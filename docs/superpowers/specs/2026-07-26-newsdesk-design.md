@@ -20,7 +20,8 @@ embedded in every finished video.
 
 - 8 calendar days remain (Jul 26 → Aug 2 submit). Zero code exists.
 - Solo builder, ~8–10 hrs/day available (~65 hours).
-- ~$25 generation budget.
+- ~$25 generation budget. Measured cost per full 6-block story (§9.1):
+  **$3.93** on seedance-2.0, **$0.94** on seedance-1-0-pro-fast.
 - B2, GMI Cloud, ElevenLabs, and LMNT credentials are all provisioned.
 - Local toolchain: `ffmpeg`, `uv`, `node`, `bun` present. Python pinned to **3.12**
   via uv (system 3.14 is ahead of provider wheel support).
@@ -308,6 +309,26 @@ scope-cut ladder in §14; cutting it leaves `EmbedPolicy` in place with a single
 
 ---
 
+### 9.1 · Budget
+
+Rates registered in `newsdesk/pricing.py` from the published SDK defaults
+(snapshot 2026-05-04; GMI pricing is contract-specific — verify against the console).
+
+| Per full 6-block story | Cost |
+|---|---|
+| Images (`seedream-5.0-lite`, 6 × $0.035) | $0.21 |
+| Video (`seedance-2-0-260128`, per-second $0.052 × 10s × 6) | $3.12 |
+| Narration (`ElevenLabs-TTS-v3`, 6 × $0.10) | $0.60 |
+| **Total** | **$3.93** |
+
+**~6 full runs fit in the $25 budget.** The lever that matters:
+`seedance-1-0-pro-fast` bills **$0.022 flat per asset** against seedance-2.0's $0.52 for
+a 10-second clip — 24× cheaper. Development and CS-4/CS-5 fixture runs use the fast
+model; only the CS-1 hero run and the demo video spend on seedance-2.0.
+
+Fallback runs cost more, not less (`kling-image2video-v2.1-master` at $0.28/asset is
+$2.49 per story), so CS-5's chaos test is budgeted deliberately rather than run casually.
+
 ## 10 · Failure handling
 
 | Failure | Behavior |
@@ -416,10 +437,20 @@ and the demo video carries the UX story.
   preflight fell through to the permissive fallback and the param reached a model that
   wants something else. This is precisely the failure the vox skill documented on
   Higgsfield, reproduced on GMI. Must be solved before any block generation.
-- **Spend cannot be tracked programmatically.** `cost_usd` is `None` on GMI steps and
-  `estimate_cost()` returns `None` (registry carries `pricing=None`). The ~$25 budget
-  has to be read from the GMI console, so the pipeline needs its own call counter
-  rather than a dollar guard.
+- **`aspect_ratio` reached GMI and Seedream ignored it.** Corrected: the param *is* in
+  the IMAGE `ParamSurface` allowlist, so genblaze forwarded it — the model dropped it.
+  Severity is lower than first assessed, because the **video** step sets the final MP4
+  dimensions and `docs/features/video-params.md` documents GMICloud video as honoring
+  `aspect_ratio` natively. Residual risk is a square `first_frame` feeding a 9:16 clip;
+  one test settles it. Fixes cheapest-first: try `resolution` (also allowlisted), try
+  `gemini-2.5-flash-image` / `flux-kontext-pro`, or centre-crop with ffmpeg ($0,
+  deterministic, already a dependency).
+- **Spend *is* trackable — `pricing=None` is by design, not a gap.** Genblaze requires
+  per-slug rates to be user-registered (`register_pricing`) because GMI pricing is
+  contract-specific; `docs/reference/pricing-recipes.md` publishes the SDK defaults.
+  `newsdesk/pricing.py` registers them, so `step.cost_usd` populates and per-block cost
+  flows into the manifest, the Parquet audit, and the Receipt. That is a provenance
+  feature, not a workaround.
 
 Answers are recorded in the README architecture section either way — a documented
 limitation is production-readiness evidence, not a weakness.

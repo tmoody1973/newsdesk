@@ -403,10 +403,23 @@ and the demo video carries the UX story.
    `Step` params?**~~ **Answered Jul 26 — no.** No GMI video model exposes a
    style-reference slot; only keyframe slots exist. Resolved by adopting the two-step
    image→video chain in §6.5. Settled from registry source at $0.
-2. **What is the `abatch_run()` concurrency ceiling on GMI?** Determines whether six
-   blocks run parallel or sequential, which sets the wall-clock target for a run. Now
-   slightly more consequential: the two-step chain means 12 calls per story rather
-   than 6.
+2. ~~**What is the `abatch_run()` concurrency ceiling on GMI?**~~ **Answered Jul 26 — no
+   ceiling at 6.** Six concurrent image jobs ran fully parallel: peak overlap 6/6, 5.2×
+   speedup, 66.8s wall clock. No batching strategy needed; a full run sits well inside
+   the ≤15 min target even with the two-step chain. Measured on the image endpoint;
+   video is confirmed during MOO-424.
+
+**Two findings from that run, both consequential:**
+
+- **`aspect_ratio` is silently ignored.** All six returned 2048×2048 square despite
+  `aspect_ratio="9:16"` on every call. `seedream-5.0-lite` matches no `ModelFamily`, so
+  preflight fell through to the permissive fallback and the param reached a model that
+  wants something else. This is precisely the failure the vox skill documented on
+  Higgsfield, reproduced on GMI. Must be solved before any block generation.
+- **Spend cannot be tracked programmatically.** `cost_usd` is `None` on GMI steps and
+  `estimate_cost()` returns `None` (registry carries `pricing=None`). The ~$25 budget
+  has to be read from the GMI console, so the pipeline needs its own call counter
+  rather than a dollar guard.
 
 Answers are recorded in the README architecture section either way — a documented
 limitation is production-readiness evidence, not a weakness.

@@ -115,8 +115,9 @@ facts + art direction
   └→ script.py ─ chat() ─→ claim→fact validator ──✗ BLOCK (P0-2)
        └→ 6 blocks (5-field prompt template)
             └→ Wall 2: gate.py → llm_check.py ──✗ BLOCKED stamp · $0 · audit row
-                 └→ Step(seedance-2.0, fallback_models=[kling-i2v], style key attached)
-                      └→ vision_check ──✗ AgentLoop retry, parent_run_id links v1→v2
+                 └→ image step: i2i remix of the style key → styled still (§6.5)
+                      └→ Step(seedance, first_frame=still, fallback_models=[kling])
+                           └→ vision_check ──✗ AgentLoop retry, parent_run_id v1→v2
                            └→ narration(ElevenLabs → LMNT) → 9.0–10.5s verify → re-voice
                                 └→ all 6 ready ═══ WALL 3: approve(name, timestamp) ═══
                                      └→ ffmpeg stitch + burn → manifest embed
@@ -176,16 +177,52 @@ failures means the prompt is wrong, not the seed — stop and surface to the edi
 both takes and the drift note. This is the AgentLoop's tightening function and its
 stop condition.
 
-### 6.5 Style key discipline — and the risk it carries
+### 6.5 Style key discipline — resolved, and it changed the pipeline
+
+**Resolved Jul 26 (MOO-415), from the installed registry source. No budget spent.**
 
 The skill is emphatic that the style key must attach to **every single clip**, and that
 framing and style do *not* reliably inherit (a documented real run with a 9:16 key still
 produced 16:9 clips; aspect ratio must be passed explicitly on every call).
 
-Newsdesk moves this from Higgsfield's `medias:[{role:"image"}]` to Genblaze/GMICloud
-`Step` params. **If GMI's Seedance cannot accept a style reference through Genblaze, the
-house style collapses across six blocks and the visual identity fails.** This is the
-single highest-risk unknown in the build and is tested first (§13).
+Moving that from Higgsfield to Genblaze/GMICloud does not survive contact:
+**no GMI video model exposes a style-reference slot.** Every video family in
+`genblaze_gmicloud/models/video.py` uses one of two image routings —
+
+```
+route_images(slots=("image",))                     pixverse · veo · kling · wan · fallback
+route_images(slots=("first_frame", "last_frame"))  seedance
+```
+
+`route_images` supports an `array_slot="reference_images"`, but no family uses it.
+Higgsfield's `medias:[{role:"image"}]` means *look like this*; Seedance's `first_frame`
+means *start from this*. Passing the style key as `first_frame` would open all six
+blocks on the same swatch — a different mechanism, not a smaller one. Kling does not
+rescue it either; `slots=("image",)` is also a keyframe.
+
+**Adopted: a two-step chain per block**, using `gmi-image-edit`
+(`reve-remix-20250915`, `seededit-3-0-i2i-250628`) to carry the style:
+
+```
+style key (b2://newsdesk-brand-kit, public)
+  └→ image step  — i2i remix into house style, per block  → styled still
+       └→ video step — seedance, first_frame = that still → 10s clip
+```
+
+This is stronger than the Higgsfield arrangement, not a workaround: the clip *begins* on
+a frame that is the style rather than being asked to resemble one. It also widens the
+Genblaze surface materially — multi-step `Pipeline`, `input_from` fan-in, and two
+modalities inside one run.
+
+Three consequences worth carrying:
+
+- Cost is ~2× calls per block. Images are the cheap half.
+- The styled still doubles as the **Run Board thumbnail**, so the UI gets a real preview
+  before the clip exists.
+- On a policy or vision rejection, the still is the cheap thing to re-roll first — which
+  makes the AgentLoop retry in §6.4 materially cheaper than regenerating video blind.
+
+The brand-kit bucket is public specifically so the style key is fetchable by GMI.
 
 ### 6.6 Provider moderation is not a substitute for the gate
 
@@ -252,7 +289,8 @@ b2://newsdesk-runs/{run_id}/state.json
 
 Every primitive below is load-bearing for the product, not added for rubric coverage.
 
-- `Pipeline` / `Step` — multi-step generation
+- `Pipeline` / `Step` — multi-step generation, with `input_from` chaining the styled
+  still into the video step (§6.5)
 - `fallback_models=[...]` — on **both** video (seedance → kling-i2v) and audio
   (ElevenLabs → LMNT)
 - `AgentLoop` with `parent_run_id` — policy-driven regeneration with queryable v1→v2 lineage
@@ -261,7 +299,8 @@ Every primitive below is load-bearing for the product, not added for rubric cove
 - `ParquetSink` — the audit trail
 - `EmbedPolicy` — redacted public receipt vs. full internal manifest
 - Manifest embed into MP4 + `genblaze verify --fetch`
-- Three provider adapters: `genblaze-gmicloud`, `genblaze-elevenlabs`, `genblaze-lmnt`
+- Two modalities from one adapter — `GMICloudImageProvider` (style) and
+  `GMICloudVideoProvider` (motion) — plus `genblaze-elevenlabs` and `genblaze-lmnt`
 
 One caveat: `EmbedPolicy` is used from Day 4 to write the embedded manifest. The *dual
 receipt* feature built on top of it (P1-3, redacted public vs. full internal) is on the
@@ -360,18 +399,30 @@ and the demo video carries the UX story.
 
 ## 15 · Day 0 blockers
 
-Both must be answered tonight, before any pipeline code is written.
-
-1. **Does GMI's Seedance endpoint accept an image/style reference through Genblaze `Step`
-   params?** Highest-risk unknown in the build (§6.5). If no: test whether Kling i2v can
-   carry the style key as primary, and if that also fails, fall back to embedding the full
-   style-token string in every `STYLE REFERENCE` line and accept measurable drift —
-   documented honestly in the README rather than hidden.
+1. ~~**Does GMI's Seedance endpoint accept an image/style reference through Genblaze
+   `Step` params?**~~ **Answered Jul 26 — no.** No GMI video model exposes a
+   style-reference slot; only keyframe slots exist. Resolved by adopting the two-step
+   image→video chain in §6.5. Settled from registry source at $0.
 2. **What is the `abatch_run()` concurrency ceiling on GMI?** Determines whether six
-   blocks run parallel or sequential, which sets the wall-clock target for a run.
+   blocks run parallel or sequential, which sets the wall-clock target for a run. Now
+   slightly more consequential: the two-step chain means 12 calls per story rather
+   than 6.
 
 Answers are recorded in the README architecture section either way — a documented
 limitation is production-readiness evidence, not a weakness.
+
+**Also resolved Jul 26 (MOO-417, MOO-432), out of band:**
+
+- `ParquetSink` is exported by `genblaze_core` but raises without the optional `pyarrow`
+  dependency. Added.
+- `ObjectStorageSink.write_run()` re-fetches each asset by URL to transfer it, so an
+  asset already sitting in a private bucket 401s. Correct behavior for real provider
+  outputs; only affects contrived cases.
+- `ObjectStorageSink` **rejects** `URLPolicy.PRESIGNED` deliberately — *"manifests
+  outlive presigned SigV4 URLs, so persisting them breaks provenance."* This is the same
+  principle the product is built on, so the assets and brand-kit buckets are public
+  rather than presigned.
+- B2 refuses to create public buckets until an account has payment history. Cleared.
 
 ---
 

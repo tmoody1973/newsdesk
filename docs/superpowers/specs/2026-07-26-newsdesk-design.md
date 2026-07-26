@@ -316,10 +316,10 @@ Rates registered in `newsdesk/pricing.py` from the published SDK defaults
 
 | Per full 6-block story | Cost |
 |---|---|
-| Images (`seedream-5.0-lite`, 6 × $0.035) | $0.21 |
+| Images (`gemini-2.5-flash-image`, 6 × $0.039) | $0.23 |
 | Video (`seedance-2-0-260128`, per-second $0.052 × 10s × 6) | $3.12 |
 | Narration (`ElevenLabs-TTS-v3`, 6 × $0.10) | $0.60 |
-| **Total** | **$3.93** |
+| **Total** | **$3.95** |
 
 **~6 full runs fit in the $25 budget.** The lever that matters:
 `seedance-1-0-pro-fast` bills **$0.022 flat per asset** against seedance-2.0's $0.52 for
@@ -437,14 +437,18 @@ and the demo video carries the UX story.
   preflight fell through to the permissive fallback and the param reached a model that
   wants something else. This is precisely the failure the vox skill documented on
   Higgsfield, reproduced on GMI. Must be solved before any block generation.
-- **`aspect_ratio` reached GMI and Seedream ignored it.** Corrected: the param *is* in
-  the IMAGE `ParamSurface` allowlist, so genblaze forwarded it — the model dropped it.
-  Severity is lower than first assessed, because the **video** step sets the final MP4
-  dimensions and `docs/features/video-params.md` documents GMICloud video as honoring
-  `aspect_ratio` natively. Residual risk is a square `first_frame` feeding a 9:16 clip;
-  one test settles it. Fixes cheapest-first: try `resolution` (also allowlisted), try
-  `gemini-2.5-flash-image` / `flux-kontext-pro`, or centre-crop with ffmpeg ($0,
-  deterministic, already a dependency).
+- **`aspect_ratio` is model-specific, and the fix is a model swap.** Tested three ways
+  on one CS-1 scene prompt ($0.074 total):
+
+  | Model | Result |
+  |---|---|
+  | `seedream-5.0-lite` + `resolution` | 2048×2048 — **ignores it** |
+  | `gemini-2.5-flash-image` | 768×1344 — **9:16 ✓** |
+  | `flux-kontext-pro` | 403, not entitled on this account |
+
+  The param was never dropped locally — it *is* in the IMAGE `ParamSurface` allowlist.
+  Seedream simply ignores it. **`gemini-2.5-flash-image` is now the image-step model**
+  ($0.039 vs $0.035 — immaterial). No ffmpeg crop needed.
 - **Spend *is* trackable — `pricing=None` is by design, not a gap.** Genblaze requires
   per-slug rates to be user-registered (`register_pricing`) because GMI pricing is
   contract-specific; `docs/reference/pricing-recipes.md` publishes the SDK defaults.

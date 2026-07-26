@@ -1,0 +1,96 @@
+# Newsdesk editorial policy — v1
+#
+# This file is the newsroom-standards artifact. The Policy page renders it
+# directly and the README ships it, so it is written to be read by an editor,
+# not only parsed by a gate.
+#
+# Every rule carries three things: a plain-language name an editor can quote, a
+# one-line reason, and the layer that enforces it. Rules whose layer is
+# `deterministic` cost nothing and run first; nothing paid happens until they
+# all pass.
+
+version: 1
+updated: 2026-07-26
+
+# Where each rule is actually enforced.
+#   deterministic — pure code, no network. Free, and cannot be talked out of it.
+#   llm           — semantic check via chat(). Runs only on prompts that already
+#                   passed deterministically, so it never spends on obvious violations.
+#   vision        — post-render evaluation of the generated image or clip.
+#                   The only layer that can catch what a compliant prompt produced.
+
+rules:
+  - id: POL-1
+    name: No real-person likenesses
+    why: >
+      A generated face that resembles a real person is a fabrication attributed
+      to someone who never said or did it. There is no editorial use of this
+      that a silhouette or an abstract stand-in cannot serve.
+    layers: [deterministic, llm]
+    check: >
+      Reject named individuals, and descriptions that resolve to one specific
+      real person even when unnamed.
+    compliant_alternative: >
+      An abstract silhouette, an empty podium, an archival object associated
+      with the role rather than the person.
+
+  - id: POL-2
+    name: The exclusion line is fixed
+    why: >
+      The NEGATIVE line is a policy constant, not a prompt suggestion. If a
+      caller can edit it, the prohibitions are advisory.
+    layers: [deterministic]
+    check: >
+      NEGATIVE must be present and byte-identical to brand-kit/negative.txt.
+    note: >
+      Enforceable at render time on video only. Gemini image generation has no
+      negative-prompt mechanism — Google's docs state unlisted parameters are
+      silently ignored — so on the image step this rule proves intent, not
+      outcome. POL-4 and POL-6 are what actually catch image violations.
+
+  - id: POL-3
+    name: No fabricated news scenes
+    why: >
+      Photoreal footage of an event that did not happen is the specific harm
+      generative video introduces to journalism. Collage cannot be mistaken
+      for a camera.
+    layers: [deterministic, llm]
+    check: >
+      Reject photoreal style requests and scene framings that present generated
+      imagery as documentary footage.
+
+  - id: POL-4
+    name: No unsourced text on screen
+    why: >
+      Words rendered inside a frame read as quotation. AI lettering also
+      garbles, which turns a garbled word into an apparent misquote.
+    layers: [deterministic, vision]
+    check: >
+      SCENE must not request readable text. Any on-prop text must map to an
+      entered fact ID.
+    prompting_rule: >
+      On the image step, state absence positively — "blank unprinted paper with
+      no markings" — rather than relying on the NEGATIVE line. Verified
+      2026-07-26: negative phrasing produced legible numerals on banknote
+      cutouts; positive phrasing produced clean fragments.
+
+  - id: POL-5
+    name: Narration fits its block
+    why: >
+      A take that overruns gets speed-compressed and reads as rushed; a short
+      one gets centred and reads as out of sync. Either way the viewer hears
+      the seams.
+    layers: [deterministic]
+    check: >
+      Narration is 20-24 words with an estimated take of 9.5s or less.
+
+  - id: POL-6
+    name: Output is checked, not just the request
+    why: >
+      A compliant prompt can still produce a violating frame. On 2026-07-26 the
+      first CS-1 scene rendered legible numerals despite an explicit exclusion.
+      Checking only the request would have shipped it.
+    layers: [vision]
+    check: >
+      Every rendered asset is evaluated for photorealism, live-action
+      appearance, and readable text before it can reach the approval gate.

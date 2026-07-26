@@ -15,15 +15,24 @@ from genblaze_s3 import S3StorageBackend
 
 load_dotenv()
 
-# The five data classes from design spec §8. Values are the bucket names;
-# swap them here if the deployment consolidates onto fewer buckets.
+# The five data classes from design spec §8. B2 bucket names are globally
+# unique across all Backblaze accounts, so each is overridable from .env —
+# a name already taken by a stranger should cost one env line, not a commit.
+#
+# Public means a third party can fetch the object with no credentials:
+#   assets    — the Receipt tells fact-checkers to verify the MP4 themselves
+#   brand_kit — the style key must be fetchable by the generation provider
+# Everything else stays private. That boundary is enforced by the bucket,
+# not by convention — the same reasoning as the pipeline's three walls.
 BUCKETS = {
-    "assets": "newsdesk-assets",
-    "brand_kit": "newsdesk-brand-kit",
-    "manifests": "newsdesk-manifests",
-    "audit": "newsdesk-audit",
-    "runs": "newsdesk-runs",
+    "assets": os.getenv("B2_BUCKET_ASSETS", "newsdesk-assets"),
+    "brand_kit": os.getenv("B2_BUCKET_BRAND_KIT", "newsdesk-brand-kit"),
+    "manifests": os.getenv("B2_BUCKET_MANIFESTS", "newsdesk-manifests"),
+    "audit": os.getenv("B2_BUCKET_AUDIT", "newsdesk-audit"),
+    "runs": os.getenv("B2_BUCKET_RUNS", "newsdesk-runs"),
 }
+
+PUBLIC_BUCKETS = frozenset({BUCKETS["assets"], BUCKETS["brand_kit"]})
 
 _REGION_RE = re.compile(r"([a-z]{2}-[a-z]+-\d{3})")
 

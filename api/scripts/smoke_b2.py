@@ -56,7 +56,10 @@ def main() -> None:
     payload = b"newsdesk b2 smoke test"
     digest = hashlib.sha256(payload).hexdigest()
 
-    backend = S3StorageBackend.for_backblaze("newsdesk-assets")
+    # Passed explicitly rather than left to env inference — a silently wrong
+    # region surfaces as an opaque connection error much further downstream.
+    region = os.getenv("B2_REGION", "us-east-005")
+    backend = S3StorageBackend.for_backblaze("newsdesk-assets", region=region)
     sink = ObjectStorageSink(
         backend,
         prefix="smoke",
@@ -101,7 +104,7 @@ def main() -> None:
     # 5 — every bucket the design depends on must actually exist
     for name, purpose in BUCKETS.items():
         try:
-            S3StorageBackend.for_backblaze(name).list(max_keys=1)
+            S3StorageBackend.for_backblaze(name, region=region).list(max_keys=1)
         except Exception as exc:  # noqa: BLE001 — report, don't mask
             fail(f"bucket {name!r} ({purpose}) unreachable: {exc}")
         print(f"bucket     {name:22} ok   {purpose}")

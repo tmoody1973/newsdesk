@@ -32,7 +32,7 @@ def main() -> None:
 
     key_id = os.getenv("B2_KEY_ID")
     app_key = os.getenv("B2_APP_KEY")
-    region = os.getenv("B2_REGION", "us-west-004")
+    region = os.getenv("B2_REGION", "us-east-005")
 
     if not key_id or not app_key:
         print("FAIL  set B2_KEY_ID and B2_APP_KEY in api/.env first")

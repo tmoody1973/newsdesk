@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-c6681402-29b9-4b9c-9748-4c71e53b7de9/styles.css">
+<script src="_ds/modernist-c6681402-29b9-4b9c-9748-4c71e53b7de9/_ds_bundle.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500&display=swap');
+body{margin:0;background:#dedcd6}
+a{color:var(--color-accent)}a:hover{color:var(--color-accent-700)}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#1a1a1a;color:#fff;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;margin-bottom:36px}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Archivo,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:var(--color-bg);border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2b5da8;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 Archivo,sans-serif;color:rgba(0,0,0,.5)}
+.dv-h{font:800 11px Archivo,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.45);margin:0 0 14px}
+.mono{font-family:'IBM Plex Mono',monospace}
+.stamp{font-family:Anton,sans-serif;text-transform:uppercase;letter-spacing:.05em;display:inline-flex;align-items:baseline;gap:10px;line-height:1;-webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.75'%20numOctaves='2'/%3E%3CfeColorMatrix%20values='0%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.55%200.55'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.75'%20numOctaves='2'/%3E%3CfeColorMatrix%20values='0%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.55%200.55'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E")}
+.st-blue{color:#2b5da8}.st-red{color:var(--color-accent)}.st-gray{color:var(--color-neutral-600)}
+.st-a{font-size:26px;padding:8px 16px 6px;border:3.5px solid currentColor;transform:rotate(-3deg)}
+.st-a.sm{font-size:17px;padding:5px 10px 4px;border-width:2.5px}
+.st-b{font-family:Archivo,sans-serif;font-weight:800;font-size:22px;letter-spacing:.02em;padding:7px 2px;border-top:3px solid currentColor;border-bottom:3px solid currentColor;-webkit-mask-image:none;mask-image:none}
+.st-c{font-size:44px;color:transparent;-webkit-text-stroke:2px;transform:rotate(-2deg)}
+.st-c.blue{-webkit-text-stroke-color:#2b5da8}.st-c.red{-webkit-text-stroke-color:#ec3013}.st-c.gray{-webkit-text-stroke-color:#7d7979}
+.st-d{font-size:24px;padding:10px 16px 8px;border:2px solid currentColor;position:relative;transform:rotate(-2deg)}
+.st-d::before,.st-d::after{content:'';position:absolute;width:10px;height:10px;border:2px solid currentColor}
+.st-d::before{top:-6px;left:-6px;border-right:0;border-bottom:0}
+.st-d::after{bottom:-6px;right:-6px;border-left:0;border-top:0}
+.subnote{font:400 10px 'IBM Plex Mono',monospace;letter-spacing:0;text-transform:none}
+</style>
+</helmet>
+<template id="__bundler_thumbnail" data-bg-color="#e8e6df"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e8e6df"></rect><g transform="rotate(-6 50 50)"><rect x="22" y="36" width="56" height="28" fill="none" stroke="#2b5da8" stroke-width="4"></rect><text x="50" y="57" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="13" font-weight="900" fill="#2b5da8">NEWS</text></g></svg></template>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Newsdesk — stamp treatments + all six screens (Modernist structure × Paste-Up stamps)</span></div>
+<div style="max-width:760px;font:400 12px/1.6 Archivo,sans-serif;color:rgba(0,0,0,.6);margin:0 0 26px">
+<strong style="color:#1a1a1a">Assumptions:</strong> Modernist carries the chrome — Archivo, flat 0-radius, 2px rules, putty ground, red accent. The spec's stamp system rides on top: Anton for stamps only, IBM Plex Mono for all provenance, approval-blue <span class="mono" style="font-size:10px">#2b5da8</span> derived in OKLCH to match the red's weight. Canary appears only as the wizard's active-step underline and selection borders. Sample story invented: <em>"The $1.1B Question"</em> (CPB funding rescission). Screens use stamp <a class="dv-oid" href="#1a">1a</a> as default — swappable.
+</div>
+
+<p class="dv-h">Stamp treatments — pick one</p>
+<div class="dv-opts">
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Rubber classic — rotated, ink grain, heavy border</div>
+<div class="dv-card" style="width:340px;padding:28px;display:flex;flex-direction:column;gap:22px;align-items:flex-start">
+<span class="stamp st-a st-blue">Approved</span>
+<span class="stamp st-a st-red">Blocked <span class="subnote">POL-1</span></span>
+<span class="stamp st-a sm st-gray">Retry 2</span>
+<span class="stamp st-a sm st-blue">Verified <span class="subnote">a3f1…09</span></span>
+</div></div>
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Plan-check plate — flat, Archivo 800, DS-native (no rotation)</div>
+<div class="dv-card" style="width:340px;padding:28px;display:flex;flex-direction:column;gap:22px;align-items:flex-start">
+<span class="stamp st-b st-blue">Approved</span>
+<span class="stamp st-b st-red">Blocked <span class="subnote">POL-1</span></span>
+<span class="stamp st-b st-gray" style="font-size:16px">Retry 2</span>
+<span class="stamp st-b st-blue" style="font-size:16px">Verified <span class="subnote">a3f1…09</span></span>
+</div></div>
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Outline oversized — hollow stroke, poster-scale</div>
+<div class="dv-card" style="width:340px;padding:28px;display:flex;flex-direction:column;gap:16px;align-items:flex-start">
+<span class="stamp st-c blue">Approved</span>
+<span class="stamp st-c red">Blocked</span>
+<span class="stamp st-c gray" style="font-size:30px">Retry 2</span>
+<span class="stamp st-c blue" style="font-size:30px">Verified</span>
+</div></div>
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Registration mark — crop corners + mono date line</div>
+<div class="dv-card" style="width:340px;padding:28px;display:flex;flex-direction:column;gap:24px;align-items:flex-start">
+<span class="stamp st-d st-blue">Approved<br><span class="subnote">2026-07-22 14:41 CT</span></span>
+<span class="stamp st-d st-red">Blocked<br><span class="subnote">POL-1 · likeness</span></span>
+<span class="stamp st-d st-gray" style="font-size:16px">Retry 2 → kling</span>
+<span class="stamp st-d st-blue" style="font-size:16px">Verified <span class="subnote">a3f1…09</span></span>
+</div></div>
+</div>
+
+<p class="dv-h">Screens · 1440 desktop</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>The Desk — story list</div>
+<div class="dv-card" style="width:1440px;display:flex;min-height:640px">
+  <div style="width:64px;border-right:2px solid var(--color-divider);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:6px;background:var(--color-surface)">
+    <div style="font-family:Anton,sans-serif;font-size:20px;color:var(--color-accent);margin-bottom:18px">N</div>
+    <div style="width:40px;height:40px;display:grid;place-items:center;background:#F2C744"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1917" stroke-width="2"><rect x="3" y="4" width="18" height="16"></rect><path d="M3 9h18"></path></svg></div>
+    <div style="width:40px;height:40px;display:grid;place-items:center;color:var(--color-neutral-600)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18M3 12h18"></path></svg></div>
+    <div style="width:40px;height:40px;display:grid;place-items:center;color:var(--color-neutral-600)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path></svg></div>
+    <div style="width:40px;height:40px;display:grid;place-items:center;color:var(--color-neutral-600)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"></path></svg></div>
+  </div>
+  <div style="flex:1;padding:28px 36px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:2px solid var(--color-divider);padding-bottom:14px;margin-bottom:0">
+      <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:32px;letter-spacing:.01em;margin:0">THE DESK</h1>
+      <span class="mono" style="font-size:11px;color:var(--color-neutral-600)">5 stories · 1 awaiting approval</span>
+      <span style="flex:1"></span>
+      <span class="btn btn-primary">Start a story</span>
+    </div>
+    <table class="table">
+      <thead><tr><th>Story</th><th>Status</th><th>Blocks</th><th>Approver</th><th>Updated</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600">The $1.1B Question — what losing CPB money means</td><td><span class="tag" style="background:#dde6f2;color:#1d3f73">Awaiting approval</span></td><td><span class="mono" style="font-size:12px">6/6</span> <span style="display:inline-block;width:60px;height:6px;background:var(--color-neutral-300);vertical-align:middle"><span style="display:block;width:100%;height:100%;background:#2b5da8"></span></span></td><td>M. Okafor</td><td class="mono" style="font-size:12px;color:var(--color-neutral-600)">12m ago</td></tr>
+        <tr><td style="font-weight:600">How your streetcar is actually funded</td><td><span class="tag tag-neutral">Generating</span></td><td><span class="mono" style="font-size:12px">4/6</span> <span style="display:inline-block;width:60px;height:6px;background:var(--color-neutral-300);vertical-align:middle"><span style="display:block;width:66%;height:100%;background:var(--color-neutral-700)"></span></span></td><td>—</td><td class="mono" style="font-size:12px;color:var(--color-neutral-600)">now</td></tr>
+        <tr><td style="font-weight:600">Milwaukee's lead pipes, explained in 60 seconds</td><td><span class="tag" style="background:#2b5da8;color:#fff">Published</span></td><td><span class="mono" style="font-size:12px">6/6</span> <span style="display:inline-block;width:60px;height:6px;background:var(--color-neutral-300);vertical-align:middle"><span style="display:block;width:100%;height:100%;background:#2b5da8"></span></span></td><td>A. Weiss</td><td class="mono" style="font-size:12px;color:var(--color-neutral-600)">Jul 18</td></tr>
+        <tr><td style="font-weight:600">Ballot drop boxes are back — what changed</td><td><span class="tag" style="background:var(--color-accent);color:#fff">Blocked</span></td><td><span class="mono" style="font-size:12px">2/6</span> <span style="display:inline-block;width:60px;height:6px;background:var(--color-neutral-300);vertical-align:middle"><span style="display:block;width:33%;height:100%;background:var(--color-accent)"></span></span></td><td>—</td><td class="mono" style="font-size:12px;color:var(--color-neutral-600)">Jul 19</td></tr>
+        <tr><td style="font-weight:600">Why the county transit levy keeps failing</td><td><span class="tag tag-neutral">Drafting</span></td><td><span class="mono" style="font-size:12px">0/6</span> <span style="display:inline-block;width:60px;height:6px;background:var(--color-neutral-300);vertical-align:middle"></span></td><td>—</td><td class="mono" style="font-size:12px;color:var(--color-neutral-600)">Jul 21</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:40px;border:1px dashed var(--color-divider);padding:28px;max-width:520px">
+      <p style="font-weight:600;margin:0 0 4px">Nothing on the board?</p>
+      <p style="font-size:13px;color:var(--color-neutral-700);margin:0 0 12px">Start with facts — the video comes later.</p>
+      <div style="display:flex;gap:12px;align-items:center"><span class="btn btn-primary">Start a story</span><a href="#1e" class="btn btn-ghost">Load a case study</a></div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Wizard · Step 1 — Facts &amp; Sources</div>
+<div class="dv-card" style="width:1440px;padding:0 0 40px">
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--color-divider)">
+    <div style="flex:1;padding:18px 36px 14px;border-bottom:4px solid #F2C744;margin-bottom:-2px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">1</span> <span style="font-weight:800;font-size:14px">Facts &amp; Sources</span></div>
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">2</span> <span style="font-size:14px">Art Direction</span></div>
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">3</span> <span style="font-size:14px">Script Review</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:32px;padding:32px 36px 0">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <h2 style="font-size:24px;margin:0">Every claim starts here.</h2>
+      <div style="border:1px solid var(--color-divider);padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--color-surface)">
+        <div style="display:flex;gap:10px;align-items:baseline"><span class="mono" style="font-size:12px;color:#2b5da8;font-weight:500">F1</span><textarea class="input" style="min-height:56px" readonly>Congress rescinded $1.1 billion in already-approved CPB funding in July 2025.</textarea></div>
+        <div style="display:flex;gap:10px;align-items:center;padding-left:32px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">src:</span><span class="mono" style="font-size:12px;color:#2b5da8">npr.org/2025/07/18/rescission-vote</span><span class="btn btn-ghost" style="font-size:12px">+ source</span></div>
+      </div>
+      <div style="border:1px solid var(--color-divider);padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--color-surface)">
+        <div style="display:flex;gap:10px;align-items:baseline"><span class="mono" style="font-size:12px;color:#2b5da8;font-weight:500">F2</span><textarea class="input" style="min-height:56px" readonly>CPB money flows to roughly 1,500 local public radio and TV stations.</textarea></div>
+        <div style="display:flex;gap:10px;align-items:center;padding-left:32px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">src:</span><span class="mono" style="font-size:12px;color:#2b5da8">cpb.org/aboutcpb/financials</span><span class="btn btn-ghost" style="font-size:12px">+ source</span></div>
+      </div>
+      <div style="border:1px solid var(--color-accent);padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--color-accent-100)">
+        <div style="display:flex;gap:10px;align-items:baseline"><span class="mono" style="font-size:12px;color:var(--color-accent-700);font-weight:500">F3</span><textarea class="input" style="min-height:56px" readonly>Rural stations rely on CPB for up to half their operating budgets.</textarea></div>
+        <div style="display:flex;gap:10px;align-items:center;padding-left:32px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">src:</span><span class="tag" style="background:var(--color-accent);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em">UNSOURCED</span><span class="btn btn-ghost" style="font-size:12px">+ source</span></div>
+        <p class="mono" style="font-size:11px;color:var(--color-accent-700);margin:0;padding-left:32px">Every fact needs a source before it can appear on screen.</p>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--color-divider);padding-top:16px">
+        <span class="btn btn-secondary">Add fact</span>
+        <span class="btn btn-primary" style="opacity:.45;cursor:not-allowed">Check sources</span>
+      </div>
+    </div>
+    <div class="card elev-sm" style="align-self:start;gap:10px">
+      <span class="card-kicker">Sources ledger</span>
+      <div class="mono" style="font-size:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between"><span>F1</span><span style="color:#2b5da8">npr.org</span></div>
+        <div style="display:flex;justify-content:space-between"><span>F2</span><span style="color:#2b5da8">cpb.org</span></div>
+        <div style="display:flex;justify-content:space-between;color:var(--color-accent)"><span>F3</span><span>— UNSOURCED</span></div>
+      </div>
+      <div class="hr" style="margin:6px 0"></div>
+      <span class="card-meta mono">2 of 3 sourced</span>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Wizard · Step 2 — Art Direction</div>
+<div class="dv-card" style="width:1440px;padding:0 0 40px">
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--color-divider)">
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">1</span> <span style="font-size:14px">Facts &amp; Sources</span></div>
+    <div style="flex:1;padding:18px 36px 14px;border-bottom:4px solid #F2C744;margin-bottom:-2px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">2</span> <span style="font-weight:800;font-size:14px">Art Direction</span></div>
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">3</span> <span style="font-size:14px">Script Review</span></div>
+  </div>
+  <div style="padding:32px 36px 0;display:flex;flex-direction:column;gap:28px">
+    <div>
+      <h6 style="margin-bottom:12px">Through-line object · pick one</h6>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px">
+        <div style="border:3px solid #F2C744;padding:14px;text-align:left;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1a1917" stroke-width="1.5"><path d="M4 20c4-1 6-4 7-8m0 0c.5-2 1-5 5-8m-5 8h.01"></path><circle cx="18" cy="5" r="2.5"></circle></svg><p style="font-size:12px;font-weight:600;margin:8px 0 0">Fuse</p></div>
+        <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><circle cx="12" cy="9" r="6"></circle><path d="M12 15v6"></path></svg><p style="font-size:12px;margin:8px 0 0;color:var(--color-neutral-700)">Balloon</p></div>
+        <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><path d="M12 21V9m-4 12l4-12 4 12M7 6c3-3 7-3 10 0M9 3.5c2-1.5 4-1.5 6 0"></path></svg><p style="font-size:12px;margin:8px 0 0;color:var(--color-neutral-700)">Tower signal</p></div>
+        <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><rect x="3" y="8" width="18" height="9"></rect><path d="M14 4l-8 16"></path></svg><p style="font-size:12px;margin:8px 0 0;color:var(--color-neutral-700)">Dollar, cut</p></div>
+        <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="2"></circle></svg><p style="font-size:12px;margin:8px 0 0;color:var(--color-neutral-700)">Record</p></div>
+        <div style="border:1px solid var(--color-divider);padding:14px;background:var(--color-surface)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><path d="M12 4v16M5 8h14M7 8l-2 6h4zM17 8l-2 6h4z"></path></svg><p style="font-size:12px;margin:8px 0 0;color:var(--color-neutral-700)">Scale</p></div>
+      </div>
+    </div>
+    <div>
+      <h6 style="margin-bottom:12px">Motif per block · defaults from the through-line</h6>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px">
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B1</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Prop with text ▾</p></div>
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B2</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Map ▾</p></div>
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B3</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Chart ▾</p></div>
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B4</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Ledger ▾</p></div>
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B5</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Cutout crowd ▾</p></div>
+        <div style="border:1px solid var(--color-divider);padding:10px 12px;background:var(--color-surface)"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B6</span><p style="font-size:13px;font-weight:600;margin:2px 0 0">Archival frame ▾</p></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start">
+      <div style="border:2px dashed var(--color-divider);padding:28px;display:flex;gap:16px;align-items:center">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.5"><path d="M12 16V5m0 0l-4 4m4-4l4 4M4 19h16"></path></svg>
+        <div><p style="font-weight:600;font-size:14px;margin:0">Add a photo from your reporting.</p><p style="font-size:12px;color:var(--color-neutral-700);margin:2px 0 0">It appears as a cutout and is labeled authentic in the receipt.</p></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="grayscale" style="width:72px;height:72px;background:linear-gradient(135deg,#bbb,#777)"></div>
+        <div><span class="tag" style="background:#2b5da8;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em">AUTHENTIC</span><p class="mono" style="font-size:11px;color:var(--color-neutral-600);margin:6px 0 0">station-doorway.jpg</p></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--color-divider);padding-top:16px">
+      <p class="mono" style="font-size:11px;color:var(--color-neutral-600);margin:0;max-width:640px">Requests outside this menu are checked against policy. Real people's likenesses and photoreal news scenes will be blocked.</p>
+      <span class="btn btn-primary">Write script</span>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1h"><div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Wizard · Step 3 — Script Review</div>
+<div class="dv-card" style="width:1440px;padding:0 0 40px">
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--color-divider)">
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">1</span> <span style="font-size:14px">Facts &amp; Sources</span></div>
+    <div style="flex:1;padding:18px 36px 14px;color:var(--color-neutral-500)"><span class="mono" style="font-size:11px">2</span> <span style="font-size:14px">Art Direction</span></div>
+    <div style="flex:1;padding:18px 36px 14px;border-bottom:4px solid #F2C744;margin-bottom:-2px"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">3</span> <span style="font-weight:800;font-size:14px">Script Review</span></div>
+  </div>
+  <div style="padding:32px 36px 0;max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">BLOCK 1 · prop with text</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">24 words · est 9.6s</span></div>
+      <textarea class="input" readonly>In July 2025, Congress clawed back one point one billion dollars it had already promised to public media.</textarea>
+      <div style="display:flex;gap:8px"><span class="mono tag" style="background:#dde6f2;color:#2b5da8;font-size:11px">F1</span></div>
+    </div>
+    <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">BLOCK 2 · map</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">21 words · est 9.2s</span></div>
+      <textarea class="input" readonly>That money flowed to about fifteen hundred local stations — radio and TV, in every state on this map.</textarea>
+      <div style="display:flex;gap:8px"><span class="mono tag" style="background:#dde6f2;color:#2b5da8;font-size:11px">F2</span></div>
+    </div>
+    <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">BLOCK 3 · chart</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">23 words · est 10.1s</span></div>
+      <textarea class="input" readonly>For big-city stations, it's a bruise. For rural ones, it can be half the budget — the chart tells that story.</textarea>
+      <div style="display:flex;gap:8px"><span class="mono tag" style="background:#dde6f2;color:#2b5da8;font-size:11px">F3</span><span class="mono tag" style="background:#dde6f2;color:#2b5da8;font-size:11px">F4</span></div>
+    </div>
+    <div style="border:1px solid var(--color-accent);background:var(--color-accent-100);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mono" style="font-size:11px;color:var(--color-accent-700)">BLOCK 4 · ledger</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">19 words · est 8.8s</span></div>
+      <textarea class="input" readonly>And the cut is permanent — this money is never coming back, no matter what happens next.</textarea>
+      <div style="display:flex;gap:8px;align-items:center"><span class="mono tag" style="background:var(--color-accent);color:#fff;font-size:11px">?</span><span class="mono" style="font-size:11px;color:var(--color-accent-700)">This line makes a claim that doesn't trace to a fact. Map it or cut it.</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--color-divider);padding-top:16px">
+      <span class="mono" style="font-size:11px;color:var(--color-neutral-600)">blocks 5–6 below · 1 unmapped claim</span>
+      <span class="btn btn-primary" style="opacity:.45;cursor:not-allowed">Send to generation</span>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1i"><div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Run Board — mid-run: generating + retry + one BLOCKED (hero screen)</div>
+<div class="dv-card" style="width:1440px;padding:28px 36px 36px;background:var(--color-bg)">
+  <div style="display:flex;align-items:baseline;gap:16px;border-bottom:2px solid var(--color-divider);padding-bottom:14px;margin-bottom:24px">
+    <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:28px;margin:0">RUN BOARD</h1>
+    <span class="mono" style="font-size:11px;color:var(--color-neutral-600)">The $1.1B Question · run f7a2c1 · 3 of 6 ready</span>
+    <span style="flex:1"></span>
+    <span class="btn btn-primary" style="opacity:.45;cursor:not-allowed">Send to editor</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-bottom:28px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="grayscale" style="aspect-ratio:9/16;background:linear-gradient(160deg,#999,#555);position:relative"><div style="position:absolute;bottom:8px;left:8px;right:8px;font-family:Anton,sans-serif;color:#fff;font-size:11px;line-height:1.2">CONGRESS CLAWED BACK $1.1B</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B1</span><span class="mono" style="font-size:11px;color:#2b5da8">9.8s ✓</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="aspect-ratio:9/16;border:1px solid var(--color-divider);background:var(--color-surface);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:12px">
+        <span class="mono" style="font-size:10px;color:var(--color-neutral-700);text-align:center">GENERATING<br>seedance-2.0</span>
+        <span style="width:70%;height:4px;background:var(--color-neutral-300)"><span style="display:block;width:60%;height:100%;background:var(--color-text)"></span></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B2</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">—</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="aspect-ratio:9/16;border:1px solid var(--color-divider);background:var(--color-surface);display:flex;justify-content:center;align-items:center;padding:12px">
+        <span class="stamp st-a sm st-gray" style="flex-direction:column;align-items:center;gap:2px">Retry 2<span class="subnote">→ kling-i2v</span></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B3</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">12.4s → re-voicing</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="aspect-ratio:9/16;border:1px solid var(--color-accent);background:var(--color-accent-100);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:12px">
+        <span class="stamp st-a st-red" style="font-size:20px">Blocked</span>
+        <span class="mono" style="font-size:10px;color:var(--color-accent-700);text-align:center">POL-1: real-person likeness</span>
+        <span class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Revise prompt</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B4</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">—</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="aspect-ratio:9/16;border:1px dashed var(--color-divider);display:flex;justify-content:center;align-items:center"><span class="tag tag-neutral mono" style="font-size:10px">QUEUED</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B5</span><span class="mono" style="font-size:11px;color:var(--color-neutral-600)">—</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="grayscale" style="aspect-ratio:9/16;background:linear-gradient(200deg,#888,#444);position:relative"><div style="position:absolute;bottom:8px;left:8px;right:8px;font-family:Anton,sans-serif;color:#fff;font-size:11px;line-height:1.2">UNLESS CONGRESS ACTS AGAIN</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B6</span><span class="mono" style="font-size:11px;color:#2b5da8">10.2s ✓</span></div>
+    </div>
+  </div>
+  <div style="border-top:2px solid var(--color-divider);padding-top:16px">
+    <h6 style="margin-bottom:10px">Run log</h6>
+    <div class="mono" style="font-size:12px;display:flex;flex-direction:column;gap:6px;color:var(--color-neutral-800)">
+      <div><span style="color:var(--color-neutral-500)">14:32:07</span> <span style="color:var(--color-accent)">block-4 POLICY REJECT</span> POL-1 real-person likeness · prompt withheld from queue</div>
+      <div><span style="color:var(--color-neutral-500)">14:31:52</span> block-3 RETRY 2 → kling-i2v (seedance timeout after 90s)</div>
+      <div><span style="color:var(--color-neutral-500)">14:31:40</span> block-2 SUBMIT seedance-2.0 · seed 88191 · style-key bk-01</div>
+      <div><span style="color:var(--color-neutral-500)">14:31:12</span> <span style="color:#2b5da8">block-1 VOICE 9.8s ✓</span> within 9.0–10.5s rule</div>
+      <div><span style="color:var(--color-neutral-500)">14:30:58</span> run f7a2c1 START · 6 blocks · brand kit B2</div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1j"><div class="dv-olabel"><a class="dv-oid" href="#1j">1j</a>Editor Review — the gate</div>
+<div class="dv-card" style="width:1440px;padding:28px 36px 36px;display:grid;grid-template-columns:1fr 380px;gap:32px">
+  <div>
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:2px solid var(--color-divider);padding-bottom:14px;margin-bottom:20px">
+      <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:28px;margin:0">EDITOR REVIEW</h1>
+      <span class="mono" style="font-size:11px;color:var(--color-neutral-600)">The $1.1B Question · v2</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:14px;display:flex;gap:16px">
+        <div class="grayscale" style="width:72px;aspect-ratio:9/16;background:linear-gradient(160deg,#999,#555);flex:none"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <span class="mono" style="font-size:10px;color:var(--color-neutral-600)">BLOCK 1 · seedance-2.0 · POL ✓ 12/12</span>
+          <p style="font-size:13px;margin:0">In July 2025, Congress clawed back one point one billion dollars it had already promised to public media.</p>
+          <div style="display:flex;gap:8px;margin-top:auto"><span class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Approve</span><span class="btn btn-ghost" style="font-size:12px">Reject with note</span><span class="btn btn-ghost" style="font-size:12px;color:var(--color-neutral-600)">Lineage ↗</span></div>
+        </div>
+        <span class="stamp st-a sm st-blue" style="align-self:center">Approved</span>
+      </div>
+      <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:14px;display:flex;gap:16px">
+        <div class="grayscale" style="width:72px;aspect-ratio:9/16;background:linear-gradient(200deg,#aaa,#666);flex:none"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <span class="mono" style="font-size:10px;color:var(--color-neutral-600)">BLOCK 2 · seedance-2.0 · POL ✓ 12/12</span>
+          <p style="font-size:13px;margin:0">That money flowed to about fifteen hundred local stations — radio and TV, in every state on this map.</p>
+          <div style="display:flex;gap:8px;margin-top:auto"><span class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Approve</span><span class="btn btn-ghost" style="font-size:12px">Reject with note</span><span class="btn btn-ghost" style="font-size:12px;color:var(--color-neutral-600)">Lineage ↗</span></div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--color-divider);background:var(--color-surface);padding:14px;display:flex;gap:16px">
+        <div class="grayscale" style="width:72px;aspect-ratio:9/16;background:linear-gradient(180deg,#909090,#505050);flex:none"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <span class="mono" style="font-size:10px;color:var(--color-neutral-600)">BLOCK 3 · kling-i2v (retry 2) · POL ✓ 12/12</span>
+          <p style="font-size:13px;margin:0">For big-city stations, it's a bruise. For rural ones, it can be half the budget.</p>
+          <div style="display:flex;gap:8px;margin-top:auto"><span class="btn btn-secondary" style="font-size:12px;padding:4px 10px">Approve</span><span class="btn btn-ghost" style="font-size:12px">Reject with note</span><span class="btn btn-ghost" style="font-size:12px;color:var(--color-neutral-600)">Lineage ↗</span></div>
+        </div>
+      </div>
+      <div class="mono" style="font-size:11px;color:var(--color-neutral-500);padding:4px 0">blocks 4–6 below ·  lineage drawer: prompt · model · provider · params · timestamps · parent_run_id — all mono</div>
+    </div>
+  </div>
+  <div class="card elev-md" style="align-self:start;position:sticky;top:0;gap:14px;padding:20px">
+    <span class="card-kicker">Approval panel</span>
+    <div class="mono" style="font-size:12px">approver: <span style="font-weight:500">m.okafor</span></div>
+    <div class="mono" style="font-size:12px;display:flex;flex-direction:column;gap:6px">
+      <div><span style="color:#2b5da8">■</span> B1 approved</div>
+      <div><span style="color:var(--color-neutral-400)">□</span> B2 pending</div>
+      <div><span style="color:var(--color-neutral-400)">□</span> B3 pending</div>
+      <div><span style="color:var(--color-neutral-400)">□</span> B4 pending</div>
+      <div><span style="color:var(--color-neutral-400)">□</span> B5 pending</div>
+      <div><span style="color:var(--color-neutral-400)">□</span> B6 pending</div>
+    </div>
+    <div class="hr" style="margin:4px 0"></div>
+    <div style="border:3.5px solid #2b5da8;color:#2b5da8;font-family:Anton,sans-serif;font-size:22px;text-align:center;padding:12px;transform:rotate(-1.5deg);opacity:.45">STAMP: APPROVED</div>
+    <p class="mono" style="font-size:10.5px;color:var(--color-neutral-600);margin:0">Your name and this timestamp become part of the video's permanent record.</p>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1k"><div class="dv-olabel"><a class="dv-oid" href="#1k">1k</a>Receipt — the public nutrition label (chit)</div>
+<div style="width:460px;padding:24px;background:#cfccc4">
+<div class="dv-card" style="width:412px;margin:0 auto;padding:0;background:var(--color-bg);--sc:#cfccc4;-webkit-mask-image:radial-gradient(circle 7px at 10px 0,transparent 97%,#000) -10px 0/20px 100% ;mask-image:radial-gradient(circle 7px at 10px 0,transparent 97%,#000) -10px 0/20px 100%">
+  <div style="padding:36px 32px 28px">
+    <div style="display:flex;justify-content:center;margin-bottom:20px"><span class="stamp st-a sm st-blue">Verified <span class="subnote">a3f1…09</span></span></div>
+    <p class="mono" style="font-size:10px;letter-spacing:.14em;text-align:center;color:var(--color-neutral-600);margin:0 0 6px">HOW THIS VIDEO WAS MADE</p>
+    <h3 style="text-align:center;font-size:20px;margin:0 0 4px">The $1.1B Question</h3>
+    <p class="mono" style="font-size:11px;text-align:center;color:var(--color-neutral-600)">62s · published 2026-07-22</p>
+    <div class="hr"></div>
+    <h6 style="font-size:11px">Made by</h6>
+    <div class="mono" style="font-size:11px;display:flex;flex-direction:column;gap:5px;color:var(--color-neutral-800)">
+      <div style="display:flex;justify-content:space-between"><span>B1–B2, B4–B5</span><span>seedance-2.0 · bytedance</span></div>
+      <div style="display:flex;justify-content:space-between"><span>B3</span><span>kling-i2v · kuaishou</span></div>
+      <div style="display:flex;justify-content:space-between"><span>B6 photo</span><span style="color:#2b5da8;font-weight:500">AUTHENTIC · uploaded</span></div>
+      <div style="display:flex;justify-content:space-between"><span>voice</span><span>eleven-v3 · elevenlabs</span></div>
+      <div style="display:flex;justify-content:space-between"><span>style key</span><span>bk-01</span></div>
+    </div>
+    <div class="hr"></div>
+    <h6 style="font-size:11px">Checked against policy</h6>
+    <div class="mono" style="font-size:11px;color:var(--color-neutral-800)">
+      <div style="display:flex;justify-content:space-between"><span>rules passed</span><span>12/12</span></div>
+      <div style="display:flex;justify-content:space-between"><span>refusals during production</span><span style="color:var(--color-accent)">1 · disclosed</span></div>
+    </div>
+    <div class="hr"></div>
+    <h6 style="font-size:11px">Approved by</h6>
+    <div class="mono" style="font-size:11px;color:var(--color-neutral-800);display:flex;justify-content:space-between"><span>M. Okafor</span><span>2026-07-22 14:41 CT</span></div>
+    <div class="hr"></div>
+    <h6 style="font-size:11px">Verify it yourself</h6>
+    <p class="mono" style="font-size:10px;word-break:break-all;color:var(--color-neutral-700);margin:0 0 8px">sha256: a3f19c02e88d41b7c6605f2ad9e13b8a44c7d0e6f2519ab38c07d64e1b52f409</p>
+    <div class="mono" style="font-size:11px;background:var(--color-neutral-900);color:#f3f2f2;padding:10px 12px">$ genblaze verify story.mp4</div>
+  </div>
+</div></div></div>
+
+<div class="dv-opt" id="1l"><div class="dv-olabel"><a class="dv-oid" href="#1l">1l</a>Brand Kit &amp; Policy (read-mostly)</div>
+<div class="dv-card" style="width:1440px;padding:28px 36px 36px;display:grid;grid-template-columns:1fr 1fr;gap:40px">
+  <div>
+    <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:28px;margin:0 0 18px;border-bottom:2px solid var(--color-divider);padding-bottom:12px">BRAND KIT</h1>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card"><span class="card-kicker">Style key</span><div class="grayscale" style="aspect-ratio:16/10;background:linear-gradient(140deg,#aaa,#555)"></div><span class="card-meta mono">bk-01 · collage cutout</span></div>
+      <div class="card"><span class="card-kicker">Motif references</span><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><div class="grayscale" style="aspect-ratio:1;background:#999"></div><div class="grayscale" style="aspect-ratio:1;background:#777"></div><div class="grayscale" style="aspect-ratio:1;background:#888"></div></div><span class="card-meta mono">map · chart · ledger</span></div>
+      <div class="card"><span class="card-kicker">Voice</span><div style="display:flex;align-items:center;gap:10px"><span class="btn btn-icon btn-secondary">▶</span><span class="mono" style="font-size:11px">eleven-v3 · "desk-read"</span></div><span class="card-meta mono">9.0–10.5s per take</span></div>
+      <div class="card"><span class="card-kicker">Subtitle font</span><p style="font-family:Anton,sans-serif;font-size:26px;margin:0">ANTON — BURNED IN</p><span class="card-meta mono">same face as the stamps</span></div>
+    </div>
+  </div>
+  <div>
+    <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:28px;margin:0 0 18px;border-bottom:2px solid var(--color-divider);padding-bottom:12px">POLICY</h1>
+    <div style="display:flex;flex-direction:column">
+      <div style="padding:14px 0;border-bottom:1px solid var(--color-divider)"><span class="mono" style="font-size:12px;color:var(--color-accent);font-weight:500">POL-1</span> <span style="font-weight:600;font-size:14px">No real-person likenesses.</span><p style="font-size:12px;color:var(--color-neutral-700);margin:4px 0 0">A generated face of a real person is a fabrication, whatever the caption says.</p></div>
+      <div style="padding:14px 0;border-bottom:1px solid var(--color-divider)"><span class="mono" style="font-size:12px;color:var(--color-accent);font-weight:500">POL-2</span> <span style="font-weight:600;font-size:14px">No photoreal news scenes.</span><p style="font-size:12px;color:var(--color-neutral-700);margin:4px 0 0">Nothing generated may be mistakable for documentary footage.</p></div>
+      <div style="padding:14px 0;border-bottom:1px solid var(--color-divider)"><span class="mono" style="font-size:12px;color:var(--color-accent);font-weight:500">POL-3</span> <span style="font-weight:600;font-size:14px">Every on-screen claim traces to a source.</span><p style="font-size:12px;color:var(--color-neutral-700);margin:4px 0 0">The fact ledger is the script's only raw material.</p></div>
+      <div style="padding:14px 0;border-bottom:1px solid var(--color-divider)"><span class="mono" style="font-size:12px;color:var(--color-accent);font-weight:500">POL-4</span> <span style="font-weight:600;font-size:14px">Authentic assets are labeled.</span><p style="font-size:12px;color:var(--color-neutral-700);margin:4px 0 0">Real photography is called out in the public receipt.</p></div>
+      <div style="padding:14px 0"><span class="mono" style="font-size:12px;color:var(--color-accent);font-weight:500">POL-5</span> <span style="font-weight:600;font-size:14px">Voice takes run 9.0–10.5 seconds.</span><p style="font-size:12px;color:var(--color-neutral-700);margin:4px 0 0">The pacing rule that keeps six blocks to one minute.</p></div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1m"><div class="dv-olabel"><a class="dv-oid" href="#1m">1m</a>Run Board @ 380px — filmstrip goes vertical</div>
+<div class="dv-card" style="width:380px;padding:20px">
+  <div style="border-bottom:2px solid var(--color-divider);padding-bottom:10px;margin-bottom:16px">
+    <h1 style="font-family:Anton,sans-serif;font-weight:400;font-size:22px;margin:0">RUN BOARD</h1>
+    <span class="mono" style="font-size:10px;color:var(--color-neutral-600)">run f7a2c1 · 3 of 6 ready</span>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:12px;align-items:center"><div class="grayscale" style="width:56px;aspect-ratio:9/16;background:linear-gradient(160deg,#999,#555);flex:none"></div><div style="flex:1"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B1</span><p style="font-size:12px;margin:2px 0 0">Congress clawed back $1.1B…</p></div><span class="mono" style="font-size:11px;color:#2b5da8;flex:none">9.8s ✓</span></div>
+    <div style="display:flex;gap:12px;align-items:center"><div style="width:56px;aspect-ratio:9/16;border:1px solid var(--color-divider);background:var(--color-surface);flex:none;display:grid;place-items:center"><span class="mono" style="font-size:8px;text-align:center;color:var(--color-neutral-600)">GEN</span></div><div style="flex:1"><span class="mono" style="font-size:10px;color:var(--color-neutral-600)">B2 · seedance-2.0</span><span style="display:block;width:100%;height:4px;background:var(--color-neutral-300);margin-top:6px"><span style="display:block;width:60%;height:100%;background:var(--color-text)"></span></span></div></div>
+    <div style="display:flex;gap:12px;align-items:center;border:1px solid var(--color-accent);background:var(--color-accent-100);padding:8px"><div style="width:56px;aspect-ratio:9/16;flex:none;display:grid;place-items:center"><span class="stamp st-a sm st-red" style="font-size:11px;padding:3px 6px;border-width:2px">Blocked</span></div><div style="flex:1"><span class="mono" style="font-size:10px;color:var(--color-accent-700)">B4 · POL-1: real-person likeness</span><p style="margin:6px 0 0"><span class="btn btn-secondary" style="font-size:11px;padding:3px 8px">Revise prompt</span></p></div></div>
+  </div>
+</div></div>
+
+</div>
+<p class="dv-next">Try next: "use stamp <a class="dv-oid" href="#1b">1b</a> across the screens" · "show the confirm modal and lineage drawer" · "make the Run Board clickable"</p>
+</section>
+</x-dc>
+</body>
+</html>

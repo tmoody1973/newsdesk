@@ -1,0 +1,13 @@
+.DS_Store
+*.zip
+.env
+.env.*
+!.env.example
+.remember/
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.next/
+scratch/
+out/

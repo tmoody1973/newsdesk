@@ -1,6 +1,32 @@
 SCENE authoring rules — how to keep text out of the frame (POL-4)
 
-WHY NEGATION FAILS — the published mechanism
+WHAT ACTUALLY DRIVES TEXT BLEED — ten renders, 2026-07-26
+
+The dominant variable is not how exclusions are phrased. It is how the ELEMENT
+IS FRAMED. Controlled pair, identical but for one clause, no negation in either:
+
+  "a small archival photo cutout of a vintage radio dial"
+    -> unmistakable numerals on every tuning scale, plus badge lettering,
+       legible at normal viewing size
+
+  "a small circular dial face of plain matte cream card"
+    -> tick marks and needles only; faint glyphs detectable at 6x zoom
+
+Framing an element as a PHOTOGRAPH OF A REAL OBJECT pulls photographic
+fidelity, and real dials, banknotes, gauges and signs carry printing. Framing
+the same element as a PAPER OR CARD GRAPHIC does not.
+
+Severity, not elimination. Ten renders, zero perfectly clean at high zoom.
+Phrasing and framing both reduce the rate; neither reaches zero. POL-6 is the
+only thing that catches it.
+
+An earlier draft of this file attributed the effect to negation phrasing. A
+controlled test refuted that: a scene with ONLY negation and no positive
+occupant came back as clean as one with only a positive occupant. The
+prediction failed and the rule was rewritten.
+
+
+WHY NEGATION IS WEAK ANYWAY — the published mechanism
 
 This is a known, measured, unsolved problem in text-to-image generation, not a
 quirk of our prompts. "Understanding the Impact of Negative Prompts: When and

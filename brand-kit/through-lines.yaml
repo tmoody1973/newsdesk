@@ -1,0 +1,95 @@
+# Through-line objects — the art-direction menu.
+#
+# One physical metaphor travels through every block and escalates; the viewer
+# holds it the whole runtime and the kicker pays it off. Design it before
+# writing any block.
+#
+# The menu IS the policy boundary. A journalist picks a label and a meaning —
+# they never write framing language, and they never learn why a tower renders
+# as a paper cutout rather than a photograph. That knowledge lives here.
+#
+# `framing` is the clause the prompt builder splices into SCENE. Every entry
+# uses paper-and-card language rather than "archival photo cutout", because a
+# controlled test on 2026-07-26 showed photo framing pulls printed detail:
+# the same dial rendered numerals under photo framing and stayed clean under
+# card framing, with no negation in either prompt. See scene-guidance.txt.
+#
+# `lettering_risk: high` marks objects that natively carry typography. Those
+# need their surface described positively (what IS on it) as well as framed as
+# card — see the `surface` field.
+
+version: 1
+
+through_lines:
+  - id: tower-signal
+    label: Broadcast tower, signal rings shrinking
+    use_when: Reach, coverage, or a service going dark.
+    framing: >
+      a tall broadcast tower rendered as a torn-paper cutout in flat charcoal
+      on cream card, taped at one corner, with hand-drawn black marker rings
+      radiating from its mast
+    escalation: rings contract block by block, outermost first
+    lettering_risk: low
+
+  - id: fuse
+    label: A burning fuse
+    use_when: A deadline, a countdown, an inevitability.
+    framing: >
+      a fuse cut from dark card threading across the frame, its lit end a small
+      torn coral shape with hand-drawn spark strokes
+    escalation: the unburnt length shortens each block
+    lettering_risk: low
+
+  - id: dollar-cut
+    label: A dollar bill cut into strips
+    use_when: Budgets, allocation, where money goes.
+    framing: >
+      a large banknote-shaped rectangle of plain pale green card, its surface
+      smooth and unengraved, being divided into labelled paper strips
+    surface: >
+      the card is flat matte green with a single hand-drawn marker line marking
+      each division and nothing else printed on it
+    escalation: one more strip separates each block
+    lettering_risk: high
+
+  - id: record
+    label: A record growing
+    use_when: Culture, revival, something small becoming large.
+    framing: >
+      a vinyl record as concentric rings of charcoal and cream card with a
+      plain coral centre circle
+    surface: >
+      the centre circle is flat coral card carrying no printing
+    escalation: grows from coaster-sized to monumental
+    lettering_risk: high
+
+  - id: scale
+    label: A tipping scale
+    use_when: Trade-offs, imbalance, who bears a cost.
+    framing: >
+      a balance scale built from torn navy card and hand-drawn marker lines,
+      its pans plain cream card
+    escalation: tilts further each block
+    lettering_risk: low
+
+  - id: balloon
+    label: A balloon nearing a needle
+    use_when: Bubbles, overextension, risk that has not popped yet.
+    framing: >
+      a balloon as a smooth coral paper shape against cream, a slender charcoal
+      needle entering from the frame edge
+    escalation: the gap between the two closes
+    lettering_risk: low
+
+# Question-on-prop: a short question rendered on a surface in block 1 or the
+# finale, answered only in the kicker. This is the ONE place readable text is
+# permitted — and only when the question maps to an entered fact ID (POL-4).
+# Everywhere else, typography beats are expressed as abstract highlight bars,
+# redaction blocks, marker circles and underlines.
+question_on_prop:
+  allowed: true
+  requires_fact_mapping: true
+  guidance: >
+    Keep it to two or three words. Render it as hand-lettered marker on card
+    rather than printed type — hand-drawn lettering garbles less visibly than
+    a typeface, and it reads as annotation rather than as quotation.

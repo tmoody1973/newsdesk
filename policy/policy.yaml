@@ -60,7 +60,7 @@ rules:
       imagery as documentary footage.
 
   - id: POL-4
-    name: No unsourced text on screen
+    name: No readable text on screen
     why: >
       Words rendered inside a frame read as quotation. AI lettering also
       garbles, which turns a garbled word into an apparent misquote.
@@ -68,6 +68,18 @@ rules:
     check: >
       SCENE must not request readable text. Any on-prop text must map to an
       entered fact ID.
+    threshold: >
+      Text is a violation when it is readable at normal viewing size — a
+      viewer watching on a phone can make out a word or a number. Sub-legible
+      marks that read as paper texture, engraving, or tick marks are not
+      violations.
+    threshold_why: >
+      The harm this rule exists to prevent is a viewer reading a fabricated
+      word. A mark no viewer can resolve cannot misinform anyone. A rule
+      written as "no marks at any magnification" would fire on nearly every
+      block, and a gate that blocks everything gets switched off — which is
+      how policy layers actually die. This threshold is stated in the README
+      rather than hidden: the claim is "no readable text", never "no text".
     prompting_rule: >
       Never append a negation list to SCENE. Gemini image generation has no
       negative-prompt mechanism, and Google's guidance is explicit that

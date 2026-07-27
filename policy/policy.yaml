@@ -69,10 +69,18 @@ rules:
       SCENE must not request readable text. Any on-prop text must map to an
       entered fact ID.
     prompting_rule: >
-      On the image step, state absence positively — "blank unprinted paper with
-      no markings" — rather than relying on the NEGATIVE line. Verified
-      2026-07-26: negative phrasing produced legible numerals on banknote
-      cutouts; positive phrasing produced clean fragments.
+      Never append a negation list to SCENE. Gemini image generation has no
+      negative-prompt mechanism, and Google's guidance is explicit that
+      narrative description beats keyword lists. Name blankness as a positive
+      property of the object, in the sentence that introduces it, and say what
+      IS on its surface so the model has something to render instead of
+      inventing detail. Full rules and the six verified renders behind them:
+      brand-kit/scene-guidance.txt.
+    known_limitation: >
+      Three of six test renders produced text despite instruction. Objects that
+      natively carry typography — dials, gauges, banknotes, signs, screens —
+      pull lettering into the frame regardless. Prompting reduces the rate; it
+      does not eliminate it. POL-6 is the enforcement.
 
   - id: POL-5
     name: Narration fits its block

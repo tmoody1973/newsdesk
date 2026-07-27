@@ -1,0 +1,66 @@
+SCENE authoring rules — how to keep text out of the frame (POL-4)
+
+Grounded in Google's own guidance for Gemini image generation:
+
+  "Describe the scene rather than just listing keywords. The model's deep
+   language understanding means a narrative, descriptive paragraph will almost
+   always produce a better, more coherent image than disconnected words."
+  — ai.google.dev/gemini-api/docs/generate-content/image-generation
+
+Gemini image generation has NO negative-prompt parameter. Google's docs state
+that parameters outside the supported list are silently ignored, so the
+NEGATIVE line cannot enforce anything on the image step. Exclusion has to be
+carried inside SCENE, as description.
+
+Verified across six renders on 2026-07-26:
+
+  FAILED — trailing keyword negation
+    "...banknote fragments. NEGATIVE: no numbers, no letters"
+    -> legible "0" digits on three fragments
+
+  FAILED — blanket negation appended to the scene
+    "...radio dials... No printing, no labels, no numbers, no markings anywhere."
+    -> garbled lettering on every dial face
+
+  PASSED — the blankness described positively, in narrative
+    "...torn fragments of BLANK UNPRINTED pale green paper, smooth empty
+     surfaces with no printing, no engraving, no markings of any kind on them"
+    -> completely clean
+
+  PASSED — the object's featureless state described as a property it has
+    "...a small circular dial face made of plain smooth matte cream card. Every
+     dial face is completely featureless — an unbroken flat surface of blank
+     card carrying one slender black needle and nothing else, as though the
+     printing were never applied."
+    -> completely clean, same object class that failed above
+
+  PASSED — object swapped for one with no native typography
+    "...each pierced by a small solid black circle from which three thin
+     concentric arcs radiate outward like a signal"
+    -> completely clean
+
+
+THE RULES
+
+1. Never append a negation list to the end of SCENE. It reads as keywords, and
+   keyword negation is the one thing the model handles worst.
+
+2. Name blankness as a positive property of the object, in the same sentence
+   that introduces the object. "A featureless dial face of blank matte card"
+   works; "a dial face (no text)" does not.
+
+3. Say what IS on the surface. "carrying one slender black needle and nothing
+   else" gives the model something to render, so it stops inventing detail to
+   fill the space. Absence alone is not a subject.
+
+4. "as though the printing were never applied" is a useful closer — it frames
+   the blankness as the object's history rather than as a restriction.
+
+5. Objects that natively carry typography — dials, gauges, banknotes, signs,
+   book covers, screens, license plates, clocks — need rule 2 and 3 applied
+   explicitly. Prefer an object without native lettering when the editorial
+   idea allows it.
+
+6. None of this is sufficient. Three of six renders produced text despite
+   instruction. POL-6's post-render vision check is the enforcement; these
+   rules only reduce how often it has to fire.

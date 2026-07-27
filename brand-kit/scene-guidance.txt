@@ -1,5 +1,41 @@
 SCENE authoring rules — how to keep text out of the frame (POL-4)
 
+WHY NEGATION FAILS — the published mechanism
+
+This is a known, measured, unsolved problem in text-to-image generation, not a
+quirk of our prompts. "Understanding the Impact of Negative Prompts: When and
+How Do They Take Effect?" (ECCV 2024) identifies two behaviours that together
+explain everything we observed:
+
+  Delayed Effect — a negative prompt only acts AFTER the positive prompt has
+  already rendered the corresponding content.
+
+  Deletion Through Neutralization — negatives remove a concept by mutual
+  cancellation in latent space against the positive prompt.
+
+Read together: the model must first render the text, then cancel it against
+something. If nothing positive occupies that region of the image, there is
+nothing to neutralize against, and the text survives. That is precisely why
+"no markings" leaves markings, and why "carrying one slender black needle and
+nothing else" removes them — the needle is the positive concept that occupies
+the dial face.
+
+It also explains why negation works better in Stable Diffusion-style tools:
+there, the negative prompt is a SEPARATE dedicated input processed
+independently of the positive one. Gemini image generation exposes no such
+parameter, so the machinery that makes negation work at all is unavailable to
+us. Exclusion has to be smuggled in as description.
+
+Google's own Nano Banana guidance agrees from the practical side: keep any
+negative list short, because long negative lists confuse the output; and "be
+descriptive, not repetitive."
+
+  - Negative prompt mechanism: link.springer.com/chapter/10.1007/978-3-031-73024-5_12
+  - Negation benchmark (NEG-TTOI): arxiv.org/pdf/2505.18434
+  - Automated negative prompting: arxiv.org/html/2512.07702v2
+  - Google prompting tips: blog.google/products-and-platforms/products/gemini/prompting-tips-nano-banana-pro/
+
+
 Grounded in Google's own guidance for Gemini image generation:
 
   "Describe the scene rather than just listing keywords. The model's deep

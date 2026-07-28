@@ -21,11 +21,12 @@ costs dollars.
 
 from __future__ import annotations
 
+import asyncio
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Any
 
-from genblaze_core import KeyStrategy, Modality, ObjectStorageSink, Pipeline
+from genblaze_core import Asset, KeyStrategy, Modality, ObjectStorageSink, Pipeline
 from genblaze_core.models.enums import StepStatus
 
 from newsdesk.blockprompt import BlockPrompt
@@ -124,6 +125,40 @@ def register_seedance_ratio(provider: Any) -> None:
         )
 
 
+# Attempts per model before moving down the chain, and the waits between them.
+#
+# Measured 2026-07-28: ten raw submits to seedance-2-0-fast-260128 returned five
+# 200s and five 500 "Backend error (401)". Not an entitlement gap — GMI's upstream
+# credential appears to load-balance across pool members, some unauthorized. The
+# same run saw blocks 3 and 4 complete on that model while block 5 failed on it.
+#
+# A flaky provider is not a dead one, and answering a transient 401 by switching
+# models is the wrong move twice over: it abandons a working model, and it bills
+# the fallback's higher rate for a failure that would have cleared on retry.
+# Same model first, then down the chain.
+RETRY_DELAYS_S = (2, 6, 15)
+
+# "timed out" as well as "timeout": httpx says "read operation timed out", and a
+# list carrying only the one-word form silently classifies every timeout as
+# permanent. Caught by the table in tests/test_blocks.py.
+_TRANSIENT = (
+    "401", "403", "429", "500", "502", "503", "504",
+    "timeout", "timed out", "temporarily", "overloaded",
+)
+
+
+def _is_transient(exc: Exception | str) -> bool:
+    """Whether a failure is worth trying the same model again for.
+
+    Deliberately treats 401/403 as transient, which is wrong in general and right
+    here: GMI wraps an upstream authorization failure as a 500 body, and the same
+    key succeeds on the next call half the time. A genuinely revoked key fails
+    every attempt and still walks the chain — it just costs three tries first.
+    """
+    text = str(exc).lower()
+    return any(t in text for t in _TRANSIENT)
+
+
 class BlockError(RuntimeError):
     """Raised when a block cannot be produced and the run must not continue."""
 
@@ -148,6 +183,9 @@ class BlockResult:
     cost_usd: float = 0.0
     status: str = "ready"
     note: str | None = None
+    # Every model tried, in order, with what it did. The fallback chain is only
+    # an honest claim if the record shows what was attempted, not just what won.
+    attempts: tuple[dict[str, Any], ...] = field(default_factory=tuple)
 
     @property
     def ok(self) -> bool:
@@ -198,6 +236,33 @@ def build_pipeline(
             duration=duration,
             aspect_ratio=ASPECT_RATIO,
         )
+    )
+
+
+def video_only_pipeline(
+    prompt: BlockPrompt,
+    still: Any,
+    *,
+    video_provider: Any,
+    model: str,
+    duration: int = DURATION_S,
+) -> Pipeline:
+    """Re-animate an existing still. The retry leg of the fallback chain.
+
+    Seeded with `external_inputs` rather than `input_from`, because the still
+    already exists and already cost money. Re-running the two-step pipeline to
+    change video models would regenerate a perfectly good image and, worse,
+    produce a *different* one — so the retry would silently change the block's
+    look as well as its provider.
+    """
+    return Pipeline(f"block-{prompt.block}-retry-{model}").step(
+        video_provider,
+        model=model,
+        prompt=prompt.render(),
+        modality=Modality.VIDEO,
+        external_inputs=[still],
+        duration=duration,
+        aspect_ratio=ASPECT_RATIO,
     )
 
 
@@ -263,4 +328,146 @@ def read_result(n: int, result: Any, *, requested_video_model: str) -> BlockResu
         used_fallback=actual_model != requested_video_model,
         cost_usd=round(cost, 4),
         status="ready",
+    )
+
+
+async def run_block(
+    prompt: BlockPrompt,
+    *,
+    image_provider: Any,
+    video_provider: Any,
+    sink_: Any,
+    models: list[str] | None = None,
+    duration: int = DURATION_S,
+    timeout: int = 1200,
+) -> BlockResult:
+    """One block, walking the model chain ourselves.
+
+    Genblaze carries `fallback_models` and it is still passed through below, but
+    it fires only on `ProviderErrorCode.MODEL_ERROR` — and its classifier reaches
+    that branch only for messages containing "not found" or "not available",
+    *after* auth and server checks have already claimed anything with 401, 403,
+    400, 500, 502 or 503 in it. GMI says "model X does not exist" over HTTP 404,
+    which lands in UNKNOWN. Measured: a bad slug with Kling registered as a
+    fallback failed outright and never attempted it.
+
+    So the chain is walked here as well. The SDK's version stays as the inner
+    layer — when it does fire it is cheaper, retrying inside the same run — and
+    this is the outer one that catches everything the classifier files elsewhere.
+    Without it `fallback_models` is decoration on the one story it exists to
+    tell, and CS-5 would pass by never engaging.
+
+    The retry re-animates the *existing* still rather than re-running both steps.
+    Regenerating the image would cost twice and produce a different picture, so a
+    provider substitution would silently change the block's look as well as its
+    lineage.
+    """
+    chain = list(models if models is not None else [VIDEO_MODEL, *VIDEO_FALLBACKS])
+    attempts: list[dict[str, Any]] = []
+    block: BlockResult | None = None
+    still: Any = None
+    spent = 0.0  # every attempt, including the ones that produced nothing usable
+
+    for model in chain:
+      for attempt_n in range(len(RETRY_DELAYS_S) + 1):
+        if attempt_n:
+            await asyncio.sleep(RETRY_DELAYS_S[attempt_n - 1])
+        try:
+            if still is None:
+                # Nothing salvageable yet, so both steps run. This is the first
+                # attempt, or a previous one died before producing a still.
+                result = await build_pipeline(
+                    prompt,
+                    image_provider=image_provider,
+                    video_provider=video_provider,
+                    video_model=model,
+                    fallbacks=[],  # the SDK chain is not used; see the docstring
+                    duration=duration,
+                ).arun(sink=sink_, raise_on_failure=False, timeout=timeout)
+                candidate = read_result(prompt.block, result, requested_video_model=model)
+                clip_uri, clip_sha, cost = (
+                    candidate.clip_uri, candidate.clip_sha256, candidate.cost_usd,
+                )
+                block = candidate
+                steps_tail = result.run.steps[-1]
+                if candidate.still_uri:
+                    still = Asset(
+                        url=candidate.still_uri,
+                        sha256=candidate.still_sha256,
+                        media_type="image/png",
+                    )
+            else:
+                # A still already exists and was already paid for. Re-animating it
+                # keeps the retry cheap AND keeps the picture identical, so a
+                # provider substitution changes the lineage without silently
+                # changing how the block looks.
+                retry = await video_only_pipeline(
+                    prompt, still, video_provider=video_provider, model=model,
+                    duration=duration,
+                ).arun(sink=sink_, raise_on_failure=False, timeout=timeout)
+                step = retry.run.steps[0]
+                steps_tail = step
+                clip_uri, clip_sha = _asset(step)
+                cost = float(getattr(step, "cost_usd", None) or 0.0)
+        except BlockError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — a dead provider is data, not a crash
+            # Preflight rejects an unknown slug by raising, even under
+            # raise_on_failure=False. Letting that escape would abort the whole
+            # run on the first bad model in a chain whose entire purpose is to
+            # survive one.
+            transient = _is_transient(exc)
+            attempts.append({
+                "model": model,
+                "status": f"error: {type(exc).__name__}",
+                "retryable": transient,
+            })
+            if transient and attempt_n < len(RETRY_DELAYS_S):
+                continue
+            break
+
+        spent += cost
+        attempts.append({
+            "model": model,
+            "status": "ready" if clip_uri else "failed",
+            "cost_usd": round(cost, 4),
+        })
+
+        if not clip_uri and attempt_n < len(RETRY_DELAYS_S):
+            # A step that came back failed rather than raising. Retry the same
+            # model only if the failure looks like it might clear — a 404 for a
+            # slug that does not exist will not, and the CS-5 run burned four
+            # attempts and 23 seconds of backoff proving that to itself.
+            step_error = getattr(steps_tail, "error", None) or getattr(
+                steps_tail, "error_code", ""
+            )
+            if _is_transient(f"{step_error} {getattr(steps_tail, 'error_message', '')}"):
+                continue
+            break
+
+        if clip_uri:
+            return replace(
+                block,
+                clip_uri=clip_uri,
+                clip_sha256=clip_sha,
+                video_model=model,
+                used_fallback=model != chain[0],
+                # The whole chain, not just the leg that worked. A block that
+                # burned a still and two failed calls before succeeding cost that
+                # much, and a budget that only counts successes is not a budget.
+                cost_usd=round(spent, 4),
+                status="ready",
+                note=None if model == chain[0]
+                else f"primary {chain[0]} failed; completed on {model}",
+                attempts=tuple(attempts),
+            )
+        break  # this model is exhausted; move down the chain
+
+    tried = ", ".join(f"{a['model']} ({a['status']})" for a in attempts)
+    return replace(
+        block if block is not None else BlockResult(n=prompt.block),
+        cost_usd=round(spent, 4),
+        status="failed",
+        note=f"no video provider completed this block — tried {tried}",
+        attempts=tuple(attempts),
     )

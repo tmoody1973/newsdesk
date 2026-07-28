@@ -39,6 +39,13 @@ VIDEO_FLAT_RATES = {
 # USD per second of output.
 VIDEO_SECOND_RATES = {
     "seedance-2-0-260128": 0.052,
+    # UNVERIFIED against the console — from GMI's own pricing post, which quotes
+    # ~$0.09/s for Seedance 2.0 Fast. Registered because the alternative is
+    # worse: with no rate at all, cost_usd comes back None and a run that used
+    # this model reports as if the video were free. The CS-5 run on 2026-07-28
+    # did exactly that, billing two blocks at $0.039 when only the image was
+    # counted. A wrong number that is visibly wrong beats a silent zero.
+    "seedance-2-0-fast-260128": 0.09,
 }
 
 # USD per asset.
@@ -49,10 +56,18 @@ AUDIO_RATES = {
 
 
 def per_duration(rate: float) -> PricingStrategy:
-    """Per-second strategy reading ``duration`` from step params."""
+    """Per-second strategy reading ``duration`` off the step.
+
+    `ctx.params` does not exist — PricingContext carries (step, assets,
+    provider_payload). The original read raised AttributeError inside the
+    pricing hook, where genblaze swallows it, so every per-second model silently
+    priced at None while looking configured. Found on the CS-5 run, which
+    reported two seedance-2.0 blocks at $0.039 — the image alone.
+    """
 
     def _strategy(ctx: PricingContext) -> float | None:
-        duration = ctx.params.get("duration")
+        params = getattr(ctx.step, "params", None) or {}
+        duration = params.get("duration") or (ctx.provider_payload or {}).get("duration")
         return None if duration is None else float(duration) * rate
 
     return _strategy

@@ -485,8 +485,26 @@ def _video_chain(index: int, clip_s: float, block: BlockTiming) -> str:
     )
 
 
+# Ducking, not volume automation. The bed is keyed off the voice itself, so it
+# steps back exactly when someone is speaking and returns in the gaps — which is
+# what makes uneven gaps audible as breathing rather than as dead air. A fixed
+# quiet level would be inaudible under the voice and still too loud between
+# lines.
+DUCK = "threshold=0.015:ratio=9:attack=25:release=450:makeup=1"
+
+# Long enough that the bed arrives and leaves rather than switching on and off.
+BED_FADE_IN_S = 2.0
+BED_FADE_OUT_S = 2.5
+
+
 def build_filtergraph(
-    blocks: Sequence[BlockTiming], clip_seconds: Sequence[float], n_clips: int
+    blocks: Sequence[BlockTiming],
+    clip_seconds: Sequence[float],
+    n_clips: int,
+    *,
+    music_index: int | None = None,
+    music_gain: float = 0.18,
+    runtime_s: float | None = None,
 ) -> str:
     """The whole edit as one graph: picture cut to the voice, voice placed on the cut.
 
@@ -505,10 +523,28 @@ def build_filtergraph(
         parts.append(
             f"[{n_clips + i}:a]aresample=48000,adelay={delay_ms}:all=1[a{i}]"
         )
+    voice_out = "aout" if music_index is None else "voicemix"
     parts.append(
         "".join(f"[a{i}]" for i in range(len(blocks)))
-        + f"amix=inputs={len(blocks)}:normalize=0:duration=longest[aout]"
+        + f"amix=inputs={len(blocks)}:normalize=0:duration=longest[{voice_out}]"
     )
+
+    if music_index is not None:
+        end = runtime_s if runtime_s is not None else blocks[-1].end_s
+        fade_at = max(end - BED_FADE_OUT_S, 0.0)
+        # The voice is used twice: once as the thing you hear, once as the key
+        # that pushes the bed down. asplit rather than two amix legs, so the
+        # sidechain follows the mixed voice and not one block of it.
+        parts.append(f"[{voice_out}]asplit=2[voice][key]")
+        parts.append(
+            f"[{music_index}:a]aresample=48000,volume={music_gain},"
+            f"atrim=0:{end:.3f},asetpts=N/SR/TB,"
+            f"afade=t=in:st=0:d={BED_FADE_IN_S},"
+            f"afade=t=out:st={fade_at:.3f}:d={BED_FADE_OUT_S}[bed]"
+        )
+        parts.append(f"[bed][key]sidechaincompress={DUCK}[ducked]")
+        parts.append("[ducked][voice]amix=inputs=2:normalize=0:duration=first[aout]")
+
     return ";".join(parts)
 
 
@@ -519,12 +555,19 @@ def render(
     *,
     ass_path: Path,
     out: Path,
+    music: Path | None = None,
+    music_gain: float = 0.18,
     fonts_dir: Path | None = None,
     ffmpeg: str | None = None,
 ) -> Path:
-    """Cut the picture to the voice and burn the captions. One pass, one file."""
+    """Cut the picture to the voice, duck the bed under it, burn the captions."""
     clip_seconds = [probe_duration(c) for c in clips]
-    graph = build_filtergraph(blocks, clip_seconds, len(clips))
+    graph = build_filtergraph(
+        blocks, clip_seconds, len(clips),
+        music_index=len(clips) + len(takes) if music else None,
+        music_gain=music_gain,
+        runtime_s=blocks[-1].end_s,
+    )
 
     # Three separate things bite here, and each one fails differently:
     #   - the filter parser splits options on ':' and reads '=' as key/value, so a
@@ -540,7 +583,7 @@ def render(
         burn += f":fontsdir={str(Path(fonts_dir).resolve())}"
 
     cmd = [ffmpeg or resolve_ffmpeg(), "-y", "-loglevel", "error"]
-    for path in [*clips, *takes]:
+    for path in [*clips, *takes, *([music] if music else [])]:
         cmd += ["-i", str(path)]
     cmd += [
         "-filter_complex", f"{graph};[vcat]{burn}[vout]",

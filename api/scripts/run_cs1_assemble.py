@@ -36,8 +36,12 @@ from genblaze_core.models.manifest import Manifest  # noqa: E402
 
 from newsdesk.brandkit import load
 from newsdesk.config import BUCKETS, ConfigError, backend, require
+from newsdesk.music import MODEL as MUSIC_MODEL
+from newsdesk.music import (BED_TARGET_LUFS, compose, gain_for, measure_lufs,
+                            movement_spans)
 from newsdesk.narration import sha256_of
-from newsdesk.receipt import BlockRecord, ReceiptError, build_run, embed, extract, publishable
+from newsdesk.receipt import (BlockRecord, ReceiptError, build_run, embed, extract,
+                              music_step, publishable)
 from newsdesk.state import RunState
 
 RUN_ID = "cs1-narration"
@@ -182,8 +186,32 @@ def main() -> int:
     print(f"\ngaps      {gaps}  ({'all distinct' if len(set(gaps)) == len(gaps) else 'DUPLICATES'})")
     print(f"runtime   {runtime:.2f}s   cues {len(cues)}")
 
+    # The bed. Generated once and cached: it is keyed to this timeline, so it is
+    # only stale if the timeline moves — and re-composing on every assembly would
+    # give the same story a different score each time it was cut.
+    bed = WORK / "bed.mp3"
+    if "--no-music" in sys.argv:
+        bed = None
+        print("\nmusic     skipped (--no-music)")
+    elif bed.exists():
+        print(f"\nmusic     cached {bed} ({probe_duration(bed):.2f}s)")
+    else:
+        spans = movement_spans(blocks)
+        print("\nmusic     composing " + " → ".join(
+            f"{s.name} {s.duration_ms / 1000:.1f}s" for s in spans))
+        compose(blocks, bed)
+        print(f"          {bed} ({probe_duration(bed):.2f}s), ducked under the voice")
+
+    bed_gain, lufs = 0.0, None
+    if bed is not None:
+        lufs = measure_lufs(bed)
+        bed_gain = gain_for(lufs)
+        print(f"          {lufs} LUFS → gain {bed_gain} → {BED_TARGET_LUFS} LUFS "
+              f"in the clear, ducked further under the voice")
+
     out = WORK / "cs1.mp4"
-    render(blocks, clips, takes, ass_path=ass_path, out=out)
+    render(blocks, clips, takes, ass_path=ass_path, out=out,
+           music=bed, music_gain=bed_gain)
     measured = probe_duration(out)
     print(f"\nrendered  {out}  {measured:.2f}s  {out.stat().st_size / 1e6:.1f} MB")
     if abs(measured - runtime) > 0.5:
@@ -217,7 +245,20 @@ def main() -> int:
         for block in blocks
     ]
 
-    run = build_run(state, records, run_name=f"{RUN_ID}-assembled", runtime_s=measured)
+    bed_step = None
+    if bed is not None:
+        bed_key = f"{RUN_ID}/bed.mp3"
+        store.put(bed_key, bed.read_bytes(), content_type="audio/mpeg")
+        bed_step = music_step(
+            store.get_durable_url(bed_key), sha256_of(bed),
+            model=MUSIC_MODEL,
+            plan=[{"section": sp.name, "first_block": sp.first_block,
+                   "duration_ms": sp.duration_ms} for sp in movement_spans(blocks)],
+            measured_lufs=lufs, gain=bed_gain,
+        )
+
+    run = build_run(state, records, run_name=f"{RUN_ID}-assembled",
+                    runtime_s=measured, music=bed_step)
     manifest = Manifest.from_run(run)
     manifest.canonical_hash = manifest.compute_hash()
 

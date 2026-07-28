@@ -112,12 +112,56 @@ def narration_step(record: BlockRecord) -> Step:
     )
 
 
+def music_step(
+    uri: str | None,
+    sha256: str | None,
+    *,
+    model: str,
+    plan: Sequence[dict[str, Any]],
+    measured_lufs: float | None,
+    gain: float,
+) -> Step:
+    """The bed, as a step. It is generated media in a generated video.
+
+    A provenance tool that accounts for every frame and every syllable and stays
+    silent about the score is not accounting for the video. The model is named,
+    the arc is recorded section by section, and the loudness decision is a number
+    rather than a taste — so "the music was ducked under the voice" is checkable
+    instead of asserted.
+    """
+    from genblaze_core.models.asset import Asset
+    from genblaze_core.models.enums import Modality, StepStatus
+
+    return Step(
+        provider="elevenlabs-music",
+        model=model,
+        modality=Modality.AUDIO,
+        status=StepStatus.SUCCEEDED,
+        assets=[Asset(url=uri, sha256=sha256, media_type="audio/mpeg")] if uri else [],
+        metadata={
+            "role": "music_bed",
+            # Recorded because it is the reason this model was chosen over a
+            # cheaper one: a tool arguing that generated media should carry
+            # provenance cannot score itself with a model that cannot say where
+            # its training came from.
+            "training_data": "licensed catalogue (ElevenLabs Music)",
+            "c2pa_signed": True,
+            "instrumental": True,
+            "arc": list(plan),
+            "measured_lufs": measured_lufs,
+            "gain_applied": gain,
+            "ducked_under_voice": "sidechaincompress keyed on the narration mix",
+        },
+    )
+
+
 def build_run(
     state: RunState,
     records: Sequence[BlockRecord],
     *,
     run_name: str,
     runtime_s: float,
+    music: Step | None = None,
 ) -> Run:
     """The master run: every block's real lineage, plus who approved it."""
     from genblaze_core.models.enums import RunStatus
@@ -132,6 +176,8 @@ def build_run(
     for record in records:
         steps.extend(_step_from_raw(raw) for raw in record.generation_steps)
         steps.append(narration_step(record))
+    if music is not None:
+        steps.append(music)
 
     return Run(
         name=run_name,

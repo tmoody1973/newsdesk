@@ -351,3 +351,41 @@ def test_no_line_ends_on_a_stranded_short_word():
             "financial year without any public announcement at all.")
     for text in _lines(subtitle_cues(line, start_s=0.0, take_s=9.6)):
         assert text.split()[-1] not in {"A", "OF", "IN", "TO", "AT", "AN", "THE"}, text
+
+
+# --- the bed is ducked, never faded by hand ---------------------------------
+
+
+def test_the_bed_is_keyed_off_the_voice(timeline):
+    from newsdesk.assembly import build_filtergraph
+
+    graph = build_filtergraph(timeline, [10.0] * 6, 6, music_index=12)
+    assert "sidechaincompress" in graph
+    assert "[bed][key]" in graph
+
+
+def test_there_is_no_music_leg_without_music(timeline):
+    from newsdesk.assembly import build_filtergraph
+
+    graph = build_filtergraph(timeline, [10.0] * 6, 6)
+    assert "sidechaincompress" not in graph
+    assert graph.endswith("[aout]")
+
+
+def test_the_bed_never_outlives_the_picture(timeline):
+    from newsdesk.assembly import build_filtergraph
+
+    graph = build_filtergraph(timeline, [10.0] * 6, 6, music_index=12)
+    assert f"atrim=0:{timeline[-1].end_s:.3f}" in graph
+
+
+def test_nothing_in_the_graph_re_times_audio_or_video(timeline):
+    """The four nevers, asserted against the actual command rather than the docs."""
+    from newsdesk.assembly import build_filtergraph
+
+    graph = build_filtergraph(timeline, [10.0] * 6, 6, music_index=12)
+    assert "atempo" not in graph
+    assert "rubberband" not in graph
+    assert "setpts=" not in graph.replace("setpts=PTS-STARTPTS", "").replace(
+        "asetpts=N/SR/TB", ""
+    )

@@ -51,6 +51,13 @@ def cs1_story() -> Story:
 # The golden script. Every line is 23-27 words across 2-3 sentences (POL-5, as
 # recalibrated against Marcus Louis on 2026-07-28), numbers spelled out, and
 # every number phrase carried by a claim whose evidence is verbatim in its fact.
+#
+# Claims span WHOLE ASSERTIONS, not bare quantities — rewritten 2026-07-28 when
+# `unmapped_assertion` arrived. "a third" mapped the number and left "Watertown
+# lost ... of its budget" tracing to nothing; the fact supports the whole clause,
+# so the whole clause is what gets mapped. This fixture is what the generator is
+# shown and measured against, so mapping it loosely here taught the model to map
+# loosely everywhere.
 def cs1_blocks() -> tuple[ScriptBlock, ...]:
     return (
         ScriptBlock(
@@ -63,9 +70,19 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
             ),
             claims=(
                 Claim(
-                    spoken="One point one billion dollars",
+                    spoken="One point one billion dollars in public broadcasting money vanished",
                     fact_id="F1",
-                    evidence="$1.1B",
+                    evidence="eliminated $1.1B in previously approved CPB funding",
+                ),
+                Claim(
+                    spoken="in a single July vote",
+                    fact_id="F1",
+                    evidence="July 2025 rescissions package",
+                ),
+                Claim(
+                    spoken="It had already been approved",
+                    fact_id="F1",
+                    evidence="previously approved CPB funding",
                 ),
             ),
         ),
@@ -78,8 +95,17 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
                 "itself. That pipeline is closed."
             ),
             claims=(
-                Claim(spoken="fifteen hundred", fact_id="F2", evidence="1,500+"),
-                Claim(spoken="nineteen sixty-seven", fact_id="F2", evidence="1967"),
+                Claim(
+                    spoken="The corporation that had routed federal money to more than fifteen hundred local stations",
+                    fact_id="F2",
+                    evidence="the conduit distributing federal funds to 1,500+ local public radio and",
+                ),
+                Claim(spoken="since nineteen sixty-seven", fact_id="F2", evidence="since 1967"),
+                Claim(
+                    spoken="voted to dissolve itself",
+                    fact_id="F2",
+                    evidence="board voted to dissolve",
+                ),
             ),
         ),
         ScriptBlock(
@@ -90,7 +116,13 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
                 "Grants were closed out. Nothing new was ever funded behind them, and "
                 "no replacement arrived."
             ),
-            claims=(Claim(spoken="Seventy percent", fact_id="F3", evidence="~70%"),),
+            claims=(
+                Claim(
+                    spoken="Seventy percent of the corporation's staff was gone within months",
+                    fact_id="F3",
+                    evidence="CPB cut staff ~70%",
+                ),
+            ),
         ),
         ScriptBlock(
             n=4,
@@ -101,11 +133,21 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
                 "forty-eight percent of revenue."
             ),
             claims=(
-                Claim(spoken="a third", fact_id="F4", evidence="a third of its budget"),
                 Claim(
-                    spoken="one point two million dollars", fact_id="F4", evidence="$1.2M"
+                    spoken="Watertown lost a third of its budget",
+                    fact_id="F4",
+                    evidence="WPBS Watertown NY lost ~$1M (a third of its budget)",
                 ),
-                Claim(spoken="forty-eight percent", fact_id="F4", evidence="48% of revenue"),
+                Claim(
+                    spoken="Fairbanks lost one point two million dollars and cut its overnight broadcasts",
+                    fact_id="F4",
+                    evidence="KUAC Fairbanks lost $1.2M, cut overnight broadcasts",
+                ),
+                Claim(
+                    spoken="West Texas lost forty-eight percent of revenue",
+                    fact_id="F4",
+                    evidence="Basin PBS West Texas lost 48% of revenue",
+                ),
             ),
         ),
         ScriptBlock(
@@ -117,8 +159,21 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
                 "donations surge instead."
             ),
             claims=(
-                Claim(spoken="fifty-seven", fact_id="F5", evidence="57 radio"),
-                Claim(spoken="donations surge", fact_id="F6", evidence="donation surges"),
+                Claim(
+                    spoken="Rural and tribal stations were hit hardest",
+                    fact_id="F5",
+                    evidence="Rural and tribal stations hit hardest",
+                ),
+                Claim(
+                    spoken="with fifty-seven tribal radio stations at risk",
+                    fact_id="F5",
+                    evidence="network of 57 radio + 4 TV stations at risk",
+                ),
+                Claim(
+                    spoken="Then Nashville, Louisville and Seattle saw donations surge",
+                    fact_id="F6",
+                    evidence="Some metros saw donation surges post-cut (Nashville, Louisville, KUOW Seattle)",
+                ),
             ),
         ),
         ScriptBlock(
@@ -131,9 +186,9 @@ def cs1_blocks() -> tuple[ScriptBlock, ...]:
             ),
             claims=(
                 Claim(
-                    spoken="One point one billion dollars",
+                    spoken="One point one billion dollars left the system",
                     fact_id="F1",
-                    evidence="$1.1B",
+                    evidence="eliminated $1.1B",
                 ),
             ),
         ),

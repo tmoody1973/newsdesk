@@ -77,11 +77,23 @@ _EXAMPLE_WORDS = len(_EXAMPLE.split())
 # miscounting it in the same breath.
 _EXAMPLE_SENTENCES = len([s for s in re.split(r"[.!?]+", _EXAMPLE) if s.strip()])
 
-# Three repair rounds, then stop. Design spec §6.4 caps retries on the principle
-# that repeated identical failures mean the prompt is wrong, not the seed —
-# surface it to the editor rather than burning attempts. Cheap here because it
-# is text, but the discipline is the same one the video AgentLoop uses.
-MAX_ATTEMPTS = 4
+# Repair rounds, then stop. Design spec §6.4 caps retries on the principle that
+# repeated IDENTICAL failures mean the prompt is wrong, not the seed — surface it
+# to the editor rather than burning attempts. Cheap here because it is text, but
+# the discipline is the same one the video AgentLoop uses.
+#
+# 4 -> 6 on 2026-07-28, when `unmapped_assertion` widened what a block has to
+# satisfy. The principle is unchanged and this is not a loosening of it: the
+# measured live runs CONVERGE rather than repeat. CS-2 went from four problems
+# to one across four attempts and ran out of budget one round short of clean,
+# with the last problem a real catch ("generating billions", supported by none
+# of the five facts). A cap tuned against a rule that only checked digits was
+# always going to be tight against one that checks assertions too.
+#
+# If a run ever fails with the SAME problem on every attempt, that is the case
+# §6.4 is about and no number fixes it — the ledger records each attempt so the
+# difference is visible rather than inferred.
+MAX_ATTEMPTS = 6
 
 # The one failure with no path to correctness. A claim citing F9 in a six-fact
 # story is not abridged or forgotten — the fact does not exist, and no rewrite
@@ -167,14 +179,23 @@ RULES:
 - Spell numbers out as they are spoken: "one point one billion dollars", not "$1.1B".
 - Assert nothing that is not in the facts above. Do not compute new figures from
   them — a derived number is an unsourced number.
-- For every quantity you state, emit a claim with:
+- For every assertion you make, emit a claim with:
     spoken   — the phrase exactly as it appears in your narration
     fact_id  — the fact it comes from
     evidence — an unbroken run of characters copied straight out of that fact.
                Do not abridge, do not splice two parts together, do not tidy
                the punctuation. Copy a span that is long enough to support the
                claim and stop.
-- Claims are also welcome for non-numeric assertions. Every claim is checked.
+- `spoken` must span the WHOLE assertion, not just the number inside it.
+  Write:  spoken = "Watertown lost a third of its budget"
+  Not:    spoken = "a third"
+  A claim covering only the quantity leaves "Watertown lost ... of its budget"
+  tracing to nothing, and that clause is a claim too. `spoken` and `evidence`
+  do not have to resemble each other — `spoken` is copied from your line,
+  `evidence` from the fact.
+- Any sentence containing a claim is read as reporting, so EVERY assertion in
+  that sentence must be mapped. A sentence with no claim in it is treated as
+  framing and needs none — which is where a closing image belongs.
 - Use every fact at least once across the six blocks. A fact the journalist
   sourced and verified, left on the floor, is research thrown away — and the
   receipt lists it as entered but unused.
@@ -300,6 +321,19 @@ def _repair_prompt(
             "For each one, either add a claim whose evidence is copied verbatim from the "
             "fact that supports it, or remove the quantity from the line. If no fact "
             "contains that figure, remove it — do not invent a source for it."
+        )
+
+    assertions = [p for p in unmapped if p.kind == "unmapped_assertion"]
+    if assertions:
+        listed = "\n".join(f"  {p}" for p in assertions)
+        sections.append(
+            f"These lines assert something with no claim behind it:\n\n{listed}\n\n"
+            "Each of these sits in a sentence that already carries a traced claim, so "
+            "it reads as reporting. Either widen an existing claim's `spoken` to cover "
+            "the whole assertion — \"Watertown lost a third of its budget\" rather than "
+            "\"a third\" — and quote evidence that supports all of it, or cut the "
+            "assertion from the line. If no fact supports it, cut it; do not stretch a "
+            "quote to reach it."
         )
 
     if quotes:

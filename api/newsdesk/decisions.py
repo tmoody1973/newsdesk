@@ -158,7 +158,12 @@ def judged(
     except Exception as exc:  # noqa: BLE001 — deliberate fail-closed boundary
         verdict, reason, response = (
             "reject",
-            f"checker unavailable ({type(exc).__name__}) — blocked rather than assumed safe",
+            # The message, not just the type. Failing closed is correct, but a
+            # bare "ProviderError" makes a rate limit, a bad model slug and a
+            # revoked key look identical in the ledger — and all three then read
+            # as the checker working. Diagnosing one cost three probes.
+            f"checker unavailable ({type(exc).__name__}: {str(exc)[:200]}) "
+            f"— blocked rather than assumed safe",
             "",
         )
     return record_decision(

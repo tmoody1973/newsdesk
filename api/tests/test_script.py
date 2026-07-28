@@ -11,7 +11,9 @@ import json
 import pytest
 from fixtures import cs1_blocks, cs1_story
 
+from newsdesk.claims import normalize, validate_script
 from newsdesk.decisions import Ledger
+from newsdesk.policy.gate import check_narration
 from newsdesk.script import ScriptError, generate_script, parse_blocks
 from newsdesk.state import RunState
 
@@ -221,21 +223,19 @@ def test_a_short_line_gets_one_repair_pass_before_rejection():
     assert len(blocks) == 6
 
 
-def test_a_fabricated_citation_is_not_retried():
-    """Citing a fact that does not say it gets no second chance.
+def test_a_citation_to_a_nonexistent_fact_is_not_retried():
+    """Citing a fact that does not exist gets no second chance.
 
-    This is the boundary that matters. An unmapped number is usually a real
-    figure the model forgot to declare, so it earns one ask (see the test
-    below). Evidence that is not in the cited fact is the model inventing a
-    source, and asking politely for a nicer version of that is how a validator
-    becomes a formality.
+    This is the boundary that survived contact with the live run. Abridged
+    evidence and forgotten mappings have benign readings and earn one ask;
+    inventing a fact ID does not — no rewrite makes F9 exist.
     """
     bad = json.loads(_payload(cs1_blocks()))
     bad["blocks"][0]["claims"] = [
         {
             "spoken": "One point one billion dollars",
-            "fact_id": "F1",
-            "evidence": "$2.4B",
+            "fact_id": "F9",
+            "evidence": "$1.1B",
         }
     ]
 
@@ -278,3 +278,179 @@ def test_an_unmapped_number_earns_one_repair_pass():
     assert "quantity with no claim" in calls[1]
     assert ledger.decisions[0].verdict == "pass"
     assert len(blocks) == 6
+
+
+# --- unused facts: repaired once, then surfaced, never gated -----------------
+
+
+def _payload_missing_f3() -> str:
+    """CS-1 with block 3 rewritten so nothing cites F3 and no number is orphaned."""
+    payload = json.loads(_payload(cs1_blocks()))
+    payload["blocks"][2]["narration"] = (
+        "Most of the corporation's staff was gone within months. Grants were "
+        "closed out. Nothing new was ever funded behind them, and no replacement "
+        "arrived."
+    )
+    payload["blocks"][2]["claims"] = []
+    return json.dumps(payload)
+
+
+def test_an_unused_fact_earns_one_repair_pass():
+    calls = []
+
+    def _twice(*args, **kwargs):
+        calls.append(kwargs.get("prompt", ""))
+
+        class _R:
+            text = _payload_missing_f3() if len(calls) == 1 else _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_twice)
+    assert len(calls) == 2, "an unused fact should be asked about once"
+    assert "F3" in calls[1], "the repair prompt must name the fact that went unused"
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6
+
+
+def test_an_unused_fact_never_blocks_the_script():
+    """It is not a policy rule. Nothing false reaches the screen because of it."""
+    _, ledger, blocks = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_fake_chat(_payload_missing_f3())
+    )
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6
+
+
+def test_a_fact_still_unused_after_the_ask_is_surfaced():
+    """Before the ask an orphan is noise; after it, it means something."""
+    _, ledger, _ = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_fake_chat(_payload_missing_f3())
+    )
+    assert "F3" in ledger.decisions[0].reason
+    assert "unused" in ledger.decisions[0].reason
+
+
+# --- throttling is waited out, not recorded as a refusal ---------------------
+
+
+def test_a_rate_limit_is_retried_not_recorded_as_a_reject(monkeypatch):
+    """A busy queue is not an editorial judgment. Recording it as one would put
+    'blocked' in the ledger for a script nobody ever objected to."""
+    monkeypatch.setattr("newsdesk.script.RETRY_DELAYS", (0, 0, 0))
+    calls = []
+
+    def _throttled_once(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError('GMICloud chat failed (429): rate_limit_exceeded')
+
+        class _R:
+            text = _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_throttled_once
+    )
+    assert len(calls) == 2
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6
+
+
+def test_a_non_throttle_error_is_not_retried(monkeypatch):
+    """Only throttles get patience. A bad slug should fail on the first try."""
+    monkeypatch.setattr("newsdesk.script.RETRY_DELAYS", (0, 0, 0))
+    calls = []
+
+    def _boom(*args, **kwargs):
+        calls.append(1)
+        raise RuntimeError("model not found")
+
+    _, ledger, _ = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_boom)
+    assert len(calls) == 1
+    assert ledger.decisions[0].verdict == "reject"
+    assert "model not found" in ledger.decisions[0].reason
+
+
+def test_abridged_evidence_earns_one_repair_pass():
+    """Quoting around an appositive is abridgement, not invention.
+
+    The live CS-1 run produced exactly this: "CPB announced it would wind down"
+    quoted from a fact carrying a clause between "CPB" and "announced". No string
+    check can tell that from a fabrication, so it gets one ask.
+    """
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][1]["claims"] = [
+        {"spoken": "fifteen hundred", "fact_id": "F2", "evidence": "CPB announced it would wind down"},
+        {"spoken": "nineteen sixty-seven", "fact_id": "F2", "evidence": "1967"},
+    ]
+
+    calls = []
+
+    def _twice(*args, **kwargs):
+        calls.append(kwargs.get("prompt", ""))
+
+        class _R:
+            text = json.dumps(bad) if len(calls) == 1 else _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_twice)
+    assert len(calls) == 2
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6
+
+
+def test_evidence_must_still_be_verbatim_in_an_accepted_script():
+    """The guarantee, not the number of chances. Retrying must never launder it."""
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][0]["claims"] = [
+        {"spoken": "One point one billion dollars", "fact_id": "F1", "evidence": "$2.4B"}
+    ]
+
+    _, ledger, blocks = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_fake_chat(json.dumps(bad))
+    )
+    assert ledger.decisions[0].verdict == "reject"
+    assert blocks == ()
+    assert "$2.4B" in ledger.decisions[0].reason
+
+
+def test_a_claim_bolted_on_without_editing_the_line_earns_one_repair_pass():
+    """What the model actually did when asked to place an unused fact: it added
+    a claim to block 6 whose quoted phrase was nowhere in block 6's narration."""
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][5]["claims"].append(
+        {"spoken": "CPB cut staff roughly seventy percent", "fact_id": "F3", "evidence": "~70%"}
+    )
+
+    calls = []
+
+    def _twice(*args, **kwargs):
+        calls.append(kwargs.get("prompt", ""))
+
+        class _R:
+            text = json.dumps(bad) if len(calls) == 1 else _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_twice)
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6
+
+
+def test_every_check_still_holds_on_an_accepted_script():
+    """The invariant that never moved, asserted directly rather than trusted."""
+    _, _, blocks = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_fake_chat(_payload(cs1_blocks()))
+    )
+    story = cs1_story()
+    known = {f.id for f in story.facts}
+    for b in blocks:
+        assert check_narration(b.narration).passed
+        for c in b.claims:
+            assert c.fact_id in known
+            assert normalize(c.spoken) in normalize(b.narration)
+            assert normalize(c.evidence) in normalize(story.by_id(c.fact_id).text)
+    assert validate_script(story, blocks).passed

@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any, Callable
 
 from genblaze_gmicloud.chat import chat
@@ -81,13 +82,41 @@ _EXAMPLE_SENTENCES = len([s for s in re.split(r"[.!?]+", _EXAMPLE) if s.strip()]
 # is text, but the discipline is the same one the video AgentLoop uses.
 MAX_ATTEMPTS = 4
 
-# Failures that get no second ask. Each one means the model cited a source that
-# does not support what it said, or quoted a line it did not write — an
-# integrity failure rather than a craft miss. An unmapped number is deliberately
-# NOT here: usually the figure is real and simply undeclared, and the repair
-# cannot launder a fabrication because it still has to produce evidence that
-# appears verbatim in a fact.
-TERMINAL_KINDS = frozenset({"unknown_fact", "evidence_missing", "spoken_missing"})
+# The one failure with no path to correctness. A claim citing F9 in a six-fact
+# story is not abridged or forgotten — the fact does not exist, and no rewrite
+# makes it exist.
+#
+# Everything else is repairable, and this boundary moved twice under live
+# testing before landing here. Both moves were driven by watching the actual
+# failure rather than imagining it: "evidence not in the fact" turned out to be
+# the model quoting around an appositive, and "quoted phrase not in the line"
+# turned out to be the model bolting a claim onto a block without editing the
+# narration, in response to being asked to use an unused fact. Neither is
+# fabrication, and no string check can tell them apart from it.
+#
+# What makes that safe is that retrying does not relax anything. An ACCEPTED
+# script always satisfies all four checks — real fact ID, spoken phrase present
+# in its line, evidence verbatim in its fact, no unmapped quantity. Retries only
+# change how many chances the model gets to produce one, and the count is
+# bounded at MAX_ATTEMPTS and disclosed in the ledger, so a script fixed three
+# times does not read as one that came back clean.
+TERMINAL_KINDS = frozenset({"unknown_fact"})
+
+# GMI throttles rapid sequential calls: a clean CS-1 run makes up to four in a
+# row and the fourth came back 429 "all endpoints are currently overloaded".
+# Without this the throttle is recorded as a *reject* — the run looks like the
+# checker refusing a script rather than a queue being busy.
+RETRY_DELAYS = (3, 8, 20)
+
+
+def _is_rate_limited(exc: Exception) -> bool:
+    """Whether a provider failure is a throttle worth waiting out.
+
+    Matches on both the classified code and the wire status, because the code is
+    normalized by the SDK and the status is not — and a retry loop that only
+    recognizes one of them silently stops retrying when either changes.
+    """
+    return "rate_limit" in str(getattr(exc, "error_code", "")).lower() or "429" in str(exc)
 
 
 class ScriptError(ValueError):
@@ -140,7 +169,10 @@ RULES:
 - For every quantity you state, emit a claim with:
     spoken   — the phrase exactly as it appears in your narration
     fact_id  — the fact it comes from
-    evidence — the supporting text copied verbatim from that fact
+    evidence — an unbroken run of characters copied straight out of that fact.
+               Do not abridge, do not splice two parts together, do not tidy
+               the punctuation. Copy a span that is long enough to support the
+               claim and stop.
 - Claims are also welcome for non-numeric assertions. Every claim is checked.
 - Use every fact at least once across the six blocks. A fact the journalist
   sourced and verified, left on the floor, is research thrown away — and the
@@ -228,7 +260,13 @@ def _pacing_instruction(narration: str) -> str:
     return " ".join(parts)
 
 
-def _repair_prompt(original: str, pacing: list, unmapped: list, failing: list[int]) -> str:
+def _repair_prompt(
+    original: str,
+    pacing: list,
+    unmapped: list,
+    orphans: tuple[str, ...],
+    failing: list[int],
+) -> str:
     """Ask for a fix, quoting each line's measured failure.
 
     Naming the number is what makes this work — "some blocks are too short"
@@ -251,8 +289,11 @@ def _repair_prompt(original: str, pacing: list, unmapped: list, failing: list[in
             "claim entry too."
         )
 
-    if unmapped:
-        listed = "\n".join(f"  {p}" for p in unmapped)
+    numbers = [p for p in unmapped if p.kind == "unmapped_number"]
+    quotes = [p for p in unmapped if p.kind == "evidence_missing"]
+
+    if numbers:
+        listed = "\n".join(f"  {p}" for p in numbers)
         sections.append(
             f"These lines state a quantity with no claim behind it:\n\n{listed}\n\n"
             "For each one, either add a claim whose evidence is copied verbatim from the "
@@ -260,17 +301,48 @@ def _repair_prompt(original: str, pacing: list, unmapped: list, failing: list[in
             "contains that figure, remove it — do not invent a source for it."
         )
 
+    if quotes:
+        listed = "\n".join(f"  {p}" for p in quotes)
+        sections.append(
+            f"These claims quote evidence that is not in the fact they cite:\n\n{listed}\n\n"
+            "Usually this means the quote was abridged — a clause was skipped, or two "
+            "pieces were joined. Copy an UNBROKEN run of characters out of the fact "
+            "instead, punctuation and all. A shorter exact quote beats a longer tidy one. "
+            "If the fact does not actually support the claim, cut the claim."
+        )
+
+    if orphans:
+        sections.append(
+            f"These facts were never used: {', '.join(orphans)}.\n\n"
+            "Work each one into whichever block it fits best, with a claim citing it "
+            "and evidence copied verbatim from it. Stay inside the length window while "
+            "you do — trim a qualifier to make room rather than letting the block run "
+            "long. If a fact genuinely cannot be placed without weakening the script, "
+            "leave it out and say nothing; it will be reported to the editor."
+        )
+
     body = "\n\n".join(sections)
-    listed = ", ".join(str(n) for n in failing)
+
+    if failing:
+        listed = ", ".join(str(n) for n in failing)
+        scope = (
+            f"Return ONLY block{'s' if len(failing) != 1 else ''} {listed} — "
+            f"{len(failing)} block(s), not {BLOCK_COUNT}. The others are finished and "
+            f"must not be resent."
+        )
+    else:
+        # Placing an unused fact is not tied to a block in advance, so the model
+        # chooses. It returns only what it touched, which keeps the same
+        # no-churn property the numbered case gets for free.
+        scope = "Return ONLY the blocks you actually changed, not all six."
+
     return f"""{original}
 
 ---
 
 You already answered this once. {body}
 
-Return ONLY block{'s' if len(failing) != 1 else ''} {listed} — {len(failing)} block(s), not
-{BLOCK_COUNT}. The others are finished and must not be resent. Same JSON shape as
-before, with each block keeping its original "n".
+{scope} Same JSON shape as before, with each block keeping its original "n".
 """
 
 
@@ -293,11 +365,22 @@ def generate_script(
     accepted: list[ScriptBlock] = []
 
     def _say(ask: str, *, expect: int | None) -> tuple[tuple[ScriptBlock, ...], str]:
-        response = chat_fn(
-            model, prompt=ask, temperature=0.4, max_tokens=2000, timeout=TIMEOUT_S
-        )
-        raw = getattr(response, "text", "") or ""
-        return parse_blocks(raw, expect=expect), raw
+        last: Exception | None = None
+        for delay in (0, *RETRY_DELAYS):
+            if delay:
+                time.sleep(delay)
+            try:
+                response = chat_fn(
+                    model, prompt=ask, temperature=0.4, max_tokens=2000, timeout=TIMEOUT_S
+                )
+            except Exception as exc:  # noqa: BLE001 — re-raised below unless throttled
+                if not _is_rate_limited(exc):
+                    raise
+                last = exc
+                continue
+            raw = getattr(response, "text", "") or ""
+            return parse_blocks(raw, expect=expect), raw
+        raise last  # type: ignore[misc]
 
     def _call() -> tuple[str, str, str]:
         blocks, raw = _say(prompt, expect=BLOCK_COUNT)
@@ -317,16 +400,50 @@ def generate_script(
             if terminal:
                 return "reject", "\n".join(str(p) for p in terminal), raw
 
-            # An unmapped number is different: usually the model stated a real
-            # figure and simply did not declare it. Worth one ask, and the ask
-            # cannot launder a fabrication — the repair still has to produce
-            # evidence that appears verbatim in a real fact.
-            unmapped = [p for p in problems if p.kind == "unmapped_number"]
+            # Everything else gets one ask. An unmapped number is usually a real
+            # figure the model forgot to declare; abridged evidence is usually a
+            # quote taken around an appositive. Neither ask can launder anything,
+            # because acceptance still requires evidence verbatim in a real fact.
+            unmapped = [p for p in problems if p.kind not in TERMINAL_KINDS]
+
+            # A fact the journalist sourced and the script never used. Measured
+            # on 2026-07-28 across eight runs: this tracks the fact's POSITION in
+            # the list, not its content — buried third of six it was dropped 3/3,
+            # moved to sixth it was used every time. So an unused fact is not the
+            # model exercising judgment, and reporting it as though it were would
+            # tell a journalist something untrue about their own work.
+            #
+            # Hence: ask once, then accept. It is not a gate — no POL rule covers
+            # it because nothing false reaches the screen when a fact goes unused,
+            # and the six-beat formula spends two blocks on one fact by design, so
+            # demanding full coverage would force worse writing. After an explicit
+            # ask, though, a fact that still will not fit means something real:
+            # either it does not belong in this story, or the story needs more
+            # than six blocks. That is worth surfacing. The unasked version is not.
+            used = {c.fact_id for b in blocks for c in b.claims}
+            orphans = tuple(f.id for f in story.facts if f.id not in used)
 
             if not pacing and not unmapped:
+                if orphans and attempt < MAX_ATTEMPTS:
+                    fixed, raw = _say(
+                        _repair_prompt(prompt, pacing, unmapped, orphans, []),
+                        expect=None,
+                    )
+                    replacements = {b.n: b for b in fixed}
+                    blocks = tuple(replacements.get(b.n, b) for b in blocks)
+                    continue
+
                 accepted.extend(blocks)
                 note = f" after {attempt - 1} repair pass(es)" if attempt > 1 else ""
-                return "pass", f"{len(blocks)} blocks, every claim traced to a fact{note}", raw
+                unused = (
+                    f" — {', '.join(orphans)} entered but unused after an explicit ask"
+                    if orphans else ""
+                )
+                return (
+                    "pass",
+                    f"{len(blocks)} blocks, every claim traced to a fact{note}{unused}",
+                    raw,
+                )
 
             if attempt == MAX_ATTEMPTS:
                 break
@@ -337,7 +454,9 @@ def generate_script(
             # each round fixed some lines and broke others and it never
             # converged. A block that already satisfies POL-5 is finished.
             failing = sorted({b.n for b, _ in pacing} | {p.block for p in unmapped})
-            fixed, raw = _say(_repair_prompt(prompt, pacing, unmapped, failing), expect=None)
+            fixed, raw = _say(
+                _repair_prompt(prompt, pacing, unmapped, orphans, failing), expect=None
+            )
 
             # Splice only the blocks that were asked about. The reply is allowed
             # to contain more — models resend the whole script however firmly

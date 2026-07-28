@@ -141,9 +141,16 @@ RETRY_DELAYS_S = (2, 6, 15)
 # "timed out" as well as "timeout": httpx says "read operation timed out", and a
 # list carrying only the one-word form silently classifies every timeout as
 # permanent. Caught by the table in tests/test_blocks.py.
+#
+# "rate_limit" for the same reason on a different provider: genblaze's
+# ElevenLabs adapter classifies a throttle to `code=rate_limit` and the status
+# code never appears in the message, so a list carrying only "429" read the most
+# transient failure there is as permanent. Measured on the CS-1 narration run of
+# 2026-07-28 — six concurrent takes, and blocks fell to LMNT on the first refusal
+# with no retry at all.
 _TRANSIENT = (
     "401", "403", "429", "500", "502", "503", "504",
-    "timeout", "timed out", "temporarily", "overloaded",
+    "timeout", "timed out", "temporarily", "overloaded", "rate_limit",
 )
 
 

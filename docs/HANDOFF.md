@@ -4,17 +4,19 @@
 **Branch:** `tarikjmoody/moo-425-moo-419-brand-kit-and-script` (11 commits ahead of `main`)
 **Linear:** [Newsdesk — Backblaze Generative Media Hackathon](https://linear.app/moodyco/project/newsdesk-backblaze-generative-media-hackathon-5f68ce40d2cc) · team `MOO`
 **Deadline:** submit **Aug 2**, hard cut **Aug 3, 5:00 PM EDT**
-**Spend:** ~$4 of ~$25 · `uv run pytest tests/ -q` → **155 passed**, zero network, $0
+**Spend:** ~$5 of ~$25 · `uv run pytest tests/ -q` → **209 passed**, zero network, $0
 
 ## The one thing that matters
 
-**Nothing has produced a finished MP4 yet.** Facts, script, stills and clips all
-work end to end. There is no voice and no assembly. Everything else on the board
-decorates a video that does not exist.
+**Nothing has produced a finished MP4 yet.** Facts, script, stills, clips *and
+now voice* all work end to end. What is missing is assembly.
 
-Two issues are the spine, in this order: **MOO-426 (narration)** then
-**MOO-428 (approval + assemble + embed + verify)**. Do not start the vision
-check, the web UI, the Parquet audit or the second policy check before those.
+**MOO-428 (approval + assemble + embed + verify) is the only thing on the
+critical path.** Do not start the vision check, the web UI, the Parquet audit or
+the second policy check before it. Everything it needs already exists: six clips
+in `b2://newsdesk-assets/cs1-{through-line}/`, six trimmed takes in
+`b2://newsdesk-assets/cs1-narration/`, and `voice_duration_s` per block in
+`b2://newsdesk-runs/cs1-narration/state.json`.
 
 ## Where to read first
 
@@ -39,10 +41,10 @@ assumption.
 
 ## Status
 
-**Done:** MOO-415, 416, 417, 418, **419**, 420, 421, 422, **425**, 432, 433.
+**Done:** MOO-415, 416, 417, 418, **419**, 420, 421, 422, **425**, **426**, 432, 433.
 **Effectively done:** MOO-424 — six blocks generate end to end and CS-5 passes;
 only ring-contraction legibility is open, and it is cosmetic.
-**Open:** MOO-423, **426**, **428**, 427, 429, 430, 431.
+**Open:** MOO-423, **428**, 427, 429, 430, 431.
 
 What works, verified against real output:
 
@@ -55,26 +57,15 @@ What works, verified against real output:
 - **CS-5** — sabotaged blocks complete on the Kling fallback with the manifest
   naming the model that ran; a fully-dead chain fails closed; healthy blocks stay
   on the primary.
+- **Narration** — six takes on `eleven_v3` / Marcus Louis, silence stripped,
+  `ffprobe`d, uploaded, $0.256, 64.0s of runtime. CS-5's TTS leg passes: a
+  revoked ElevenLabs key puts all six on LMNT with the manifest naming the
+  substitution, $0.15. Run it with `scripts/run_cs1_narration.py [--reuse]
+  [--sabotage]`.
 - **Brand kit** — published to `b2://newsdesk-brand-kit/kit/`, loads at runtime,
   refuses to fall back on a missing kit. `scripts/verify_brand_kit.py` → 4/4.
 
 ## Immediate next work
-
-### MOO-426 — narration (do this first)
-
-The issue was rewritten today; read it. Two things to know before you write code:
-
-**The pricing gotcha is blocking, not cosmetic.** `pricing.py` registers
-`ElevenLabs-TTS-v3` at $0.10 — that is the *GMI* slug and rate. `voice.json` says
-we call ElevenLabs **directly** with `eleven_v3`, so the registered rate applies
-to a path we do not use and a direct run reports `cost_usd = None`. Two bugs of
-exactly this shape were found today and both made video look free. Register a
-rate, mark it UNVERIFIED if you don't have the real number, never leave a model
-unpriced.
-
-**Walk the fallback chain yourself.** Copy the pattern from
-`blocks.run_block` — including `_is_transient` and the same-model retry. Do not
-rely on `fallback_models`; see below.
 
 ### MOO-428 — approval, assembly, embed, verify
 
@@ -93,6 +84,17 @@ itself a named failure mode. The model now is **audio leads, picture follows**:
 Never: speed-compress the voice, stretch video, squeeze audio to fill a window,
 centre a take, space gaps evenly. The numbers live in `voice.json`'s
 `assembly_contract` block, not in code constants.
+
+Everything assembly needs is measured and saved. Read `voice_duration_s` off the
+run state rather than re-probing — it is already the trimmed number. The takes in
+B2 are the trimmed files; the raw ones were never uploaded, and
+`raw_duration_s` in the state is what makes "we stripped the silence" checkable.
+
+**Before you plan the timeline, read the open question at the bottom about the
+two windows.** Three of six blocks currently land at 10.9-12.6s against a
+published 9.0-10.5s window, so a six-block piece runs ~64s rather than ~60s.
+Nothing is broken by that — §6.6 derives block length from the take — but the
+number you budget the piece against should be the measured one.
 
 ## Assumptions that died — do not resurrect them
 
@@ -143,6 +145,32 @@ Each cost real money or a real run. Linear comments have the evidence.
 14. **The prompt pack's "style key is the whole game" is wrong on this stack.**
     Written for Higgsfield. See `docs/` and the MOO-428 comment.
 
+**Narration, 2026-07-28 (MOO-426):**
+
+15. **`eleven_v3` does not accept SSML `<break>`.** ElevenLabs documents break
+    tags on every model *except* v3; v3 takes audio tags. `[pause]` buys ~0.36s
+    at each internal sentence boundary, `[long pause]` ~1.25s, and they are
+    interpreted rather than spoken — which `silencedetect` proves and duration
+    alone cannot. Word-level alignment is **not** a valid check: it aligns
+    against input characters, so the tag appears whether it was voiced or not.
+16. **`[short pause]` buys nothing** and was removed from the ladder. v3's audio
+    tags are probabilistic and the smallest notch is the most likely to be
+    ignored.
+17. **Six concurrent ElevenLabs calls return `code=rate_limit`** and push four of
+    six blocks onto LMNT — a narrator change we caused ourselves, recorded as
+    though the provider had failed. `TTS_CONCURRENCY = 2`.
+18. **`rate_limit` carries no status code.** `_TRANSIENT` held "429" and read the
+    most transient failure there is as fatal.
+19. **`register_pricing()` silently drops a connector's param contract** when the
+    connector has no model families. It would have swapped LMNT's narrator for
+    the provider default while the manifest still named Nathan. Use
+    `pricing._price()`.
+20. **LMNT pads heavily** — one take came back 40.08s raw for 11.35s of words.
+21. **An overrun has no correction on this stack.** `voice_settings.speed` is not
+    forwarded by the adapter, and shortening a line would edit words `claims.py`
+    has already traced to a fact. Re-rendering was tried and priced: eight extra
+    renders, one landed, ~$0.25.
+
 ## Gotchas that will bite
 
 - **`gate.py` must never import anything network-capable.** `test_structure.py`
@@ -177,10 +205,13 @@ Each cost real money or a real run. Linear comments have the evidence.
 | `gemini-2.5-flash-image` | $0.039/asset | $0.23 |
 | `seedance-1-0-pro-fast-251015` | $0.022/asset | $0.13 |
 | `kling-image2video-v2.1-master` (fallback) | $0.28/asset | $1.68 |
-| ElevenLabs direct | **unregistered — fix this** | ? |
+| `eleven_v3` direct | $0.22/1k chars (UNVERIFIED) | $0.26 |
+| `lmnt` direct (fallback) | $0.15/1k chars | $0.15 |
 
-A full story on the primary chain is **$0.97**, against the design's projected
-$3.95. Iterate freely.
+A full story on the primary chain is **$1.23** — $0.97 of picture plus $0.26 of
+voice — against the design's projected $3.95. Iterate freely. The narration
+figure is measured, not modelled: it is what
+`scripts/run_cs1_narration.py --reuse` actually billed.
 
 ## Working agreements observed
 
@@ -207,3 +238,17 @@ $3.95. Iterate freely.
 4. **Voice cloning for the demo video only?** Your own voice would be strong for
    MOO-431's demo. It would be wrong for the product — a provenance tool whose
    narrator is a clone of a real person invites the question POL-1 forecloses.
+5. **The two published windows disagree, and it is an editorial call.** POL-5
+   admits 23-27 words; on this narrator that produced 9.25-12.56s across six
+   blocks against a 9.0-10.5s take window. Three of six miss, all long, and no
+   correction reaches them. Either widen `target_take_seconds` to ~9.0-12.5s and
+   accept a ~65s piece, or narrow POL-5 to ~22-25 words and keep ~60s. The
+   measurements and both options are in `voice.json` under
+   `delivery.measured_2026_07_28_narration`.
+6. **The ElevenLabs rate is a guess.** `eleven_v3` is registered at $0.22/1k
+   characters — Creator tier, the most expensive plausible number, marked
+   UNVERIFIED. The real figure is at
+   https://elevenlabs.io/app/settings/billing.
+7. **Two takes need a listen.** Back to back for the same voice, and one paced
+   take to confirm the `[pause]` tag is not audible as a word. The instruments
+   say silence; only ears close it.

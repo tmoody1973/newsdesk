@@ -13,7 +13,14 @@ contract-specific — verify against the console before trusting a total.
 
 from __future__ import annotations
 
-from genblaze_core.providers import PricingContext, PricingStrategy, per_unit
+import dataclasses
+
+from genblaze_core.providers import (
+    PricingContext,
+    PricingStrategy,
+    per_input_chars,
+    per_unit,
+)
 
 # USD per asset.
 IMAGE_RATES = {
@@ -48,10 +55,40 @@ VIDEO_SECOND_RATES = {
     "seedance-2-0-fast-260128": 0.09,
 }
 
-# USD per asset.
+# USD per asset, on the GMI-routed audio path.
+#
+# We do not take that path. `brand-kit/voice.json` calls ElevenLabs directly,
+# because GMI rejects the `ElevenLabs-TTS-v3` slug — so this rate is registered
+# against a route no run uses, and a direct call priced at nothing while looking
+# configured. That is the same failure shape as the two silent zeros found on
+# 2026-07-28. Kept, because a GMI-routed run is still reachable by env override
+# and an unpriced model is worse than a stale one; the direct rates are below.
 AUDIO_RATES = {
     "ElevenLabs-TTS-v3": 0.10,
     "MiniMax-TTS-Speech-2.6-Turbo": 0.06,
+}
+
+# USD per 1,000 input characters, on the direct provider paths (MOO-426).
+#
+# UNVERIFIED. Derived from ElevenLabs' Creator tier — $22/month for 100,000
+# credits, at one credit per character — which is the most expensive plausible
+# rate and therefore the safe direction for a budget guard. v3 has shipped at a
+# promotional discount before now, and per-credit cost drops on higher tiers, so
+# the real number is likely lower. Verify at
+# https://elevenlabs.io/app/settings/billing and replace.
+#
+# Registered rather than left blank on purpose: with no rate, `cost_usd` comes
+# back `None` and six takes report as free. A wrong number that is visibly
+# labelled wrong beats a silent zero.
+ELEVENLABS_CHAR_RATES = {
+    "eleven_v3": 0.22,
+}
+
+# USD per 1,000 input characters. From genblaze-lmnt's own docstring, which
+# records 0.00015 USD/char as the rate the SDK hardcoded before 0.3.0 moved
+# pricing out to the caller.
+LMNT_CHAR_RATES = {
+    "lmnt": 0.15,
 }
 
 
@@ -73,11 +110,35 @@ def per_duration(rate: float) -> PricingStrategy:
     return _strategy
 
 
-def register_all(*, image=None, video=None, audio=None) -> None:
+def _price(provider, slug: str, strategy: PricingStrategy) -> None:
+    """Attach a rate to a slug without discarding its parameter contract.
+
+    `register_pricing()` resolves its base spec through the user layer, then a
+    family match, then a **bare** `ModelSpec` — and a bare user spec wins over
+    the registry fallback in `get()`. On a connector with no families that is
+    silently destructive: LMNT carries `voice_id` → `voice` on its fallback
+    spec, so pricing it the obvious way drops the alias, `voice_id` never
+    reaches the wire, and every line is read in LMNT's default voice while the
+    manifest still names Nathan.
+
+    Resolving the spec first and replacing only `pricing` keeps the contract.
+    Exactly the seedance `aspect_ratio`/`ratio` bug wearing different clothes:
+    a parameter arriving under a name nothing reads.
+    """
+    spec = provider.models.get(slug)
+    provider.models.register(
+        dataclasses.replace(spec, model_id=slug, pricing=strategy), override=True
+    )
+
+
+def register_all(*, image=None, video=None, audio=None, elevenlabs=None, lmnt=None) -> None:
     """Attach rates to whichever providers are supplied.
 
     Call once at pipeline construction. Providers not passed are skipped, so a
     policy-gate-only run never touches this.
+
+    `audio` is the GMI-routed TTS provider; `elevenlabs` and `lmnt` are the
+    direct ones the narration chain actually uses.
     """
     if image is not None:
         for slug, rate in IMAGE_RATES.items():
@@ -90,6 +151,12 @@ def register_all(*, image=None, video=None, audio=None) -> None:
     if audio is not None:
         for slug, rate in AUDIO_RATES.items():
             audio.models.register_pricing(slug, per_unit(rate))
+    if elevenlabs is not None:
+        for slug, rate in ELEVENLABS_CHAR_RATES.items():
+            _price(elevenlabs, slug, per_input_chars(rate, per=1000))
+    if lmnt is not None:
+        for slug, rate in LMNT_CHAR_RATES.items():
+            _price(lmnt, slug, per_input_chars(rate, per=1000))
 
 
 def estimate_run(blocks: int = 6, *, seconds: int = 10, video_model: str) -> float:

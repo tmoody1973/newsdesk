@@ -25,6 +25,9 @@ from newsdesk.blocks import RETRY_DELAYS_S, _is_transient
         ("GMICloud submit failed (500): server error", True),
         ("read operation timed out", True),
         ("Read timeout on endpoint", True),
+        # No status code anywhere in it — genblaze's ElevenLabs adapter reports
+        # a throttle as `code=rate_limit` and the 429 never reaches the message.
+        ("ElevenLabs TTS failed: headers: {...} (code=rate_limit)", True),
         # Will never clear. Retrying only burns the backoff.
         ("GMICloud submit failed (404): model seedance-x does not exist", False),
         ("invalid input: duration must be 4-15", False),

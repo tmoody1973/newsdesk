@@ -179,25 +179,37 @@ def check(prompt: BlockPrompt, *, narration: str = "", fact_ids: tuple[str, ...]
 
     # POL-5 — narration fits its block (coarse bound; measured take is enforcement)
     if narration:
-        words = len(narration.split())
-        sentences = len([p for p in re.split(r"[.!?]+", narration) if p.strip()])
-        est = estimate_take_seconds(narration)
-        ok = MIN_WORDS <= words <= MAX_WORDS and MIN_SENTENCES <= sentences <= MAX_SENTENCES
-        why = []
-        if not MIN_WORDS <= words <= MAX_WORDS:
-            why.append(f"{words} words (need {MIN_WORDS}-{MAX_WORDS})")
-        if not MIN_SENTENCES <= sentences <= MAX_SENTENCES:
-            why.append(
-                f"{sentences} sentence{'s' if sentences != 1 else ''} "
-                f"(need {MIN_SENTENCES}-{MAX_SENTENCES}) — sentence-end pauses are what "
-                f"fill the ten-second window, so one long sentence runs short"
-            )
-        findings.append(Finding(
-            "POL-5", n["POL-5"], ok,
-            f"{'; '.join(why)}. Estimated ~{est:.1f}s." if not ok else "",
-        ))
+        findings.append(check_narration(narration))
 
     return GateResult(findings=tuple(findings))
+
+
+def check_narration(narration: str) -> Finding:
+    """POL-5 on one line, independent of any block prompt.
+
+    Split out so script generation (MOO-419) rejects an over-long line before it
+    is ever paired with a prompt, without either module carrying its own copy of
+    the window. One policy number, one place.
+    """
+    words = len(narration.split())
+    sentences = len([p for p in re.split(r"[.!?]+", narration) if p.strip()])
+    est = estimate_take_seconds(narration)
+    ok = MIN_WORDS <= words <= MAX_WORDS and MIN_SENTENCES <= sentences <= MAX_SENTENCES
+
+    why = []
+    if not MIN_WORDS <= words <= MAX_WORDS:
+        why.append(f"{words} words (need {MIN_WORDS}-{MAX_WORDS})")
+    if not MIN_SENTENCES <= sentences <= MAX_SENTENCES:
+        why.append(
+            f"{sentences} sentence{'s' if sentences != 1 else ''} "
+            f"(need {MIN_SENTENCES}-{MAX_SENTENCES}) — sentence-end pauses are what "
+            f"fill the ten-second window, so one long sentence runs short"
+        )
+
+    return Finding(
+        "POL-5", _names()["POL-5"], ok,
+        f"{'; '.join(why)}. Estimated ~{est:.1f}s." if not ok else "",
+    )
 
 
 def negative_constant() -> str:

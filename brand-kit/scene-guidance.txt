@@ -126,3 +126,36 @@ THE RULES
 6. None of this is sufficient. Three of six renders produced text despite
    instruction. POL-6's post-render vision check is the enforcement; these
    rules only reduce how often it has to fire.
+
+---
+
+## The style key (added 2026-07-27, MOO-425)
+
+`brand-kit/style-key.png` is candidate 6 of the six rendered on 2026-07-26 into
+`b2://newsdesk-brand-kit/style-key-candidates/`. All six were viewed at full
+size, not as thumbnails.
+
+**Why this one.** It is the only candidate that satisfies every token in
+`style-tokens.txt` at once:
+
+- GROUND is warm cream with an even grey halftone dot field *and* visible paper
+  grain. Candidate 3's ground was a woven canvas texture with the halftone
+  reduced to one patch; candidate 5's dots were high-contrast black, which reads
+  as pattern rather than as printing.
+- ACCENTS are deep navy and coral and nothing else. Candidate 5's blue is a
+  bright royal, not navy. Candidate 1's ground carries multicoloured speckle —
+  stray red and blue flecks — which violates "no other accent colour appears".
+- Candidate 2's halftone is gold-dotted and its kraft tape dominates, pulling the
+  ground toward tan. `style-tokens.txt` says the ground is never tan.
+- ELEMENTS: torn white paper borders on both shapes, tape strips, two
+  double-drawn hand marker circles, and a marker arrow — the full vocabulary in
+  one frame.
+- No readable text anywhere in the frame, at any zoom.
+
+**It is documentation, not a pipeline input.** MOO-424 established that feeding
+a style key to an image model as a reference made consistency *worse* — two
+scenes generated from one key produced a solid-blue ground and a warm-tan
+ground, while naming the palette explicitly in text locked it. The key exists so
+an editor can see the house style on the Brand Kit page, and so a reviewer can
+check a rendered block against an agreed reference by eye. No generation call
+receives it. See `newsdesk/brandkit.py`.

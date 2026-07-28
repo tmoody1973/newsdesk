@@ -1,0 +1,46 @@
+; Newsdesk burned-in subtitle style (MOO-425)
+;
+; Anton, uppercase, ink on a pasteboard halo. Same face as the app's stamps, on
+; purpose: the UI spec's continuity rule is that the tool and the media it
+; produces should be visibly the same product, and Anton is the one typeface
+; both share.
+;
+; Dark-on-light rather than the usual white-on-black. The house ground is warm
+; cream paper (brand-kit/style-tokens.txt), so white captions would dissolve
+; into it. Ink fill inside a thick pasteboard outline reads as a printed
+; caption pasted onto the collage instead of a broadcast overlay.
+;
+; Colours are the app's own tokens, not invented ones:
+;   ink        #1A1917  ->  &H0017191A
+;   pasteboard #E8E6DF  ->  &H00DFE6E8
+;   canary     #F2C744  ->  &H0044C7F2   (the UI spec assigns canary to highlights)
+; ASS stores colour as &HAABBGGRR — bytes reversed from hex RGB, alpha 00 = opaque.
+;
+; PlayRes is the 9:16 delivery frame. libass scales outline and shadow with it
+; (ScaledBorderAndShadow: yes), so burning at a different output size keeps the
+; same proportions rather than producing hairline outlines.
+;
+; PREREQUISITE FOR ASSEMBLY (Day 4): Anton must be resolvable by libass on the
+; machine running the burn. ffmpeg does not embed it — a missing face falls back
+; silently to something else, and nobody notices until the render is watched.
+; Verify with:  fc-list | grep -i anton
+
+[Script Info]
+Title: Newsdesk burned subtitles
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Anton,72,&H0017191A,&H0017191A,&H00DFE6E8,&H0017191A,0,0,0,0,100,100,2,0,1,7,3,2,90,90,220,1
+Style: Number,Anton,72,&H0044C7F2,&H0044C7F2,&H0017191A,&H0017191A,0,0,0,0,100,100,2,0,1,7,3,2,90,90,220,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+; Events are written per run by the assembler. This line is a rendering probe —
+; burn it once to confirm Anton actually resolved before committing a full run.
+Dialogue: 0,0:00:00.00,0:00:03.00,Default,,0,0,0,,ANTON RESOLVED — STYLE KEY OK

@@ -11,6 +11,7 @@ Schema imported verbatim from ~/.claude/skills/vox-motion-graphics.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -18,7 +19,7 @@ from pathlib import Path
 
 # api/newsdesk/blockprompt.py -> repo root
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BRAND_KIT = REPO_ROOT / "brand-kit"
+DEFAULT_BRAND_KIT = REPO_ROOT / "brand-kit"
 
 FIELDS = ("STYLE REFERENCE", "SCENE", "MOTION", "AUDIO", "NEGATIVE")
 
@@ -36,16 +37,42 @@ class BlockPromptError(ValueError):
     """Raised when a prompt does not conform to the five-field schema."""
 
 
-@lru_cache(maxsize=1)
+def kit_dir() -> Path:
+    """Where the brand kit lives on this filesystem.
+
+    Overridable via NEWSDESK_BRAND_KIT_DIR so a deployed run reads the kit
+    fetched from B2 (`newsdesk.brandkit.sync_down`) rather than whatever
+    happens to be checked out beside the code.
+
+    The indirection is what keeps the two requirements compatible. MOO-425
+    wants the published kit at runtime; `tests/test_structure.py` walks this
+    module's import graph — gate.py imports it — and fails the build if
+    anything network-capable appears. So the fetch lives in `brandkit.py`,
+    which this module must never import, and the two meet at a directory path.
+    """
+    override = os.getenv("NEWSDESK_BRAND_KIT_DIR")
+    return Path(override) if override else DEFAULT_BRAND_KIT
+
+
+@lru_cache(maxsize=8)
+def _read(name: str, directory: str) -> str:
+    """Cached kit read, keyed on the directory as well as the file.
+
+    Keying on the directory matters: an lru_cache over a no-argument reader
+    would outlive a NEWSDESK_BRAND_KIT_DIR change and hand back the previous
+    kit's bytes — which POL-2 would then byte-compare against, silently.
+    """
+    return (Path(directory) / name).read_text(encoding="utf-8").strip()
+
+
 def negative_line() -> str:
     """The fixed exclusion line. A policy constant, not a suggestion (POL-2)."""
-    return (BRAND_KIT / "negative.txt").read_text(encoding="utf-8").strip()
+    return _read("negative.txt", str(kit_dir()))
 
 
-@lru_cache(maxsize=1)
 def style_tokens() -> str:
     """The house style descriptor, verbatim from the craft layer."""
-    return (BRAND_KIT / "style-tokens.txt").read_text(encoding="utf-8").strip()
+    return _read("style-tokens.txt", str(kit_dir()))
 
 
 @dataclass(frozen=True)

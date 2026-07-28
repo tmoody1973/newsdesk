@@ -1,3 +1,67 @@
+# What the vox craft changes here
+
+## First: the section nobody read
+
+`~/.claude/skills/vox-motion-graphics/SKILL.md` has a section titled
+**"Story engine (what separates a banger from postcards)"**. It opens:
+
+> *"A sequence of pretty, disconnected scenes reads as a museum slideshow."*
+
+It lists five things. **Newsdesk implements one.**
+
+| | | |
+|---|---|---|
+| 1 | **One through-line object** travelling every block and escalating | ✅ built |
+| 2 | **A question hook, answered last** — the question ON a prop ("WHO PAYS?", "WHO BLINKS?"), narration withholds the answer to the kicker | ❌ |
+| 3 | **Fake-oner** — every clip one continuous FPV move beginning and ending in full motion blur, so hard cuts read as one unbroken shot | ❌ **we built the opposite** |
+| 4 | **An impact every ~3s** (slam, stamp, shockwave, snap), **at least one speed ramp per block**, alternate extreme macro and wide, **whiplash the scale** | ❌ **we built the opposite** |
+| 5 | **One reveal shot** the whole video is remembered by | ❌ |
+
+On 3 and 4 the repo does not merely omit the craft, it contradicts it:
+
+- `scene.MOTION`: *"small paper shifts; a slow push in. No camera shake, no whip
+  pans, no parallax"* — against *"one continuous high-energy FPV camera move
+  with aggressive speed ramps."*
+- `scene.IDENTITY`: *"same silhouette, same proportions, **same position in
+  frame**"* — against *"alternate extreme macro and wide diorama; whiplash the
+  scale (giant face → ant-sized figures → colossal prop)."*
+
+`IDENTITY` was written to stop the model redesigning the tower between blocks.
+It fixed that and froze the camera with it. Hold the object; free the shot.
+
+### What a block prompt is supposed to read like
+
+From `references/diorama-doc.md`, the worked opening of "WHO BLINKS?":
+
+> *EXTREME slow-motion macro of a halftone-printed human eye on newsprint as a
+> thick black censor bar SLAMS down over it like a guillotine, paper dust
+> exploding on impact. Violent speed-ramp pull-back reveals it is a giant
+> newspaper front-page portrait… a gust RIPS the page away… each rip faster than
+> the last. The camera then DIVES at full speed into a tearing gap in a giant
+> aged treaty document as a burnt-orange stamp punches the letterpress word
+> "EXPIRED" across it; the lens plunges through the torn fibers into swirling
+> paper dust, ending mid-dive fully motion-blurred.*
+> *Sound design: guillotine slam with dust whump, three accelerating page rips,
+> one massive stamp punch, rushing paper wind. No speech.*
+
+Ours, for every block: *"A warm cream paper background with halftone dot texture.
+A broadcast tower… rings contract… a slow push in."*
+
+That comparison is the whole gap. Nothing about the models is the problem.
+
+### Two more things from SKILL.md
+
+- **`seedance_2_0` is the ref-grade engine** — it *"executes in-prompt cuts
+  ('Shot 1 … Cut to shot 2'), reads 'speed ramp', 'FPV', 'whip pan' literally"*
+  and generates native SFX that survive under the voiceover. Newsdesk runs
+  `seedance-1-0-pro-fast` because 2.0 measured flaky at ~50% on GMI. **The
+  in-prompt cuts and speed ramps are 2.0 features** — worth re-testing before
+  writing the new scene layer, because the fake-oner may need it.
+- **Sound design belongs in the prompt.** The `AUDIO:` field is currently one
+  module constant. The craft wants 3–5 concrete diegetic events per block.
+
+---
+
 # What the Vox Explainer Prompt Pack changes here
 
 Source: `docs/design/vox-explainer-prompt-pack.pdf` (Zubair Trabzada, AI

@@ -50,6 +50,7 @@ class BlockRecord:
     take_sha256: str | None
     voice_provider: str | None
     voice_model: str | None
+    claims: tuple[dict[str, Any], ...] = ()
 
 
 def _step_from_raw(raw: dict[str, Any]) -> Step:
@@ -93,6 +94,11 @@ def narration_step(record: BlockRecord) -> Step:
         metadata={
             "block": record.timing.n,
             "role": record.timing.role,
+            # Where this line's assertions came from. Per block rather than per
+            # run, because "the video cites these six facts" is a much weaker
+            # claim than "this sentence cites this fact and quotes it here".
+            "claims": list(record.claims),
+            "fact_ids": sorted({str(c.get("fact_id")) for c in record.claims}),
             # The measured numbers, per block. §6.6: a receipt that says "10.0s"
             # six times when none of them were is a small lie in a document whose
             # entire value is that it contains none.

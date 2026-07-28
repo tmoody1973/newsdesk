@@ -19,6 +19,7 @@ import json
 import os
 import re
 import time
+from dataclasses import replace
 from typing import Any, Callable
 
 from genblaze_gmicloud.chat import chat
@@ -480,3 +481,122 @@ def generate_script(
         role="script", model=model, provider=PROVIDER, call=_call, prompt=prompt,
     )
     return state, ledger, tuple(accepted)
+
+
+# --- attaching claims to narration that already exists -----------------------
+
+MAP_ATTEMPTS = 3
+
+
+def _claim_map_prompt(story: Story, blocks: tuple[ScriptBlock, ...], problems: str = "") -> str:
+    """Ask only for the mapping. The narration is input, not a draft.
+
+    Stated three times and in three ways, because a model asked to look at a
+    line and produce evidence for it will improve the line as a courtesy — and
+    here that courtesy would invalidate six rendered takes and a human's
+    approval of the cut they are in.
+    """
+    facts = "\n".join(f"{f.id}: {f.text}" for f in story.facts)
+    lines = "\n".join(f"Block {b.n}: {b.narration}" for b in blocks)
+    body = f"""These narration lines are FINAL. They have already been voiced and approved.
+Do not rewrite them, do not shorten them, do not correct them. You are not
+being asked for a script — you are being asked where each assertion came from.
+
+FACTS:
+{facts}
+
+FINAL NARRATION:
+{lines}
+
+For every quantity or checkable assertion in each line, emit a claim:
+  spoken   — the phrase exactly as it appears in that line, copied character for character
+  fact_id  — the fact it comes from
+  evidence — an unbroken run of characters copied straight out of that fact.
+             Do not abridge, do not splice two parts together, do not tidy the
+             punctuation.
+
+If a line states something no fact supports, emit no claim for it and say
+nothing — do not invent a source, and do not edit the line to remove it.
+
+Reply with JSON only:
+{{"blocks": [{{"n": 1, "claims": [{{"spoken": "...", "fact_id": "F1", "evidence": "..."}}]}}]}}
+"""
+    return body if not problems else f"{body}\n---\n\nYou already answered this once:\n\n{problems}\n\nFix only the claims. The narration is still final."
+
+
+def _parse_claim_map(text: str) -> dict[int, tuple[Claim, ...]]:
+    fenced = _FENCE_RE.search(text)
+    candidate = fenced.group(1) if fenced else text
+    try:
+        payload = json.loads(candidate)
+    except json.JSONDecodeError:
+        start, end = candidate.find("{"), candidate.rfind("}")
+        if start == -1 or end <= start:
+            raise ScriptError(f"the model did not return JSON: {text[:200]!r}") from None
+        payload = json.loads(candidate[start : end + 1])
+
+    mapped: dict[int, tuple[Claim, ...]] = {}
+    for entry in payload.get("blocks", ()):
+        mapped[int(entry["n"])] = tuple(
+            Claim(spoken=str(c["spoken"]), fact_id=str(c["fact_id"]).upper(),
+                  evidence=str(c["evidence"]))
+            for c in entry.get("claims", ())
+        )
+    return mapped
+
+
+def map_claims(
+    state: RunState,
+    ledger: Ledger,
+    story: Story,
+    blocks: tuple[ScriptBlock, ...],
+    *,
+    model: str = MODEL,
+    chat_fn: Callable[..., Any] = chat,
+) -> tuple[RunState, Ledger, tuple[ScriptBlock, ...]]:
+    """Trace finished narration back to its facts, without touching the words.
+
+    `generate_script` produces claims alongside the lines, which is the stronger
+    arrangement and the one every new run uses. This exists for the case where
+    narration was rendered before the claim map was persisted: re-generating the
+    script would produce *different lines*, which would invalidate the takes cut
+    from the old ones and the human approval attached to that cut.
+
+    The mapper is untrusted in exactly the way the generator is. Acceptance
+    still requires every claim to name a real fact and quote it verbatim, so a
+    map produced after the fact cannot launder anything a map produced with the
+    script could not.
+    """
+    mapped: list[ScriptBlock] = []
+
+    def _call() -> tuple[str, str, str]:
+        prompt = _claim_map_prompt(story, blocks)
+        raw = ""
+        for attempt in range(1, MAP_ATTEMPTS + 1):
+            response = chat_fn(model, prompt=prompt, temperature=0.2,
+                               max_tokens=2000, timeout=TIMEOUT_S)
+            raw = getattr(response, "text", "") or ""
+            by_n = _parse_claim_map(raw)
+            candidate = tuple(
+                replace(b, claims=by_n.get(b.n, ())) for b in blocks
+            )
+            problems = validate_script(story, candidate).problems
+
+            terminal = [p for p in problems if p.kind in TERMINAL_KINDS]
+            if terminal:
+                return "reject", "\n".join(str(p) for p in terminal), raw
+            if not problems:
+                mapped.extend(candidate)
+                note = f" after {attempt - 1} repair pass(es)" if attempt > 1 else ""
+                claims = sum(len(b.claims) for b in candidate)
+                return "pass", f"{claims} claims traced to facts{note}", raw
+            if attempt == MAP_ATTEMPTS:
+                return "reject", " | ".join(str(p) for p in problems), raw
+            prompt = _claim_map_prompt(story, blocks, "\n".join(str(p) for p in problems))
+        return "reject", "no usable claim map", raw
+
+    state, ledger, _ = judged(
+        state, ledger, role="claim_map", model=model, provider=PROVIDER,
+        call=_call, prompt=_claim_map_prompt(story, blocks),
+    )
+    return state, ledger, tuple(mapped)

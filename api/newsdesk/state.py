@@ -77,6 +77,11 @@ class Block:
     voice_duration_s: float | None = None
     attempts: tuple[Attempt, ...] = ()
     policy_results: tuple[dict[str, Any], ...] = ()
+    # Every quantity this block asserts, with the fact it came from and the
+    # verbatim span of that fact supporting it. Carried on the block rather than
+    # derived at receipt time: a claim map rebuilt later is a reconstruction, and
+    # the receipt's whole value is that it is not one.
+    claims: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -142,7 +147,8 @@ class RunState:
                 "blocks": tuple(
                     Block(**{**b, "attempts": tuple(Attempt(**a) for a in b.get("attempts", ())),
                              "fact_ids": tuple(b.get("fact_ids", ())),
-                             "policy_results": tuple(b.get("policy_results", ()))})
+                             "policy_results": tuple(b.get("policy_results", ())),
+                             "claims": tuple(b.get("claims", ()))})
                     for b in d.get("blocks", ())
                 ),
                 "events": tuple(Event(**e) for e in d.get("events", ())),

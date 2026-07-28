@@ -454,3 +454,70 @@ def test_every_check_still_holds_on_an_accepted_script():
             assert normalize(c.spoken) in normalize(b.narration)
             assert normalize(c.evidence) in normalize(story.by_id(c.fact_id).text)
     assert validate_script(story, blocks).passed
+
+
+# --- attaching claims to narration that already exists -----------------------
+
+
+def _stripped(blocks):
+    """The same six lines with their claims removed — a run voiced before its
+    claim map was captured."""
+    from dataclasses import replace
+    return tuple(replace(b, claims=()) for b in blocks)
+
+
+def _claim_reply(blocks):
+    return json.dumps({"blocks": [
+        {"n": b.n, "claims": [
+            {"spoken": c.spoken, "fact_id": c.fact_id, "evidence": c.evidence}
+            for c in b.claims
+        ]}
+        for b in blocks
+    ]})
+
+
+def test_claims_are_mapped_onto_narration_without_changing_it():
+    """A run voiced before its claims were captured can still be traced.
+
+    The narration is fixed input here, not something the model may improve: the
+    takes were rendered from these exact words and a human approved the cut. A
+    mapper that rewrote a line would silently invalidate both.
+    """
+    from newsdesk.script import map_claims
+
+    blocks = cs1_blocks()
+    _, _, mapped = map_claims(
+        _run(), Ledger(), cs1_story(), _stripped(blocks),
+        chat_fn=_fake_chat(_claim_reply(blocks)),
+    )
+    assert [b.narration for b in mapped] == [b.narration for b in blocks]
+    assert all(b.claims for b in mapped)
+
+
+def test_a_mapping_that_cites_a_missing_fact_is_refused():
+    """The mapper is untrusted for the same reason the generator is."""
+    from newsdesk.script import map_claims
+
+    bad = json.dumps({"blocks": [{"n": 1, "claims": [
+        {"spoken": "One point one billion dollars", "fact_id": "F9",
+         "evidence": "$1.1B"}
+    ]}]})
+    _, ledger, mapped = map_claims(
+        _run(), Ledger(), cs1_story(), _stripped(cs1_blocks())[:1],
+        chat_fn=_fake_chat(bad),
+    )
+    assert mapped == ()
+    assert ledger.decisions[-1].verdict == "reject"
+
+
+def test_the_mapping_is_recorded_in_the_ledger():
+    """chat() produces no manifest entry of its own, so the decision has to be
+    written down or the receipt is silent about how the tracing was produced."""
+    from newsdesk.script import map_claims
+
+    blocks = cs1_blocks()
+    _, ledger, _ = map_claims(
+        _run(), Ledger(), cs1_story(), _stripped(blocks),
+        chat_fn=_fake_chat(_claim_reply(blocks)),
+    )
+    assert ledger.decisions[-1].role == "claim_map"

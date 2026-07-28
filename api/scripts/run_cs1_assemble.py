@@ -204,6 +204,7 @@ def main() -> int:
             # over exactly this: six audio assets with no digest, which would
             # have shipped a receipt naming files nobody could check.
             take_sha256=sha256_of(takes[block.n - 1]),
+            claims=tuple(by_n[block.n].claims),
             voice_provider=next(
                 (a.provider for a in by_n[block.n].attempts if a.status in ("in", "short", "long")),
                 None,

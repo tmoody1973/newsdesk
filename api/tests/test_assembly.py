@@ -298,3 +298,56 @@ def test_captions_are_uppercased_because_the_kit_says_so():
     assert subtitle_cues("Nobody announced it.", start_s=0.0, take_s=2.0)[0].text == (
         "NOBODY ANNOUNCED IT."
     )
+
+
+# --- captions must not break a spoken number --------------------------------
+#
+# Every figure in this product is spelled out, because POL rules require numbers
+# to be written as they are said. That makes a mid-number line break a recurring
+# defect rather than an unlucky one — the live CS-1 cut produced
+# "KUAC IN FAIRBANKS LOST ONE / POINT TWO MILLION DOLLARS AND CUT".
+
+
+def _lines(cues):
+    return [line for c in cues for line in c.text.split("\\N")]
+
+
+def test_a_spelled_out_number_never_breaks_across_lines():
+    line = ("KUAC in Fairbanks lost one point two million dollars and cut "
+            "overnight broadcasts entirely.")
+    for text in _lines(subtitle_cues(line, start_s=0.0, take_s=9.6)):
+        assert not text.endswith("ONE"), text
+        assert not text.startswith("POINT"), text
+
+
+def test_a_long_number_run_stays_whole():
+    line = "One point one billion dollars vanished from the budget in a single year."
+    joined = " ".join(_lines(subtitle_cues(line, start_s=0.0, take_s=9.6)))
+    assert "ONE POINT ONE BILLION" in joined
+
+
+def test_a_number_run_is_not_split_across_two_cues():
+    line = ("The rescissions package eliminated one point one billion dollars in "
+            "previously approved funding covering two fiscal years of public media.")
+    for cue in subtitle_cues(line, start_s=0.0, take_s=9.6):
+        text = cue.text.replace("\\N", " ")
+        assert not text.endswith("ONE POINT"), text
+
+
+def test_a_bare_and_still_breaks_normally():
+    """`and` joins a number run only when numbers sit on both sides of it.
+
+    Otherwise the commonest word in English becomes unbreakable and every cue
+    grows a tail.
+    """
+    line = "The stations went dark and the listeners noticed and nobody explained why."
+    cues = subtitle_cues(line, start_s=0.0, take_s=9.6)
+    assert len(_lines(cues)) > 1
+
+
+def test_no_line_ends_on_a_stranded_short_word():
+    """A line ending in "a" or "of" reads as a typo, not as a line break."""
+    line = ("A third of its operating budget vanished in a single quarter of the "
+            "financial year without any public announcement at all.")
+    for text in _lines(subtitle_cues(line, start_s=0.0, take_s=9.6)):
+        assert text.split()[-1] not in {"A", "OF", "IN", "TO", "AT", "AN", "THE"}, text

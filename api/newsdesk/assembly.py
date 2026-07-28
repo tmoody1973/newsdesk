@@ -49,6 +49,27 @@ ROLES = ("cold open", "stakes", "evidence", "evidence", "turn", "kicker")
 SUBTITLE_LINE_CHARS = 30
 MAX_SUBTITLE_LINES = 2
 
+# Words that make up a spoken number. Every figure in this product is spelled
+# out — POL rules require numbers written as they are said — so a run of these
+# is one thing a reader takes in at once, and breaking it is a recurring defect
+# rather than an unlucky one. The live CS-1 cut produced "LOST ONE / POINT TWO
+# MILLION DOLLARS", which is the whole reason this set exists.
+_NUMBER_WORDS = frozenset("""
+zero one two three four five six seven eight nine ten eleven twelve thirteen
+fourteen fifteen sixteen seventeen eighteen nineteen twenty thirty forty fifty
+sixty seventy eighty ninety hundred thousand million billion trillion
+first second third half quarter
+""".split())
+
+# Joiners that belong to a number only when a number sits on both sides of them.
+# `and` is the commonest word in English; treating it as unbreakable everywhere
+# would give every cue a tail.
+_NUMBER_JOINERS = frozenset({"point", "and", "a"})
+
+# A line ending on one of these reads as a typo rather than as a line break.
+_NEVER_LINE_FINAL = frozenset({"a", "an", "the", "of", "in", "to", "at", "on",
+                               "for", "and", "or", "is", "was", "by"})
+
 
 class AssemblyError(RuntimeError):
     """Raised when a run cannot be assembled, or must not be."""
@@ -214,15 +235,62 @@ def approved_or_raise(state: RunState) -> Approval:
     return state.approval
 
 
+def atoms(words: Sequence[str]) -> list[list[str]]:
+    """Group words into the units a line break may fall between.
+
+    A run of number words is one atom, so "one point two million" cannot be
+    split. A joiner is absorbed only when numbers flank it, which keeps "and"
+    breakable in ordinary prose and unbreakable in "a hundred and five".
+    """
+    def is_number(word: str) -> bool:
+        return word.strip(".,;:!?\u2019'").lower() in _NUMBER_WORDS
+
+    def is_joiner(word: str) -> bool:
+        return word.strip(".,;:!?\u2019'").lower() in _NUMBER_JOINERS
+
+    grouped: list[list[str]] = []
+    i = 0
+    while i < len(words):
+        if not is_number(words[i]):
+            grouped.append([words[i]])
+            i += 1
+            continue
+        run = [words[i]]
+        i += 1
+        while i < len(words):
+            if is_number(words[i]):
+                run.append(words[i])
+                i += 1
+            elif (is_joiner(words[i]) and i + 1 < len(words)
+                  and is_number(words[i + 1])):
+                run.append(words[i])
+                i += 1
+            else:
+                break
+        grouped.append(run)
+    return grouped
+
+
 def _wrap(words: Sequence[str]) -> str:
-    """Fold a cue into at most two lines at the kit's width."""
+    """Fold a cue into at most two lines at the kit's width.
+
+    Broken between atoms rather than between words, and never after a word that
+    would be left stranded at the end of a line.
+    """
     lines: list[list[str]] = [[]]
-    for word in words:
-        candidate = " ".join([*lines[-1], word])
-        if lines[-1] and len(candidate) > SUBTITLE_LINE_CHARS and len(lines) < MAX_SUBTITLE_LINES:
-            lines.append([word])
+    groups = atoms(words)
+    for i, group in enumerate(groups):
+        candidate = " ".join([*lines[-1], *group])
+        stranded = (
+            lines[-1]
+            and lines[-1][-1].strip(".,;:!?").lower() in _NEVER_LINE_FINAL
+            and len(lines[-1]) > 1
+        )
+        if (lines[-1] and len(candidate) > SUBTITLE_LINE_CHARS
+                and len(lines) < MAX_SUBTITLE_LINES and not stranded):
+            lines.append(list(group))
         else:
-            lines[-1].append(word)
+            lines[-1].extend(group)
     # Uppercased here because ASS carries no text-transform and the kit's style
     # is "Anton, uppercase" — the same face and case as the app's stamps, which
     # is the UI spec's continuity rule made literal.
@@ -252,11 +320,20 @@ def subtitle_cues(narration: str, *, start_s: float, take_s: float) -> tuple[Cue
         # A sentence wider than two lines becomes two cues rather than a wall.
         budget = SUBTITLE_LINE_CHARS * MAX_SUBTITLE_LINES
         current: list[str] = []
-        for word in words:
-            if current and len(" ".join([*current, word])) > budget:
+        # By atom, so a cue boundary cannot split a number either — the line
+        # break and the cue break are the same hazard at two scales.
+        for group in atoms(words):
+            stranded = (
+                current
+                and current[-1].strip(".,;:!?").lower() in _NEVER_LINE_FINAL
+            )
+            # The same guard as the line break, because a cue boundary strands a
+            # word just as visibly as a line boundary does — the caption simply
+            # disappears rather than wrapping.
+            if current and len(" ".join([*current, *group])) > budget and not stranded:
                 chunks.append(current)
                 current = []
-            current.append(word)
+            current.extend(group)
         if current:
             chunks.append(current)
 

@@ -111,7 +111,7 @@ def test_cs2_control_story_trips_nothing(spend):
             "to a monument. Paper-disc bars rise beside it; a crate-digging hand cutout "
             "reaches in from the left."
         ),
-        narration="Vinyl revenue passed one billion dollars in the United States last year, the first time that has happened since nineteen eighty-three.",
+        narration="Vinyl revenue passed one billion dollars last year in the United States. That is the first time it has crossed that mark since nineteen eighty-three.",
     )
     assert result.passed, result.explain()
     assert spend.usd == 0.0
@@ -123,7 +123,10 @@ def test_cs2_control_story_trips_nothing(spend):
 @pytest.mark.parametrize(
     "narration,should_pass",
     [
-        ("Vinyl revenue passed one billion dollars in the United States last year, the first time that has happened since nineteen eighty-three.", True),
+        ("Vinyl revenue passed one billion dollars last year in the United States. That is the first time it has crossed that mark since nineteen eighty-three.", True),
+        # 24 words but ONE sentence — runs short, because sentence-end pauses
+        # are what fill the ten-second window. Calibrated 2026-07-28.
+        ("Vinyl revenue passed one billion dollars last year in the United States for the first time since nineteen eighty-three, capping nineteen years of growth.", False),
         ("Vinyl is up.", False),
         (" ".join(["word"] * 40), False),
     ],

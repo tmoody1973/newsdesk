@@ -102,7 +102,16 @@ rules:
       the seams.
     layers: [deterministic]
     check: >
-      Narration is 20-24 words with an estimated take of 9.5s or less.
+      Narration is 23-27 words across 2-3 sentences. This is a coarse
+      pre-flight bound only — the enforcement is the take measured after
+      rendering.
+    calibration: >
+      Measured against the actual voice on 2026-07-28, not inherited. Four
+      takes on eleven_v3: 22 words ran 8.96s, 26 words ran 8.88s, and the only
+      take that landed in window was 22 words across five sentences at 9.92s.
+      Word count is a poor predictor; sentence-end pauses fill the window. This
+      reverses the imported vox guidance, which was calibrated on a slower
+      voice and recommends one flowing sentence.
 
   - id: POL-6
     name: Output is checked, not just the request

@@ -1,0 +1,72 @@
+{
+  "brief": "Deep, measured documentary narrator. Calm authority, never ad-read. The narrator explains; they do not hype.",
+  "primary": {
+    "provider": "elevenlabs",
+    "model": "eleven_v3",
+    "voice_id": "6lbtrJXRylVZ6EqIQQPT",
+    "voice_name": "Marcus Louis",
+    "why": "Deep, natural, articulate, believable \u2014 middle-aged US male. Closest catalogue match to the documentary brief, and it reads as trustworthy rather than sold-to.",
+    "model_note": "Direct ElevenLabs, not routed through GMICloud \u2014 'ElevenLabs-TTS-v3' is the GMI slug and is rejected here. Going direct also gives the run two distinct provider adapters rather than one."
+  },
+  "fallback": {
+    "provider": "lmnt",
+    "model": "lmnt",
+    "voice_id": "nathan",
+    "voice_name": "Nathan",
+    "why": "Narrative-classified, calm, US male. Nearest tonal match on the fallback provider.",
+    "note": "A fallback voice will never match the primary exactly. That is disclosed rather than hidden: the manifest records which provider voiced each block and the receipt shows it. A visible substitution is more honest than a silent one."
+  },
+  "delivery": {
+    "target_take_seconds": [
+      9.0,
+      10.5
+    ],
+    "words_per_block": [
+      23,
+      27
+    ],
+    "sentences_per_block": [
+      2,
+      3
+    ],
+    "measured_2026_07_28": [
+      {
+        "words": 22,
+        "sentences": 1,
+        "seconds": 8.96,
+        "wps": 2.46,
+        "result": "below window"
+      },
+      {
+        "words": 23,
+        "sentences": 1,
+        "seconds": 8.56,
+        "wps": 2.69,
+        "result": "short"
+      },
+      {
+        "words": 26,
+        "sentences": 1,
+        "seconds": 8.88,
+        "wps": 2.93,
+        "result": "short"
+      },
+      {
+        "words": 22,
+        "sentences": 5,
+        "seconds": 9.92,
+        "wps": 2.22,
+        "result": "IN WINDOW"
+      }
+    ],
+    "what_the_data_says": "Word count is a poor predictor: 22 words ran 8.96s while 26 words ran 8.88s \u2014 more words, shorter take. Rate varied 2.22-2.93 w/s across four takes. The only take that landed in window was the CHOPPY one, at 22 words across five sentences.",
+    "reverses_the_imported_guidance": "vox-motion-graphics says 'prefer single flowing sentences' because flowing lines run FAST and overrun. On eleven_v3 with this voice the opposite holds: flowing lines run short and it is sentence-end pauses that fill the ten-second window. The skill's 20-24 word rule was calibrated on Higgsfield seed_audio, a slower voice. Ours needs 23-27 words across 2-3 sentences.",
+    "duration_must_be_measured": "asset.duration comes back None from the ElevenLabs adapter, so POL-5 cannot read it from the manifest. Take length is measured with ffprobe on the downloaded file. Word count is only a coarse pre-flight bound; the measured take is the enforcement.",
+    "correction_order": [
+      "lengthen or split into another sentence",
+      "lower speech rate one notch",
+      "flag for human review after two attempts"
+    ],
+    "why_not_shorter": "A short take is worse than a slight overrun. The assembler centres short takes, so a 7s take starts about 1.5s late and reads as desync; a slight overrun is speed-compressed pitch-safely and passes unnoticed."
+  }
+}

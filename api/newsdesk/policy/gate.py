@@ -26,12 +26,24 @@ from newsdesk.blockprompt import BlockPrompt, negative_line
 
 POLICY_FILE = Path(__file__).resolve().parents[3] / "policy" / "policy.yaml"
 
-# Narration pacing. The window comes from measured TTS behavior, not taste:
-# narrator voices pause ~0.7s per sentence end, so word count alone predicts
-# duration badly. 20-24 words is the range that lands inside 9.0-10.5s.
-MIN_WORDS, MAX_WORDS = 20, 24
-MAX_TAKE_SECONDS = 9.5
-WORDS_PER_SECOND = 2.5  # flowing single sentence; choppy lines run slower
+# Narration pacing, calibrated against the actual voice on 2026-07-28 rather
+# than inherited. Four takes on eleven_v3 / Marcus Louis:
+#
+#   22 words, 1 sentence  -> 8.96s   26 words, 1 sentence -> 8.88s
+#   23 words, 1 sentence  -> 8.56s   22 words, 5 sentences -> 9.92s  (only one in window)
+#
+# Word count is a poor predictor — more words came back shorter, and the rate
+# ranged 2.22-2.93 w/s. Sentence-end pauses, not words, fill the ten seconds.
+# This inverts the imported vox guidance, which was calibrated on a slower
+# voice and says to prefer one flowing sentence.
+#
+# So this check is a COARSE PRE-FLIGHT BOUND only. The enforcement is the
+# measured take (ffprobe on the rendered file) — the ElevenLabs adapter returns
+# asset.duration as None, so it cannot come from the manifest either.
+MIN_WORDS, MAX_WORDS = 23, 27
+MIN_SENTENCES, MAX_SENTENCES = 2, 3
+MAX_TAKE_SECONDS = 10.5
+WORDS_PER_SECOND = 2.6  # measured mean; spread is wide enough that this only catches extremes
 
 # POL-3. Requests for camera realism, in any of the phrasings that mean it.
 #
@@ -165,15 +177,24 @@ def check(prompt: BlockPrompt, *, narration: str = "", fact_ids: tuple[str, ...]
         if text_problem else "",
     ))
 
-    # POL-5 — narration fits its block
+    # POL-5 — narration fits its block (coarse bound; measured take is enforcement)
     if narration:
         words = len(narration.split())
+        sentences = len([p for p in re.split(r"[.!?]+", narration) if p.strip()])
         est = estimate_take_seconds(narration)
-        ok = MIN_WORDS <= words <= MAX_WORDS and est <= MAX_TAKE_SECONDS
+        ok = MIN_WORDS <= words <= MAX_WORDS and MIN_SENTENCES <= sentences <= MAX_SENTENCES
+        why = []
+        if not MIN_WORDS <= words <= MAX_WORDS:
+            why.append(f"{words} words (need {MIN_WORDS}-{MAX_WORDS})")
+        if not MIN_SENTENCES <= sentences <= MAX_SENTENCES:
+            why.append(
+                f"{sentences} sentence{'s' if sentences != 1 else ''} "
+                f"(need {MIN_SENTENCES}-{MAX_SENTENCES}) — sentence-end pauses are what "
+                f"fill the ten-second window, so one long sentence runs short"
+            )
         findings.append(Finding(
             "POL-5", n["POL-5"], ok,
-            f"{words} words (~{est:.1f}s). Blocks need {MIN_WORDS}-{MAX_WORDS} words "
-            f"so the take lands in its ten-second window." if not ok else "",
+            f"{'; '.join(why)}. Estimated ~{est:.1f}s." if not ok else "",
         ))
 
     return GateResult(findings=tuple(findings))

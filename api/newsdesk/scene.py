@@ -30,24 +30,120 @@ GROUND = (
 # Anchors the frame so the accent palette appears even in a sparse composition.
 ANCHOR = "Flat deep navy and coral torn-paper shapes anchor the lower corners"
 
-# Motion is deliberately small. Collage that swoops reads as a template; collage
-# that shifts by a few degrees reads as someone moving paper on a table.
-MOTION = (
-    "Elements settle into place with small paper shifts; a slow push in. "
-    "No camera shake, no whip pans, no parallax"
+# SUPERSEDED 2026-07-28. This read:
+#
+#   MOTION = "Elements settle into place with small paper shifts; a slow push in.
+#             No camera shake, no whip pans, no parallax"
+#   AUDIO  = "Quiet room tone with paper rustle; one soft tape peel on entry."
+#
+# One constant, used on all six blocks. It was written to stop the collage
+# swooping like a template, and it worked — it also produced six static wides and
+# a video Tarik called bland, correctly.
+#
+# The craft says the opposite, and says it in the section titled "what separates
+# a banger from postcards" (vox-motion-graphics/SKILL.md):
+#
+#   "A sequence of pretty, disconnected scenes reads as a museum slideshow."
+#   "Fake-oner. Write every clip as one continuous FPV camera move that begins
+#    and ends in full motion blur (dive, whip, flare, fall) — hard cuts between
+#    blocks then read as one unbroken shot."
+#   "An impact every ~3 seconds and at least one speed ramp per block. Alternate
+#    extreme macro and wide; whiplash the scale."
+#
+# So motion and audio are now per block, not constants. The five story-engine
+# elements below are that section, implemented.
+
+# 1 · FAKE-ONER. Each block is one continuous move that starts and ends in motion
+# blur, so six hard cuts read as one unbroken shot. Block 1 opens from black;
+# every later block emerges from the blur the previous one ended in.
+_ENTRIES = (
+    "Open from black, already moving",
+    "Emerge from the motion-blurred paper dust the previous shot ended in",
+    "Emerge from a motion-blurred whip across torn card",
+    "Emerge from a motion-blurred fall through paper layers",
+    "Emerge from a motion-blurred flare off cream card",
+    "Emerge from a motion-blurred dive between paper layers",
+)
+_EXITS = (
+    "end fully motion-blurred mid-dive into the paper",
+    "end fully motion-blurred mid-whip",
+    "end fully motion-blurred mid-fall",
+    "end fully motion-blurred mid-flare",
+    "end fully motion-blurred mid-dive",
+    "settle, for the first and only time, and hold",
 )
 
-AUDIO = "Quiet room tone with paper rustle; one soft tape peel on entry. No voice"
+# 2 · SCALE WHIPLASH. Alternate extreme macro and wide. Never the same framing
+# twice running — six identical compositions is the defect this replaces.
+_SHOTS = (
+    "EXTREME MACRO on one torn edge of the object, so close the paper fibres show",
+    "WIDE, the whole object small in a big empty field of cream card",
+    "LOW ANGLE looking steeply up the object so it towers over the frame",
+    "OVERHEAD FLAT-LAY looking straight down, the object foreshortened on the card",
+    "MACRO DETAIL on the part of the object the change is happening to",
+    "CRANE REVEAL rising and pulling back until the whole arrangement is legible at once",
+)
+
+# 3 · ONE IMPACT EVERY ~3 SECONDS, and one speed ramp per block.
+_IMPACTS = (
+    "a hand-drawn marker circle SNAPS closed around it",
+    "a torn paper shape SLAMS into frame and stops dead",
+    "a stamp PUNCHES down and paper dust bursts",
+    "a card layer RIPS away in one stroke",
+    "a shape DROPS in and bounces once",
+    "every loose element SNAPS into its final position at once",
+)
+_RAMPS = (
+    "a violent speed-ramp pull-back",
+    "a slow-motion beat that whips back to full speed",
+    "an abrupt ramp into slow motion, then a snap back",
+    "a speed-ramp push that overshoots and settles",
+    "a slow-motion hold that accelerates hard out",
+    "a final slow-motion settle",
+)
+
+# 4 · MOTIF PER BLOCK. The design's Art Direction step names these six and
+# defaults them from the through-line (Newsdesk Screens.dc.html, 1g). They are
+# what makes a block about THIS story rather than about the object alone.
+_MOTIFS = (
+    "the object alone on the card, nothing else competing",
+    "a flat stylised map beneath it, regions filling with flat colour",
+    "an abstract bar chart of torn card growing beside it, unlabelled",
+    "a ruled ledger of paper strips stacking and un-stacking behind it",
+    "a crowd of small faceless paper cutouts arranged below it",
+    "an archival paper frame closing around it like a mount",
+)
+
+# 5 · SOUND DESIGN, three to five concrete diegetic events per block. The old
+# constant asked for room tone on every block, which is the audio equivalent of
+# six static wides.
+_SOUND = (
+    "paper fibre crackle, one marker squeak, a soft tape peel",
+    "a low paper whump, sliding card, one distant room tone swell",
+    "three accelerating card rips, a stamp punch, dust settling",
+    "stacking paper taps, one ruler snap, a page turn",
+    "a soft crowd shuffle of paper, one collective flutter, a held breath of room tone",
+    "one last stamp punch, paper dust settling, silence opening up",
+)
 
 # The through-line only works if the viewer recognises the SAME object each time.
 # The first six-block run held the palette perfectly and lost the object: blocks
 # 1, 2 and 6 rendered lattice masts while 4 and 5 rendered observation towers
 # with decks. Palette was pinned by naming it; identity has to be pinned the
 # same way rather than assumed to carry.
+# The object is identical across blocks; the framing is not.
+#
+# Says "framing" rather than "the shot on it" because POL-3 rejected the latter:
+# "shot on" is how a request for camera realism is usually phrased, and the gate
+# was right to stop it. A rule that only fires on other people's wording is not
+# a rule. The first version of
+# this clamp ended "...same position in frame", which fixed the object and froze
+# the camera with it — and freezing the camera is how six blocks became six
+# identical wides. Hold the object. Free the shot.
 IDENTITY = (
     "This is the identical object in every block of this story — same silhouette, "
-    "same proportions, same materials, same position in frame. Only its state "
-    "changes between blocks. Do not redesign it"
+    "same proportions, same materials, same colours. Only its state and the "
+    "framing change between blocks. Do not redesign the object"
 )
 
 
@@ -61,6 +157,10 @@ class ThroughLine:
     escalation: str
     lettering_risk: str = "low"
     surface: str = ""
+    # Optional per-object shape lock. See through-lines.yaml for why it exists:
+    # the framing clause names the object, the silhouette clause makes sure only
+    # one thing satisfies it.
+    silhouette: str = ""
 
     @classmethod
     def from_kit(cls, entry: dict) -> ThroughLine:
@@ -71,6 +171,7 @@ class ThroughLine:
             escalation=_flatten(entry.get("escalation", "")),
             lettering_risk=entry.get("lettering_risk", "low"),
             surface=_flatten(entry.get("surface", "")),
+            silhouette=_flatten(entry.get("silhouette", "")),
         )
 
 
@@ -97,13 +198,59 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
 
     parts[0] += "."
 
+    # Immediately after the object is introduced and before anything else — the
+    # same placement rule scene-guidance.txt found for the surface clause. A
+    # shape constraint that arrives after two other sentences is a shape
+    # constraint the model has already resolved without.
+    if through_line.silhouette:
+        # Capitalised on splice rather than in the kit, so an editor writing a
+        # silhouette does not have to think about where their clause lands in
+        # the sentence. tests/test_scene.py enforces this and caught it.
+        shape = through_line.silhouette
+        parts.append(f"{shape[:1].upper()}{shape[1:]}.")
+
     parts.append(f"{IDENTITY}.")
+
+    i = _index(block_n, blocks)
+    parts.append(f"Shot scale for this block: {_SHOTS[i]}.")
+    parts.append(f"Also in frame: {_MOTIFS[i]}.")
 
     if through_line.escalation:
         parts.append(f"{_stage(through_line.escalation, block_n, blocks)}.")
 
+    # The fake-oner, in the scene rather than only in the motion field, because
+    # the entry and exit are composition decisions before they are camera ones.
+    parts.append(
+        f"{_ENTRIES[i]}. One continuous move through the scene; partway through, "
+        f"{_IMPACTS[i]}. The shot does not stop — {_EXITS[i]}."
+    )
+
     parts.append(f"{ANCHOR}.")
     return " ".join(parts)
+
+
+def _index(block_n: int, blocks: int) -> int:
+    """Position in the six-beat arrays, clamped for stories of another length."""
+    if blocks == len(_SHOTS):
+        return block_n - 1
+    scaled = round((block_n - 1) / max(blocks - 1, 1) * (len(_SHOTS) - 1))
+    return max(0, min(scaled, len(_SHOTS) - 1))
+
+
+def build_motion(block_n: int, blocks: int = 6) -> str:
+    """MOTION for one block. One continuous move, one speed ramp, never static."""
+    i = _index(block_n, blocks)
+    return (
+        f"ONE continuous camera move for the whole clip, never a static shot, "
+        f"with {_RAMPS[i]}. The move begins already in motion and ends still "
+        f"moving so this clip cuts into the next as one unbroken shot. "
+        f"Paper elements move as layers with real parallax"
+    )
+
+
+def build_audio(block_n: int, blocks: int = 6) -> str:
+    """AUDIO for one block: three to five concrete diegetic events. No voice."""
+    return f"Sound design: {_SOUND[_index(block_n, blocks)]}. No voice, no narration"
 
 
 def _stage(escalation: str, block_n: int, blocks: int) -> str:
@@ -143,6 +290,6 @@ def build_block_prompt(through_line: ThroughLine, block_n: int, blocks: int = 6)
     return BlockPrompt.build(
         block_n,
         scene=build_scene(through_line, block_n, blocks),
-        motion=MOTION,
-        audio=AUDIO,
+        motion=build_motion(block_n, blocks),
+        audio=build_audio(block_n, blocks),
     )

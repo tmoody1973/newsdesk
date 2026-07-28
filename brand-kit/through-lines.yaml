@@ -28,6 +28,29 @@ through_lines:
       a tall broadcast tower rendered as a torn-paper cutout in flat charcoal
       on cream card, taped at one corner, with hand-drawn black marker rings
       radiating from its mast
+    # The silhouette bible. Added 2026-07-28 because "a tall broadcast tower" is
+    # ambiguous and every model resolves it to a different landmark — one run
+    # produced a lattice mast, a CN-Tower-style observation deck, a pagoda form
+    # and a slim spire across six blocks of the SAME story. That is not the model
+    # failing to be consistent; it is four models' idea of the same three words.
+    #
+    # Tried first and abandoned: passing block 1 back as a reference image.
+    # bria-fibo accepts `reference_images`, `image` and `image_url`, returns 200
+    # on all three, and ignores all three — the same permissive-parameter trap as
+    # seedance's `aspect_ratio`/`ratio`. GMI accepting a parameter has never meant
+    # GMI reading it.
+    #
+    # So the lock is text, which is the lever MOO-424 already proved works for
+    # palette. Say the shape precisely enough that only one object satisfies it,
+    # and name the near-misses so they are excluded rather than left open.
+    silhouette: >
+      the tower is a four-legged steel lattice mast: straight tapering sides
+      made of visible criss-cross triangular bracing all the way up, three
+      horizontal cross-braces spaced along its height, and a single thin
+      antenna spire at the very top. It has NO observation deck, NO disc, NO
+      bulge, NO pod and NO restaurant at any height — it is not a CN Tower,
+      not a Fernsehturm, not a needle. Open framework throughout, so the cream
+      background shows through the bracing
     escalation: rings contract block by block, outermost first
     lettering_risk: low
 

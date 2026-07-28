@@ -24,6 +24,15 @@ from genblaze_core.providers import (
 
 # USD per asset.
 IMAGE_RATES = {
+    # UNVERIFIED — no published rate found; registered at the gemini rate so a
+    # run reports a number instead of None. The alternative is a silent zero,
+    # which has already happened twice on this project.
+    #
+    # Adopted 2026-07-28 when `gemini-2.5-flash-image` began timing out with zero
+    # bytes on every request while video on the same endpoint answered in a
+    # second. bria-fibo returned 576x1024 — TRUE 9:16 — where seedream returns
+    # 2048x2048 under both `aspect_ratio` and `ratio`.
+    "bria-fibo": 0.039,
     "seedream-5.0-lite": 0.035,
     "gemini-2.5-flash-image": 0.039,
     "flux-kontext-pro": 0.05,

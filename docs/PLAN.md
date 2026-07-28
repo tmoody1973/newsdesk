@@ -80,13 +80,70 @@ remains: roughly fifty rounds. **Time is the constraint, not money.**
 
 ### C · The web product
 
-**C0 first, before writing any more UI: read
-`stamp-system-design-handoff/project/Newsdesk Screens.dc.html` in full (426
-lines) and follow its imports.** Its own README opens *"CODING AGENTS: READ THIS
-FIRST"* and says the designs should be recreated pixel-perfectly. The existing
-`web/` was built from `newsdesk-ui-ux-spec.md` instead and needs reconciling
-against the real mockups. Screens in the bundle: **THE DESK · RUN BOARD ·
-EDITOR REVIEW · BRAND KIT · POLICY**.
+**The design bundle is the source of truth for every screen, and `web/` was not
+built from it.** `stamp-system-design-handoff/project/Newsdesk Screens.dc.html`
+is a complete 426-line mockup whose own README opens *"CODING AGENTS: READ THIS
+FIRST"* and says to recreate it **pixel-perfectly**. It was not read; `web/` was
+invented from `newsdesk-ui-ux-spec.md`. Rebuild against the mockup.
+
+**What is actually in it — all of this exists and none of it is built:**
+
+- **Design system**: `project/_ds/modernist-c6681402-…/styles.css` plus
+  `_ds_bundle.js` and an `_adherence.oxlintrc.json`. Real component classes —
+  `.btn` / `.btn-primary` / `.btn-secondary` / `.btn-ghost` / `.btn-icon`,
+  `.card` / `.card-kicker` / `.card-meta`, `.table`, `.tag` / `.tag-neutral`,
+  `.input`, `.hr`, `.elev-sm` / `.elev-md`, `.grayscale`, and CSS custom
+  properties (`--color-bg`, `--color-surface`, `--color-divider`,
+  `--color-accent`, `--color-neutral-300…900`). **Use these; do not re-derive a
+  palette from the markdown.** Modernist carries the chrome (Archivo, flat
+  0-radius, 2px rules, putty ground, red accent); the stamp system rides on top.
+- **Four stamp treatments to choose between** — `1a` rubber classic (rotated,
+  SVG turbulence ink-grain mask, heavy border), `1b` plan-check plate (flat,
+  Archivo 800, no rotation), `1c` outline oversized (hollow `-webkit-text-stroke`
+  at poster scale), `1d` registration mark (crop corners + mono date line).
+  The mockup defaults to **1a**. **Ask Tarik which he wants** — this is the
+  signature and it is an explicit pick-one.
+- **A 64px left icon rail** with an Anton "N" in accent red and a canary active
+  cell. Missing entirely from the current build.
+- **`1e` The Desk** — five sample rows with `.tag` status chips, `6/6` in mono
+  beside a 60×6px progress bar, `Start a story` primary button, and the
+  dashed empty-state card carrying both `Start a story` and `Load a case study`.
+- **`1f` Wizard Step 1 · Facts & Sources** — F-numbered fact cards, a `src:` line
+  per fact, the **UNSOURCED tag in accent red** with the row bordered red and
+  the message *"Every fact needs a source before it can appear on screen."*, a
+  sticky **Sources ledger** card reading `2 of 3 sourced`, and `Check sources`
+  disabled at 45% opacity until it is.
+- **`1g` Wizard Step 2 · Art Direction** — a six-card through-line grid with an
+  SVG glyph each and a 3px canary border on the selection, **and the motif strip
+  this project needs (see A2): `B1 Prop with text · B2 Map · B3 Chart ·
+  B4 Ledger · B5 Cutout crowd · B6 Archival frame`, "defaults from the
+  through-line"** — plus the upload dropzone and the blue `AUTHENTIC` tag.
+- **`1h` Wizard Step 3 · Script Review** — per-block card headed
+  `BLOCK 1 · prop with text` with `24 words · est 9.6s` in mono, fact chips, and
+  a red-bordered block whose chip is `?` reading *"This line makes a claim that
+  doesn't trace to a fact. Map it or cut it."*
+- **`1i` Run Board (hero)** — six 9:16 filmstrip cards showing *five distinct
+  states side by side*: thumbnail with burned caption, `GENERATING seedance-2.0`
+  with a progress bar, a grey `Retry 2 → kling-i2v` stamp, a red `Blocked` card
+  with `POL-1: real-person likeness` and a `Revise prompt` button, and a dashed
+  `QUEUED` cell. Take badges (`9.8s ✓` blue, `12.4s → re-voicing` grey). Run log
+  beneath in mono with the policy reject in accent red.
+- **`1j` Editor Review** — per-block rows with thumbnail, `POL ✓ 12/12`,
+  Approve / Reject with note / **Lineage ↗**, and a sticky approval panel with a
+  six-block checklist and the `STAMP: APPROVED` control at 45% until complete.
+- **`1k` Receipt** — a **412px chit** whose perforation is a real
+  `mask-image: radial-gradient(...)`, not a dashed border. Centred `Verified
+  a3f1…09` stamp, `HOW THIS VIDEO WAS MADE` kicker, Made by / Checked against
+  policy / Approved by / Verify it yourself, ending in a dark terminal block.
+- **`1l` Brand Kit & Policy** — a four-card kit grid (style key, motif
+  references, voice with a play control, subtitle font specimen). **The Brand Kit
+  page does not exist in the build at all.**
+- **`1m` Run Board at 380px** — the filmstrip goes vertical. The quality floor
+  in the spec is 380px; verify against this.
+
+Note the mockup's POL-1…POL-5 text is an **older policy set** than
+`policy/policy.yaml` (which is now POL-1…POL-6 with different wording). The
+live YAML wins; the mockup is right about layout, not content.
 
 | | Work | Notes |
 |---|---|---|

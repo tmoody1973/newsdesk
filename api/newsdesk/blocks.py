@@ -48,12 +48,22 @@ IMAGE_MODEL = os.getenv("NEWSDESK_IMAGE_MODEL", "gemini-2.5-flash-image")
 #                                  the parameter arrived under a name nothing
 #                                  looked at (see register_seedance_ratio).
 #                                  With the alias: 704x1248, TRUE 9:16, $0.022.
-#   seedance-2-0-fast-260128       the real 2.0 slug per GMI's docs — genblaze's
-#                                  example_slugs name seedance-2-0-260128, which
-#                                  the docs do not. Both return 500 "Backend
-#                                  error (401)" at $0: an entitlement failure,
-#                                  not a transient one. GMI runs a waitlist at
-#                                  seedance2.gmicloud.ai.
+#   seedance-2-0-260128            500 "Backend error (401)" at $0
+#   seedance-2-0-fast-260128       500 "Backend error (401)" at $0. This is the
+#                                  slug GMI's docs actually name; genblaze's
+#                                  example_slugs give the undated one, which the
+#                                  docs do not carry.
+#
+#   Both 2.0 generation models were retried with a RAW doc-exact request, no SDK
+#   in the path, and both 401 identically — so it is not genblaze's payload. The
+#   control that pins it down is seedance-2-0-260128-upscale: same org, same key,
+#   same endpoint, and it returns 400 rather than 401. A validation error means
+#   the request reached the backend and was understood. So this is not a blanket
+#   account problem; entitlement is missing on the two 2.0 generation models
+#   specifically, upstream of GMI. A waitlist form will not move it — GMI support
+#   has to provision it. Not in VIDEO_FALLBACKS, because falling back to a
+#   guaranteed 401 only burns a retry; they are listed in SEEDANCE_SLUGS purely
+#   so the ratio alias is already registered if access ever appears.
 #   kling-image2video-v1.6-pro     404, not in the catalogue.
 #   kling-image2video-v2.1-master  720x1280, TRUE 9:16, 10.4s, $0.28 — works with
 #                                  no alias needed, at 12.7x the seedance price.

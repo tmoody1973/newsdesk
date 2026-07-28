@@ -154,3 +154,52 @@ def test_a_fallback_video_model_is_recorded_as_the_one_that_ran():
     result = read_result(1, _Run(), requested_video_model="seedance-1-0-pro-fast-251015")
     assert result.used_fallback
     assert result.video_model == "kling-image2video-v2.1-master"
+
+
+# --- POL-4 element budget (policy v2) ---------------------------------------
+
+
+def _scene_with(text: str) -> object:
+    from newsdesk.blockprompt import BlockPrompt
+
+    return BlockPrompt.build(1, scene=text, motion="Slow push in.", audio="Room tone.")
+
+
+def test_sourced_on_prop_text_within_budget_passes():
+    """The permitted case: a short question mapped to an entered fact."""
+    prompt = _scene_with(
+        'A cream card taped at one corner, carrying the hand-lettered words "F1".'
+    )
+    assert check(prompt, fact_ids=("F1",)).passed
+
+
+def test_too_many_text_elements_is_rejected():
+    prompt = _scene_with('Cards reading "F1", "F2", "F3" and "F4" laid in a row.')
+    result = check(prompt, fact_ids=("F1", "F2", "F3", "F4"))
+    assert not result.passed
+    assert "4 text elements" in result.explain()
+
+
+def test_an_over_long_text_element_is_rejected():
+    prompt = _scene_with('A card hand-lettered "who pays when the lights go out".')
+    result = check(prompt, fact_ids=("WHO PAYS WHEN THE LIGHTS GO OUT",))
+    assert not result.passed
+    assert "words on screen" in result.explain()
+
+
+def test_an_unsourced_word_outranks_a_budget_complaint():
+    """A policy violation must not be buried under a quibble about counting."""
+    prompt = _scene_with('Cards reading "RIGGED", "F1", "F2" and "F3".')
+    result = check(prompt, fact_ids=("F1", "F2", "F3"))
+    assert not result.passed
+    assert "RIGGED" in result.explain()
+
+
+def test_the_published_negative_line_carries_the_duplication_terms():
+    """Policy v2 extended the constant; POL-2 byte-compares against it."""
+    from newsdesk.blockprompt import negative_line
+
+    line = negative_line()
+    for term in ("repeated text", "doubled text", "two lines of identical text"):
+        assert term in line
+    assert build_block_prompt(all_through_lines()[0], 1).negative_is_intact

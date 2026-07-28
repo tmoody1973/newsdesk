@@ -59,6 +59,16 @@ _PHOTOREAL = re.compile(
     re.IGNORECASE,
 )
 
+# POL-4's element budget, for the one case where lettering is permitted at all:
+# a question-on-prop that maps to an entered fact. Past three elements, or four
+# words in any one of them, models stop rendering text and start approximating
+# it — duplicating an element, stacking near-identical lines, garbling the
+# longest. Numbers from the Vox-Style Explainer Prompt Pack, and they agree with
+# through-lines.yaml's independent advice to keep an on-prop question to two or
+# three words. See policy.yaml POL-4 element_budget_why.
+MAX_TEXT_ELEMENTS = 3
+MAX_WORDS_PER_ELEMENT = 4
+
 # POL-4. Quoted strings and explicit lettering requests inside SCENE.
 _QUOTED = re.compile(r"[\"“”']([^\"“”']{2,40})[\"“”']")
 _TEXT_REQUEST = re.compile(
@@ -166,16 +176,40 @@ def check(prompt: BlockPrompt, *, narration: str = "", fact_ids: tuple[str, ...]
         if m else "",
     ))
 
-    # POL-4 — no unsourced text on screen
-    quoted = [q for q in _QUOTED.findall(prompt.scene) if q.upper() not in fact_ids]
+    # POL-4 — no unsourced text on screen, and a budget on the sourced kind
+    all_quoted = _QUOTED.findall(prompt.scene)
+    unsourced = [q for q in all_quoted if q.upper() not in fact_ids]
     requested = _TEXT_REQUEST.search(prompt.scene)
-    text_problem = quoted or requested
-    findings.append(Finding(
-        "POL-4", n["POL-4"], not text_problem,
-        (f"SCENE requests on-screen text ({'\"' + quoted[0] + '\"' if quoted else requested.group(0)}). "
-         f"Map it to an entered fact, or express it as an abstract highlight bar or marker circle.")
-        if text_problem else "",
-    ))
+
+    # Checked in severity order: an unsourced word is a policy violation, while
+    # too many sourced ones is a craft bound. Reporting the bound first would
+    # bury the violation under a quibble about counting.
+    if unsourced or requested:
+        problem = (
+            f"SCENE requests on-screen text "
+            f"({'\"' + unsourced[0] + '\"' if unsourced else requested.group(0)}). "
+            f"Map it to an entered fact, or express it as an abstract highlight bar "
+            f"or marker circle."
+        )
+    elif len(all_quoted) > MAX_TEXT_ELEMENTS:
+        problem = (
+            f"{len(all_quoted)} text elements in one scene (limit {MAX_TEXT_ELEMENTS}). "
+            f"Past that a model stops rendering text and starts approximating it — "
+            f"duplicating an element or garbling the longest. Cut to the one that "
+            f"carries the idea."
+        )
+    elif any(len(q.split()) > MAX_WORDS_PER_ELEMENT for q in all_quoted):
+        longest = max(all_quoted, key=lambda q: len(q.split()))
+        problem = (
+            f"\"{longest}\" is {len(longest.split())} words on screen "
+            f"(limit {MAX_WORDS_PER_ELEMENT}). Longer strings come back garbled, and a "
+            f"garbled word reads as a misquote of a real source rather than as an "
+            f"artefact. Shorten it or move it to narration."
+        )
+    else:
+        problem = ""
+
+    findings.append(Finding("POL-4", n["POL-4"], not problem, problem))
 
     # POL-5 — narration fits its block (coarse bound; measured take is enforcement)
     if narration:

@@ -1,4 +1,4 @@
-# Newsdesk editorial policy — v1
+# Newsdesk editorial policy — v2
 #
 # This file is the newsroom-standards artifact. The Policy page renders it
 # directly and the README ships it, so it is written to be read by an editor,
@@ -9,8 +9,8 @@
 # `deterministic` cost nothing and run first; nothing paid happens until they
 # all pass.
 
-version: 1
-updated: 2026-07-26
+version: 2
+updated: 2026-07-28
 
 # Where each rule is actually enforced.
 #   deterministic — pure code, no network. Free, and cannot be talked out of it.
@@ -47,6 +47,18 @@ rules:
       negative-prompt mechanism — Google's docs state unlisted parameters are
       silently ignored — so on the image step this rule proves intent, not
       outcome. POL-4 and POL-6 are what actually catch image violations.
+    changelog: >
+      v2 (2026-07-28) extended the constant with "repeated text, doubled text,
+      two lines of identical text". The exclusion list previously named text in
+      general but not its most common rendered form — models that do produce
+      lettering tend to produce it twice, stacked or mirrored, and a term for the
+      general case does not reliably suppress the specific one. Terms taken from
+      the Vox-Style Explainer Prompt Pack (Zubair Trabzada, AI Workshop), whose
+      negative prompt carries them for exactly this reason.
+      The change history lives here because it cannot live in the file: the whole
+      of brand-kit/negative.txt is the constant, byte-for-byte, so a comment line
+      would become part of what is sent to the provider. Only-ever-extended, per
+      the rule above; nothing was removed.
 
   - id: POL-3
     name: No fabricated news scenes
@@ -88,18 +100,46 @@ rules:
       IS on its surface so the model has something to render instead of
       inventing detail. Full rules and the six verified renders behind them:
       brand-kit/scene-guidance.txt.
+    element_budget: >
+      Where a frame is permitted to carry lettering at all — the question-on-prop
+      case, and only when it maps to an entered fact — at most THREE text
+      elements may appear in the scene, and no single element may exceed FOUR
+      words. Checked deterministically.
+    element_budget_why: >
+      Past that budget models stop rendering text and start approximating it:
+      duplicating an element, stacking two near-identical lines, or garbling the
+      longer one. A garbled word is worse than no word, because a viewer reads it
+      as a misquote of a real source rather than as an artefact. The numbers are
+      not ours — they are the working thresholds published in the Vox-Style
+      Explainer Prompt Pack (Zubair Trabzada, AI Workshop), which states the
+      failure plainly: "a MAXIMUM of three text elements per scene and a maximum
+      of four words in any title, or the model will duplicate or garble the
+      words." They agree with this project's own guidance arrived at separately —
+      brand-kit/through-lines.yaml already tells authors to keep an on-prop
+      question to two or three words.
     known_limitation: >
       Three of six test renders produced text despite instruction. Objects that
       natively carry typography — dials, gauges, banknotes, signs, screens —
       pull lettering into the frame regardless. Prompting reduces the rate; it
       does not eliminate it. POL-6 is the enforcement.
+      The element budget bounds the damage where text is permitted. It does
+      nothing about text that arrives uninvited, which stays POL-6's job.
 
   - id: POL-5
     name: Narration fits its block
     why: >
-      A take that overruns gets speed-compressed and reads as rushed; a short
-      one gets centred and reads as out of sync. Either way the viewer hears
-      the seams.
+      Six takes near ten seconds is what keeps the piece near sixty. A take well
+      outside the window makes the story longer or shorter than intended.
+    why_changed: >
+      v2 (2026-07-28). This previously read: "A take that overruns gets
+      speed-compressed and reads as rushed; a short one gets centred and reads as
+      out of sync." Both halves described an assembler that no longer exists.
+      Design spec 6.6 replaced the fixed ten-second window with an audio-led
+      model — block length is derived from the take, the voice is never
+      speed-compressed, and nothing is centred — so this rule stopped being a
+      sync constraint and became a RUNTIME BUDGET. The check and its numbers are
+      unchanged; only the reason is. Worth knowing before anyone tightens it
+      further on sync grounds, because that argument no longer applies.
     layers: [deterministic]
     check: >
       Narration is 23-27 words across 2-3 sentences. This is a coarse

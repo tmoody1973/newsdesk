@@ -167,8 +167,57 @@ block 1. Numbers spelled out. Single flowing sentences preferred over choppy cla
 Target **9.0–10.5s** per take. The skill documents *why* this is unpredictable: narrator
 voices pause ~0.7s at every period, so name-heavy choppy lines read ~1.8 words/s while a
 flowing comma-joined sentence reads ~2.5 words/s — the same word count can vary by 4+
-seconds. Overrun is corrected by raising speech rate or shortening the line; short takes
-are worse than slight overruns because the assembler centers them and they read as desync.
+seconds.
+
+> **Superseded 2026-07-28 — the assembler no longer uses a fixed window.**
+>
+> This section originally read: *"short takes are worse than slight overruns because the
+> assembler centers them and they read as desync."* That was true of the assembler
+> described in §6.6, and the mitigation chosen was to police the input — POL-5's word
+> window existed partly to stop short takes being written at all.
+>
+> The assembler was wrong, not the takes. Centring a take inside a fixed ten-second block
+> puts dead air at **both** ends of every block; a short take is only a symptom. The fixed
+> window is removed in favour of the audio-led model in §6.6, where the block's length is
+> derived from the take rather than the take fitted to the block. Short takes stop being a
+> sync problem, and POL-5 becomes a **runtime budget** — six blocks near ten seconds keeps
+> the piece around sixty — rather than a sync-critical constraint.
+>
+> Source of the correction: the Vox-Style Explainer Prompt Pack (Zubair Trabzada, AI
+> Workshop), Prompt 08, which names "each narration line is centered inside a fixed
+> ten-second window" as the first of four things that make an explainer feel machine-made.
+
+### 6.6 Assembly timing model (P0-7)
+
+Audio leads; picture follows. Every rule here exists to remove a named failure, and the
+order is load-bearing — each step depends on the one above it being already true.
+
+1. **Trim silence first.** Strip leading and trailing silence from every narration take
+   before any timing decision. A take with four seconds of dead air at the front buries the
+   hook, and it is invisible until someone watches the final cut. Every measurement below
+   is taken on the trimmed file.
+2. **Measure, never infer.** `asset.duration` comes back `None` from the ElevenLabs
+   adapter, so take length is `ffprobe` on the downloaded file. This was already true and
+   is restated here because every step downstream depends on it.
+3. **Narration starts 0.4s after its cut, not on it.** The viewer needs a beat to read a
+   new image before a voice starts. Narration landing on the cut means the shot is never
+   actually seen.
+4. **Block length follows the take**, not the reverse: `0.4s + take + tail`, where the tail
+   is a natural gap of roughly 0.5–1.5s. Gaps are *allowed to be uneven* — evenly spaced
+   gaps are what machine-cut video sounds like.
+5. **The clip serves the voice.** Clip longer than its block → trim the clip. Clip shorter →
+   hold the last frame. Never speed up the read, never stretch the video, never squeeze
+   audio to fill a window.
+6. **Music is an arc, not a loop.** Energetic under the opening, softer where the facts
+   land, back up for the payoff — crossfaded and loudness-matched so the change is
+   inaudible. One flat loop is what makes sixty seconds feel like three minutes.
+7. **Subtitles: at most two lines on screen**, timed to the trimmed audio rather than the
+   original file.
+
+Consequence for the manifest: the per-block window is no longer a constant, so assembly
+records the actual measured take length, lead-in and tail per block. A receipt that says
+"10.0s" for six blocks when none of them were is a small lie in a document whose entire
+value is that it does not contain any.
 
 ### 6.4 Retry strategy (P1-1 / AgentLoop)
 

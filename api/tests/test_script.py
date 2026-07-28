@@ -182,3 +182,99 @@ def test_the_prompt_states_the_calibrated_pol5_window():
 
     prompt = build_prompt(cs1_story())
     assert "23" in prompt and "27" in prompt
+
+
+def test_the_prompt_example_satisfies_pol5():
+    """The worked example must obey the rule it demonstrates.
+
+    The first version of it was 22 words against a 23-27 window — a prompt
+    demonstrating the failure it is trying to prevent.
+    """
+    from newsdesk.policy.gate import check_narration
+    from newsdesk.script import _EXAMPLE
+
+    finding = check_narration(_EXAMPLE)
+    assert finding.passed, finding.message
+
+
+def test_a_short_line_gets_one_repair_pass_before_rejection():
+    """§6.4: one retry, then surface. Not zero, and not an unbounded loop."""
+    short = json.loads(_payload(cs1_blocks()))
+    short["blocks"][0]["narration"] = "Money vanished."
+    short["blocks"][0]["claims"] = []
+
+    calls = []
+
+    def _twice(*args, **kwargs):
+        calls.append(kwargs.get("prompt", ""))
+
+        class _R:
+            text = json.dumps(short) if len(calls) == 1 else _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_twice)
+    assert len(calls) == 2, "a short line should trigger exactly one repair pass"
+    assert "Block 1" in calls[1], "the repair prompt must name the block that missed"
+    assert ledger.decisions[0].verdict == "pass"
+    assert "repair" in ledger.decisions[0].reason
+    assert len(blocks) == 6
+
+
+def test_a_fabricated_citation_is_not_retried():
+    """Citing a fact that does not say it gets no second chance.
+
+    This is the boundary that matters. An unmapped number is usually a real
+    figure the model forgot to declare, so it earns one ask (see the test
+    below). Evidence that is not in the cited fact is the model inventing a
+    source, and asking politely for a nicer version of that is how a validator
+    becomes a formality.
+    """
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][0]["claims"] = [
+        {
+            "spoken": "One point one billion dollars",
+            "fact_id": "F1",
+            "evidence": "$2.4B",
+        }
+    ]
+
+    calls = []
+
+    def _count(*args, **kwargs):
+        calls.append(1)
+
+        class _R:
+            text = json.dumps(bad)
+
+        return _R()
+
+    _, ledger, _ = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_count)
+    assert len(calls) == 1
+    assert ledger.decisions[0].verdict == "reject"
+
+
+def test_an_unmapped_number_earns_one_repair_pass():
+    """The counterpart to the test above: a forgotten mapping is asked about once."""
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][1]["narration"] = (
+        "The corporation that had routed federal money to more than fifteen "
+        "hundred local stations since nineteen sixty-seven voted to dissolve in "
+        "twenty twenty-six."
+    )
+
+    calls = []
+
+    def _twice(*args, **kwargs):
+        calls.append(kwargs.get("prompt", ""))
+
+        class _R:
+            text = json.dumps(bad) if len(calls) == 1 else _payload(cs1_blocks())
+
+        return _R()
+
+    _, ledger, blocks = generate_script(_run(), Ledger(), cs1_story(), chat_fn=_twice)
+    assert len(calls) == 2
+    assert "quantity with no claim" in calls[1]
+    assert ledger.decisions[0].verdict == "pass"
+    assert len(blocks) == 6

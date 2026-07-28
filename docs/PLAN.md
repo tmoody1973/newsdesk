@@ -76,7 +76,54 @@ remains: roughly fifty rounds. **Time is the constraint, not money.**
 |---|---|---|
 | **B1** | **`newsdesk/pipeline.py`** — one entry point taking a `Story`, a through-line and a run id, walking facts → script → scene → gate → blocks → narration → assembly, writing `state.json` at every transition. The five `run_cs1_*.py` scripts become thin callers. | **Blocks C and D.** Build first. |
 | **B2** | **Story format that is not a test fixture.** YAML/JSON with title, facts, sources → `Story.build()`. CS-1, CS-2, CS-3 as files. | `newsdesk-case-studies.md` has them written out. |
+| **B4** | **Ingest from a URL — paste a link to a story you reported.** See below; this is the on-ramp that makes it a newsroom tool rather than a form. | |
 | **B3** | **Run CS-2 end to end. ~$0.62.** | Second video, second receipt, second through-line. CS-2 is the judge's designated cold-start story **and** the false-positive control. |
+
+#### B4 · Ingest from a URL
+
+**Tarik, 2026-07-28:** *"the journalist can even put a link to a story they did
+and you pull the facts to help craft the video."*
+
+This is the highest-leverage product idea on the board and it should be built.
+Today, step 1 is "type six facts and their sources by hand" — fifteen minutes of
+tedium before anything happens. Paste a link and you are at art direction in
+thirty seconds. It is also how a newsroom actually works: a reporter does not
+start from a fact list, they start from a piece they already filed.
+
+**It strengthens Wall 1 rather than piercing it, and the design has to make that
+true rather than merely claim it:**
+
+- Extraction **proposes**; the journalist **confirms each fact**. Nothing is
+  auto-accepted, and an unconfirmed fact cannot reach a script.
+- Every proposed fact carries the URL **and the verbatim span it came from** —
+  the same discipline `claims.py` already enforces on narration. If the quoted
+  run of characters is not present in the fetched article, the proposal is
+  dropped, not shown.
+- A fact the journalist **edits** loses its verbatim link and reverts to
+  unsourced until they re-attach a source. Editing a quote is how a paraphrase
+  becomes a claim nobody checked.
+- `chat()` role #4, recorded through `judged()` like the script and the claim
+  map. `chat()` is not a Pipeline citizen, so the ledger is the only place this
+  decision would otherwise not appear.
+
+**`Source.url()` already exists** in `facts.py` and `SourceKind` already admits
+`"url"`. No schema change — the fact model was built for this.
+
+**Shape:** `newsdesk/ingest.py` — fetch → readable text → `chat()` proposes
+`{text, quote, url}` per fact → verbatim check against the fetched body →
+`Fact` + `Source.url(...)` on confirmation. The wizard's step 1 gets a URL field
+above the fact rows: *"Paste a link to a story you reported."*
+
+**Risks to handle, not discover:**
+
+- **Paywalls and JS-rendered pages.** Needs a fallback: paste the text instead.
+  Say so in the UI rather than failing silently.
+- **Fetching arbitrary URLs is an SSRF surface** once this is a public web app.
+  genblaze already ships an SSRF-pinned, redirect-revalidating stream in its
+  verify path — reuse it rather than writing a fetch.
+- **Whose story is it?** The copy should say *"a story you reported."* A
+  provenance tool that quietly ingests someone else's journalism has a problem
+  it cannot argue its way out of. Worth a line in `policy.yaml`.
 
 ### C · The web product
 

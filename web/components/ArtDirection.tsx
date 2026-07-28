@@ -89,7 +89,8 @@ export function ArtDirection() {
                 style={{
                   display: "block", width: "100%", marginTop: 2, border: 0, padding: 0,
                   background: "transparent", font: "inherit", fontSize: 13, fontWeight: 600,
-                  color: "inherit", cursor: "pointer",
+                  color: "inherit", cursor: "pointer", appearance: "none",
+                  textOverflow: "ellipsis",
                 }}
               >
                 {MOTIFS.map((m) => <option key={m}>{m}</option>)}
@@ -99,7 +100,7 @@ export function ArtDirection() {
         </div>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 32, alignItems: "start" }}>
+      <section style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 32, alignItems: "stretch" }}>
         <label style={{
           border: "2px dashed var(--color-divider)", padding: 28,
           display: "flex", gap: 16, alignItems: "center", cursor: "pointer",
@@ -115,6 +116,9 @@ export function ArtDirection() {
             </p>
           </div>
         </label>
+        <div aria-hidden style={{
+          background: "linear-gradient(135deg,#bbb,#777)", filter: "grayscale(1)",
+        }} />
       </section>
 
       <div style={{
@@ -125,7 +129,9 @@ export function ArtDirection() {
           Requests outside this menu are checked against policy. Real people&apos;s likenesses
           and photoreal news scenes will be blocked.
         </p>
-        <button type="button" className="btn btn-primary">Write script</button>
+        <button type="button" className="btn btn-primary" style={{ whiteSpace: "nowrap" }}>
+          Write script
+        </button>
       </div>
     </div>
   );

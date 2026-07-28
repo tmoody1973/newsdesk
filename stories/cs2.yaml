@@ -1,0 +1,54 @@
+# CS-2 — the judge's cold-start story, and the gate's false-positive control.
+#
+# Two jobs, and the second one is the reason this file is not optional:
+#
+#   1. PRD P0-9 — "a judge can execute CS-2 end-to-end without help".
+#   2. It is designed to contain NO policy landmines. If CS-2 trips a gate,
+#      the gate is miscalibrated, not the story. That control has already
+#      earned its keep once: it caught a gate bug that would have blocked
+#      100% of legitimate blocks while citing a real rule.
+#
+# Keep it clean. Adding a fact here that legitimately trips policy destroys the
+# control and the next miscalibrated gate ships.
+#
+# Facts from newsdesk-case-studies.md. Sources that the fixture named as a
+# report or a publication rather than a link stay `citation` — see the note in
+# cs1.yaml about why a fabricated URL is worse than an honest citation.
+
+id: cs2
+title: Vinyl now outsells CDs three to one
+through_line: record
+
+facts:
+  - text: >-
+      US vinyl revenue passed $1 billion in 2025, reaching $1.04 billion — the
+      first time since 1983
+    sources:
+      - citation: RIAA year-end report, 2025
+      - citation: Billboard, "Vinyl passes $1B"
+
+  - text: >-
+      2025 was the nineteenth consecutive year of vinyl growth, up 9.3 percent
+      year over year
+    sources:
+      - citation: RIAA year-end report, 2025
+
+  - text: >-
+      46.8 million LPs sold against 29.5 million CDs, and vinyl brought in more
+      than three times CD revenue — CDs fell 11.6 percent to $312.4 million
+    sources:
+      - citation: RIAA year-end report, 2025
+      - citation: Billboard, "Vinyl passes $1B"
+
+  - text: >-
+      The United States accounts for about half of global vinyl revenue, and
+      total US recorded music hit a record $11.5 billion, with streaming making
+      up $9.75 billion of it
+    sources:
+      - citation: RIAA year-end report, 2025
+
+  - text: >-
+      A decade earlier, in 2016, US vinyl revenue was $224 million — a climb of
+      more than $800 million
+    sources:
+      - citation: Forbes, "A decade of vinyl"

@@ -1,0 +1,59 @@
+# CS-1 — the flagship demo story.
+#
+# Facts transcribed from newsdesk-case-studies.md, which is the fixture of
+# record. The case-studies file opens with the rule this project holds itself
+# to: "Re-verify every number against its listed source at build time — never
+# script from memory." Where that file listed a source as a bare publication
+# name and date ("npr.org (Aug 1, 2025)"), it is written here as a `citation`
+# rather than promoted to a URL. A citation in the receipt is honest; a
+# fabricated link in the receipt is the exact failure this product exists to
+# prevent, and it would be the tool doing it rather than a reporter.
+#
+# Art direction from the same file: the tower's signal rings contract block by
+# block, then the kicker half-relights it. See brand-kit/through-lines.yaml for
+# the silhouette bible that holds the object across six independent renders.
+
+id: cs1
+title: Who pays when public radio goes dark?
+through_line: tower-signal
+
+facts:
+  - text: >-
+      The July 2025 rescissions package eliminated $1.1 billion in previously
+      approved CPB funding covering fiscal years 2026 and 2027
+    sources:
+      - url: https://www.npr.org/2025/08/01/cpb-rescission
+      - citation: TIME, August 1 2025
+
+  - text: >-
+      CPB — the conduit that has distributed federal funds to more than 1,500
+      local public radio and TV stations since 1967 — announced it would wind
+      down, and its board voted to dissolve in January 2026
+    sources:
+      - url: https://www.npr.org/2026/01/06/cpb-dissolve
+
+  - text: >-
+      CPB cut roughly 70 percent of its staff and began closing out grants
+      after October 1 with no new funding
+    sources:
+      - url: https://www.cpb.org/impact
+
+  - text: >-
+      WPBS in Watertown, New York lost about $1 million — a third of its budget
+      — and reduced its workforce by 30 percent; KUAC in Fairbanks lost $1.2
+      million and cut overnight broadcasts; Basin PBS in West Texas lost 48
+      percent of its revenue
+    sources:
+      - url: https://www.cpb.org/impact
+
+  - text: >-
+      Rural and tribal stations were hit hardest, putting Native Public Media's
+      network of 57 radio and 4 television stations at risk
+    sources:
+      - citation: The Conversation, "Rural and tribal stations hit hardest"
+
+  - text: >-
+      Some metropolitan stations saw donation surges after the cuts, including
+      in Nashville, Louisville and at KUOW Seattle
+    sources:
+      - url: https://www.npr.org/2025/08/01/cpb-rescission

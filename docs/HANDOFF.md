@@ -1,148 +1,209 @@
-# Handoff — Newsdesk, end of Day 0/1
+# Handoff — Newsdesk, end of Day 2
 
 **Repo:** `/Users/tarikmoody/Documents/Projects/newsdesk`
+**Branch:** `tarikjmoody/moo-425-moo-419-brand-kit-and-script` (11 commits ahead of `main`)
 **Linear:** [Newsdesk — Backblaze Generative Media Hackathon](https://linear.app/moodyco/project/newsdesk-backblaze-generative-media-hackathon-5f68ce40d2cc) · team `MOO`
 **Deadline:** submit **Aug 2**, hard cut **Aug 3, 5:00 PM EDT**
-**Spend:** ~$0.80 of a ~$25 generation budget
+**Spend:** ~$4 of ~$25 · `uv run pytest tests/ -q` → **155 passed**, zero network, $0
+
+## The one thing that matters
+
+**Nothing has produced a finished MP4 yet.** Facts, script, stills and clips all
+work end to end. There is no voice and no assembly. Everything else on the board
+decorates a video that does not exist.
+
+Two issues are the spine, in this order: **MOO-426 (narration)** then
+**MOO-428 (approval + assemble + embed + verify)**. Do not start the vision
+check, the web UI, the Parquet audit or the second policy check before those.
 
 ## Where to read first
 
-Don't re-derive any of this — it's all written down:
+Don't re-derive any of this — it is all written down.
 
 | What | Where |
 |---|---|
-| Architecture, decisions, budget, day plan | `docs/superpowers/specs/2026-07-26-newsdesk-design.md` |
+| Architecture, budget, day plan | `docs/superpowers/specs/2026-07-26-newsdesk-design.md` |
+| **Assembly timing model** (new, §6.6) | same file — read this before touching MOO-428 |
 | Requirements (P0-1…P0-9) | `newsdesk-prd.md` |
 | Fixtures CS-1…CS-5 (they *are* the test suite) | `newsdesk-case-studies.md` |
 | Screens, stamp system, tokens | `newsdesk-ui-ux-spec.md` |
-| Editorial rules POL-1…POL-6, with thresholds and reasoning | `policy/policy.yaml` |
-| Why text bleeds into frames and how to prompt around it | `brand-kit/scene-guidance.txt` |
-| Narrator choice + measured pacing data | `brand-kit/voice.json` |
-| Art-direction menu (framing language per option) | `brand-kit/through-lines.yaml` |
+| Editorial rules POL-1…POL-6, **now v2** | `policy/policy.yaml` |
+| Narrator, pacing data, **assembly contract** | `brand-kit/voice.json` |
+| Why text bleeds into frames | `brand-kit/scene-guidance.txt` |
+| Art-direction menu | `brand-kit/through-lines.yaml` |
 
-Every Linear issue carries Intent / Acceptance / Verification, and the closed ones have
-evidence comments with real output. **Read the issue before building it** — several were
-rewritten mid-session when testing killed an assumption.
+Every Linear issue carries Intent / Acceptance / Verification, and the closed
+ones have evidence comments with real output. **Read the issue before building
+it** — MOO-419, 424, 425, 426 and 428 were all rewritten when testing killed an
+assumption.
 
 ## Status
 
-**Done:** MOO-415, 416, 417, 418, 420, 421, 422, 432, 433 — plus MOO-425 partially.
-**Open:** MOO-419, 423, 424, 425, 426, 427, 428, 429, 430, 431.
+**Done:** MOO-415, 416, 417, 418, **419**, 420, 421, 422, **425**, 432, 433.
+**Effectively done:** MOO-424 — six blocks generate end to end and CS-5 passes;
+only ring-contraction legibility is open, and it is cosmetic.
+**Open:** MOO-423, **426**, **428**, 427, 429, 430, 431.
 
-Days 0 and 1 complete, roughly one day ahead — but the day gained is the *predictable*
-half. Nothing has generated a video yet; narration timing, ffmpeg assembly, manifest
-embed and `verify` are all untouched.
+What works, verified against real output:
 
-The governance core is done and tested offline: both walls, the decision ledger, the
-prompt schema. `uv run pytest tests/ -q` → **17 passed**, zero network, `$0` asserted.
-**CS-4 (the refusal demo) already works before any video exists.**
+- **Script** — `chat()` on `anthropic/claude-haiku-4.5` via GMI. CS-1 passes in
+  28s: six blocks at 23–27 words, every claim traced to verbatim evidence, zero
+  orphan facts, after two repair passes.
+- **Blocks** — `gemini-2.5-flash-image` 768×1344 → `seedance-1-0-pro-fast-251015`
+  704×1248 true 9:16, 10.0s. Six blocks, $0.366, 2m14s. Stills read as one video
+  **from text alone**, no style-key image anywhere.
+- **CS-5** — sabotaged blocks complete on the Kling fallback with the manifest
+  naming the model that ran; a fully-dead chain fails closed; healthy blocks stay
+  on the primary.
+- **Brand kit** — published to `b2://newsdesk-brand-kit/kit/`, loads at runtime,
+  refuses to fall back on a missing kit. `scripts/verify_brand_kit.py` → 4/4.
 
 ## Immediate next work
 
-### MOO-425 — finish the brand kit (in progress, ~$0)
+### MOO-426 — narration (do this first)
 
-Done: `negative.txt`, `style-tokens.txt`, `scene-guidance.txt`, `through-lines.yaml`,
-`voice.json`.
+The issue was rewritten today; read it. Two things to know before you write code:
 
-Remaining, per the issue's rewritten acceptance criteria:
-- `brand-kit/subtitle.ass` — Anton, matching the burned-subtitle look and the app's stamps
-- `brand-kit/style-key.png` — pick the best of six candidates already in
-  `b2://newsdesk-brand-kit/style-key-candidates/`. **Documentation only, not a pipeline
-  input** (see "Assumptions that died" below)
-- `newsdesk/brandkit.py` — load the kit **from B2 at runtime**, and fail loudly on a
-  missing kit rather than falling back to defaults
-- `scripts/sync_brand_kit.py` — idempotent push of the local kit to B2
+**The pricing gotcha is blocking, not cosmetic.** `pricing.py` registers
+`ElevenLabs-TTS-v3` at $0.10 — that is the *GMI* slug and rate. `voice.json` says
+we call ElevenLabs **directly** with `eleven_v3`, so the registered rate applies
+to a path we do not use and a direct run reports `cost_usd = None`. Two bugs of
+exactly this shape were found today and both made video look free. Register a
+rate, mark it UNVERIFIED if you don't have the real number, never leave a model
+unpriced.
 
-### MOO-419 — script generation + claim→fact validator
+**Walk the fallback chain yourself.** Copy the pattern from
+`blocks.run_block` — including `_is_transient` and the same-model retry. Do not
+rely on `fallback_models`; see below.
 
-First real `chat()` call. Text-only, so cents. Completes facts → script → gate end to end,
-which is the first genuinely demoable path.
+### MOO-428 — approval, assembly, embed, verify
 
-**Must route through `newsdesk/decisions.py::judged()`** — see MOO-433 below. That's the
-whole reason this issue was sequenced after the ledger.
+The assembly criteria were rewritten today against design spec **§6.6**. The old
+ones prescribed a fixed ten-second window with short takes centred, which is
+itself a named failure mode. The model now is **audio leads, picture follows**:
 
-Script shape is imported, not invented: `brand-kit/` + design spec §6.2. Note POL-5 now
-wants **23–27 words across 2–3 sentences**, not the vox skill's 20–24 in one sentence.
+1. strip leading/trailing silence *before any timing decision*
+2. measure the trimmed file with `ffprobe` (`asset.duration` is `None`)
+3. narration starts **0.4s after its cut**, not on it
+4. block length = `0.4 + take + tail(0.5–1.5s)`; gaps **allowed to be uneven**
+5. clip longer → trim it; shorter → **hold the last frame**
+6. music is an arc, not a loop
+7. subtitles ≤ 2 lines, timed to the trimmed audio
 
-## Assumptions that died this session — do not resurrect them
+Never: speed-compress the voice, stretch video, squeeze audio to fill a window,
+centre a take, space gaps evenly. The numbers live in `voice.json`'s
+`assembly_contract` block, not in code constants.
 
-Each cost real money to disprove. The Linear comments have the evidence.
+## Assumptions that died — do not resurrect them
 
-1. **Seedance has no style-reference slot.** Every GMI video family routes images to
-   keyframe slots only (`first_frame`/`last_frame`, or `image`). Kling doesn't rescue it.
-   *(MOO-415)*
-2. **Passing a style key as an image input makes consistency worse.** Two scenes off one
-   key produced a solid-blue ground and a warm-tan ground. **Naming the palette explicitly
-   in text locked it.** So: no i2i step, one image call per block, style lives in
-   `style-tokens.txt`. *(MOO-424)*
-3. **`seedream-5.0-lite` silently ignores `aspect_ratio`.** Returns 2048×2048 regardless.
-   **`gemini-2.5-flash-image` honours it** (768×1344). That's the image model.
-4. **Negation phrasing is not what drives text bleed — framing is.** "archival photo
-   cutout of a radio dial" → numerals legible at normal size. "dial face of matte cream
-   card" → clean. Same prompt otherwise, no negation in either. An earlier hypothesis
-   about negation mechanics was tested and **refuted**; `scene-guidance.txt` records the
-   refutation deliberately.
-5. **The vox skill's pacing rule is backwards for our voice.** It says prefer one flowing
-   sentence; four measured takes show flowing lines run *short* and sentence-end pauses
-   fill the window. *(POL-5 recalibrated — `policy.yaml` has the numbers)*
-6. **`chat()` is not a Pipeline citizen** — it cannot ride `.step()` and produces no
-   manifest. Since all three of our `chat()` uses are governance, the decisions would have
-   been the only unrecorded part of a provenance product. `newsdesk/decisions.py` fixes
-   this: decisions are hashed into a ledger whose digest enters the master manifest.
-   *(MOO-433)*
+Each cost real money or a real run. Linear comments have the evidence.
+
+**From earlier sessions, still true:**
+
+1. **Seedance has no style-reference slot.** Every GMI video family routes images
+   to keyframe slots only. *(MOO-415)*
+2. **Passing a style key as an image input makes consistency worse.** Naming the
+   palette in text locked it. Confirmed again today: six text-only stills read as
+   one video. *(MOO-424)*
+3. **`seedream-5.0-lite` ignores `aspect_ratio`;** `gemini-2.5-flash-image`
+   honours it.
+4. **Framing, not negation, drives text bleed.** *(scene-guidance.txt)*
+5. **The vox pacing rule is backwards for our voice.** POL-5 is 23–27 words
+   across 2–3 sentences.
+6. **`chat()` is not a Pipeline citizen** — hence `decisions.py`. *(MOO-433)*
+
+**New today, and several are corrections to corrections:**
+
+7. **GMI reads `ratio`; genblaze emits `aspect_ratio`.** No alias between them.
+   This is why a clip came back 1248×704 landscape with a portrait `first_frame`
+   — the parameter arrived under a name nothing read. `register_seedance_ratio()`
+   fixes it. **I first recorded this as "seedance ignores aspect ratio" and
+   inverted the whole chain to Kling on that basis** — which would have shipped
+   every clip on a model costing 12.7× more.
+8. **`fallback_models` is inert against every real GMI failure.** It fires only
+   on `MODEL_ERROR`, a branch the classifier reaches only for "not found" /
+   "not available", *after* auth and server checks have claimed anything with
+   401/403/400/5xx in it. GMI says "model X does not exist" over HTTP 404 →
+   `UNKNOWN` → no fallback. **CS-5 would have passed by never engaging.**
+   `run_block` walks the chain itself.
+9. **Seedance 2.0 is flaky, not unavailable.** Ten raw submits to
+   `seedance-2-0-fast-260128` gave five 200s and five 500 "Backend error (401)".
+   **This repo recorded "not entitled" twice before the retest.** Hence
+   same-model retry before falling down the chain.
+10. **The undated slug `seedance-1-0-pro-fast` does not exist.** GMI carries
+    dated builds; the registry's `example_slugs` are the real names.
+11. **`arun()` returns `PipelineResult`, not `Run`.** Reading `.steps` off it
+    silently yields nothing.
+12. **`ctx.params` does not exist on `PricingContext`** — it carries
+    `(step, assets, provider_payload)`. The `AttributeError` was swallowed inside
+    the pricing hook, so every per-second model priced at `None` while looking
+    configured.
+13. **The style key is documentation.** Committed, published, and wired into
+    nothing. Deliberate.
+14. **The prompt pack's "style key is the whole game" is wrong on this stack.**
+    Written for Higgsfield. See `docs/` and the MOO-428 comment.
 
 ## Gotchas that will bite
 
-- **`ParquetSink` needs `pyarrow`** — exported in `__all__` but raises without it. Already
-  added; don't remove it.
-- **Direct ElevenLabs wants `eleven_v3`**, not the GMI slug `ElevenLabs-TTS-v3`. Which
-  means the ElevenLabs rate in `newsdesk/pricing.py` is the *GMI* rate and doesn't apply
-  to the direct path. **Unresolved — worth fixing before MOO-426.**
-- **`asset.duration` is `None`** from the ElevenLabs adapter. Take length must be measured
-  with `ffprobe`.
-- **`ObjectStorageSink.write_run()` re-fetches assets by URL**, so it 401s on a private
-  bucket. Fine for real provider outputs; bit the smoke test.
-- **`ObjectStorageSink` rejects `URLPolicy.PRESIGNED` by design** — "manifests outlive
-  presigned URLs". Hence public `assets` and `brand-kit` buckets.
-- **B2 bucket creation needs an all-buckets key**; a bucket-scoped one fails even with
-  `writeBuckets`.
-- **Cost is not reported by GMI.** `newsdesk/pricing.py` registers rates so `cost_usd`
-  populates. Rates are a 2026-05-04 snapshot — contract-specific, verify against console.
-- **Budget lever:** `seedance-1-0-pro-fast` is **$0.022/asset** vs seedance-2.0's
-  **$0.52** for a 10s clip. Iterate on pro-fast; spend on 2.0 only for the hero run and
-  the demo video. Full story ≈ $3.95 on 2.0, $0.94 on pro-fast.
-- **`gate.py` must never import anything network-capable.** `tests/test_structure.py`
-  walks its import graph and fails the build. Don't "fix" that test.
-- **Keep the CS-2 false-positive control.** It caught a gate bug on first run that would
-  have blocked 100% of legitimate blocks while citing a real rule.
+- **`gate.py` must never import anything network-capable.** `test_structure.py`
+  walks its import graph. Don't "fix" that test. This is why `brandkit.py` cannot
+  be imported by `blockprompt.py` — they meet at `NEWSDESK_BRAND_KIT_DIR`.
+- **`asset.duration` is `None`** from the ElevenLabs adapter. `ffprobe` it.
+- **Every catalogued seedance slug tested works through genblaze**, including the
+  `-upscale` one, because `input_from` supplies the `first_frame` it wants. The
+  only reliable sabotage is a fictional slug — which is also what CS-5 prescribes.
+- **A fictional slug matching `^seedance-` raises at *preflight*** (family match →
+  probe → NOT_FOUND) and costs $0. One that matches no family runs permissively
+  and costs an image before failing at the wire. Both are handled; know which
+  you're testing.
+- **GMI throttles rapid sequential calls** — a clean script run makes four and the
+  fourth 429s. `script.py` has backoff; narration will need the same.
+- **`judged()` records the exception message now, not just its type.** Keep it —
+  a rate limit, a bad slug and a revoked key were previously indistinguishable in
+  the ledger, and all three read as the checker working.
+- **`ObjectStorageSink.write_run()` re-fetches assets by URL**, so it 401s on a
+  private bucket. Hence public `assets` and `brand-kit`.
+- **`ParquetSink` needs `pyarrow`.** Already added; don't remove it.
+- **B2 bucket creation needs an all-buckets key.**
+- **Anton must be resolvable by libass at burn time.** ffmpeg does not embed it
+  and a missing face falls back *silently*. `fc-list | grep -i anton`.
+- **Keep the CS-2 false-positive control.** It caught a gate bug that would have
+  blocked 100% of legitimate blocks while citing a real rule.
 
-## Working agreements observed this session
+## Costs, measured
 
-- Verify with real output before claiming anything. View images at zoom rather than
-  trusting a thumbnail — that caught two things a downsampled view missed.
-- Read the SDK source / docs before spending. MOO-415 was answered for **$0** from the
-  installed registry.
-- Make the first paid call produce something needed anyway — the concurrency spike also
-  produced the style-key candidates.
-- Move Linear issues to Done **as work completes**; the board drifted once this session.
-- Corrections are stated plainly and the wrong version is left in the record (see
-  `scene-guidance.txt`).
+| | Rate | Six-block story |
+|---|---|---|
+| `gemini-2.5-flash-image` | $0.039/asset | $0.23 |
+| `seedance-1-0-pro-fast-251015` | $0.022/asset | $0.13 |
+| `kling-image2video-v2.1-master` (fallback) | $0.28/asset | $1.68 |
+| ElevenLabs direct | **unregistered — fix this** | ? |
 
-## Suggested skills for the next session
+A full story on the primary chain is **$0.97**, against the design's projected
+$3.95. Iterate freely.
 
-- **`find-docs`** (context7) — before any SDK/API assumption. Settled the Gemini
-  negative-prompt question authoritatively.
-- **`superpowers:test-driven-development`** — MOO-419's validator is exactly the shape
-  (fixtures exist as CS-1/CS-3).
-- **`linear-build`** — already in use; keep the issue-as-contract loop.
-- Not needed: brainstorming (design is settled and committed), writing-plans (the board
-  is the plan).
+## Working agreements observed
+
+- Verify with real output before claiming anything. View images at full size.
+- Read the provider's own docs before trusting the SDK's vocabulary. Both of
+  today's most expensive mistakes were the SDK and GMI disagreeing about a name.
+- Make the first paid call produce something needed anyway.
+- Move Linear issues as work completes; attach evidence comments with real output.
+- Corrections are stated plainly and the wrong version stays in the record — see
+  design spec §6.3, `policy.yaml` POL-2 `changelog` and POL-5 `why_changed`.
 
 ## Open questions for Tarik
 
-1. **Listen to `scratchpad/narrator_sample.mp3`** before six blocks get built on Marcus
-   Louis. Voice is a brand call, not a technical one.
-2. **GMI credit balance** — asked twice, never answered. It's the real budget ceiling and
-   `estimate_cost()` returns `None`, so it can only come from the console.
-3. **Direct-ElevenLabs vs via-GMI for TTS.** Direct gives two distinct provider adapters
-   (better for the Genblaze Usage criterion) but sits outside the registered pricing.
+1. **GMI credit balance.** Asked three times, never answered. `estimate_cost()`
+   returns `None`, so it can only come from the console. ~$4 spent of an assumed
+   $25.
+2. **Seedance 2.0 access.** Flaky at ~50%, not absent. Worth one email to
+   [GMI support](https://www.gmicloud.ai/contact#sales) quoting a failing
+   `request_id` and the 500/401 body — it looks like an upstream pool member
+   without credentials. Not blocking; the primary chain works.
+3. **Ring contraction doesn't read** across the six blocks even with per-block
+   percentages. Cosmetic, $0.23 a round to iterate. Worth doing *after* an MP4
+   exists.
+4. **Voice cloning for the demo video only?** Your own voice would be strong for
+   MOO-431's demo. It would be wrong for the product — a provenance tool whose
+   narrator is a clone of a real person invites the question POL-1 forecloses.

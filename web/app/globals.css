@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* The Paste-Up Room. Architectural trace paper, plan-check stamps, registration
+   marks. Deliberately not a SaaS dashboard and not the hairline-rule broadsheet
+   cliché that "newsroom tool" invites.
+
+   Everything here stays quiet so the stamps can be loud. That is the whole
+   design rule — resist adding a fifth accent. */
+@theme {
+  --color-pasteboard: #e8e6df;
+  --color-ink: #1a1917;
+  --color-canary: #f2c744;
+  --color-stamp-red: #c8372d;
+  --color-approval-blue: #2b5da8;
+  --color-graphite: #6b675f;
+
+  --font-display: var(--font-anton), sans-serif;
+  --font-sans: var(--font-public-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-sm: 2px;
+}
+
+html { background: var(--color-pasteboard); }
+
+body {
+  background: var(--color-pasteboard);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Bumwad. A faint blueprint grid so the surface reads as a board rather than
+     as a page — visible enough to notice, quiet enough to ignore. */
+  background-image:
+    linear-gradient(rgba(26, 25, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 25, 23, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Machine truth always renders in mono. Hashes, model ids, timestamps, source
+   ids — if a machine produced it, it does not get the body face. */
+.mono { font-family: var(--font-mono); font-variant-ligatures: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .stamp-land { animation: stamp-settle 120ms cubic-bezier(0.2, 0, 0, 1); }
+}
+@keyframes stamp-settle {
+  from { transform: scale(1.12) rotate(var(--stamp-rot, -3deg)); opacity: 0; }
+  to   { transform: scale(1) rotate(var(--stamp-rot, -3deg)); opacity: 1; }
+}

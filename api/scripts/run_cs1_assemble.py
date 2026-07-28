@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from newsdesk.assembly import (
@@ -289,7 +290,28 @@ def main() -> int:
 
     key = f"{RUN_ID}/cs1.mp4"
     store.put(key, embedded.read_bytes(), content_type="video/mp4")
-    print(f"published  {store.get_durable_url(key)}")
+    url = store.get_durable_url(key)
+    print(f"published  {url}")
+
+    # The run is only published once the file exists and its manifest checks out,
+    # so this transition happens here rather than at approval. Without it the
+    # board keeps reporting `awaiting_approval` on a story that shipped, and a
+    # status that lags reality is worse than no status — it is the one field a
+    # reader uses to decide whether to trust the rest.
+    state = replace(
+        state,
+        status="published",
+        blocks=tuple(replace(b, status="ready") for b in state.blocks),
+        final={
+            "uri": url,
+            "runtime_s": measured,
+            "loudness_lufs": lufs_out,
+            "true_peak_db": peak_out,
+            "manifest_sha256": manifest.canonical_hash,
+            "verify": "genblaze verify --fetch",
+        },
+    ).log("publish", f"published {measured:.2f}s at {lufs_out} LUFS", cost_usd=0.0)
+    state.save()
     print(f"\nverify with:  uv run genblaze verify --fetch {embedded}")
     return 0
 

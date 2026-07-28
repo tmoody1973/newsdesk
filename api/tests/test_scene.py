@@ -62,11 +62,49 @@ def test_a_lettering_prone_object_describes_its_surface_in_the_same_sentence(tl)
 
 
 def test_the_escalation_advances_across_blocks():
+    """Whichever phrasing a through-line uses, the six blocks must differ."""
     tl = all_through_lines()[0]
     stages = [build_scene(tl, n) for n in (1, 3, 6)]
     assert len(set(stages)) == 3, "every block should describe a different state"
-    assert "has not started" in stages[0]
-    assert "furthest extent" in stages[2]
+
+
+@pytest.mark.parametrize(
+    "tl", [t for t in all_through_lines() if t.countable], ids=lambda t: t.id
+)
+def test_a_countable_escalation_falls_by_a_whole_unit(tl):
+    """Stated as an exact count, decreasing, never repeating.
+
+    The percentage phrasing it replaced came back non-monotonic twice on live
+    rolls — block 6 with MORE rings than block 1. A model cannot render a
+    proportion of an abstract change; it can render eight things and three.
+    """
+    import re
+
+    counts = []
+    for n in range(1, 7):
+        m = re.search(r"Draw EXACTLY (\d+) ", build_scene(tl, n))
+        assert m, f"block {n} states no count"
+        counts.append(int(m.group(1)))
+
+    assert counts[0] == tl.countable["start"]
+    assert counts[-1] == tl.countable["end"]
+    assert counts == sorted(counts, reverse=True), f"not monotonic: {counts}"
+    assert len(set(counts)) == len(counts), f"two blocks share a count: {counts}"
+
+
+@pytest.mark.parametrize(
+    "tl", [t for t in all_through_lines() if t.silhouette], ids=lambda t: t.id
+)
+def test_a_silhouette_describes_rather_than_forbids(tl):
+    """scene-guidance.txt: framing, not negation, drives what a model renders.
+
+    v1 of the tower silhouette ended in "NO observation deck, NO disc, NO bulge,
+    NO pod" and two of six blocks grew a pod anyway. A shape stated positively
+    leaves nothing to resolve.
+    """
+    shape = tl.silhouette.upper()
+    assert " NO " not in shape, "the silhouette forbids instead of describing"
+    assert "NOT A " not in shape
 
 
 @pytest.mark.parametrize("tl", all_through_lines(), ids=lambda t: t.id)

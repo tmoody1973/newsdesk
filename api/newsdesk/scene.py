@@ -161,6 +161,11 @@ class ThroughLine:
     # the framing clause names the object, the silhouette clause makes sure only
     # one thing satisfies it.
     silhouette: str = ""
+    # Optional countable escalation: {"noun": ..., "start": int, "end": int}.
+    # Present when the change is a thing that can be counted; absent when it is
+    # continuous (a fuse shortening, a balloon filling), which still gets the
+    # percentage phrasing below.
+    countable: dict | None = None
 
     @classmethod
     def from_kit(cls, entry: dict) -> ThroughLine:
@@ -172,6 +177,7 @@ class ThroughLine:
             lettering_risk=entry.get("lettering_risk", "low"),
             surface=_flatten(entry.get("surface", "")),
             silhouette=_flatten(entry.get("silhouette", "")),
+            countable=entry.get("countable"),
         )
 
 
@@ -215,7 +221,9 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
     parts.append(f"Shot scale for this block: {_SHOTS[i]}.")
     parts.append(f"Also in frame: {_MOTIFS[i]}.")
 
-    if through_line.escalation:
+    if through_line.countable:
+        parts.append(f"{_count(through_line.countable, block_n, blocks)}.")
+    elif through_line.escalation:
         parts.append(f"{_stage(through_line.escalation, block_n, blocks)}.")
 
     # The fake-oner, in the scene rather than only in the motion field, because
@@ -251,6 +259,26 @@ def build_motion(block_n: int, blocks: int = 6) -> str:
 def build_audio(block_n: int, blocks: int = 6) -> str:
     """AUDIO for one block: three to five concrete diegetic events. No voice."""
     return f"Sound design: {_SOUND[_index(block_n, blocks)]}. No voice, no narration"
+
+
+def _count(spec: dict, block_n: int, blocks: int) -> str:
+    """The escalation as an exact remaining count, not as a proportion.
+
+    Six blocks of "about sixty percent through that change" came back
+    non-monotonic twice — block 6 with more rings than block 1. A model cannot
+    render a proportion of an abstract change, but it can render eight things
+    and it can render three. Interpolated linearly and rounded, so consecutive
+    blocks differ by a whole unit and the direction is never ambiguous.
+    """
+    start, end = int(spec["start"]), int(spec["end"])
+    noun = str(spec["noun"])
+    span = (block_n - 1) / max(blocks - 1, 1)
+    now = round(start + (end - start) * span)
+    return (
+        f"Draw EXACTLY {now} {noun} — count them, there must be {now} and no "
+        f"more. There were {start} at the start of this story and there will be "
+        f"{end} by the end; this block shows {now}"
+    )
 
 
 def _stage(escalation: str, block_n: int, blocks: int) -> str:

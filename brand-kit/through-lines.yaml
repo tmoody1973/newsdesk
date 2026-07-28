@@ -43,15 +43,30 @@ through_lines:
     # So the lock is text, which is the lever MOO-424 already proved works for
     # palette. Say the shape precisely enough that only one object satisfies it,
     # and name the near-misses so they are excluded rather than left open.
+    # v2, 2026-07-28. v1 ended in a list of negations — "NO observation deck, NO
+    # disc, NO bulge, NO pod" — and two of six blocks grew a pod anyway. That is
+    # scene-guidance.txt's own finding about text bleed applied to shape:
+    # framing, not negation, is what drives what a model renders. The top is now
+    # described by what IS there, and the near-misses are gone rather than
+    # forbidden. A model given a positive description has nothing to resolve.
     silhouette: >
-      the tower is a four-legged steel lattice mast: straight tapering sides
-      made of visible criss-cross triangular bracing all the way up, three
-      horizontal cross-braces spaced along its height, and a single thin
-      antenna spire at the very top. It has NO observation deck, NO disc, NO
-      bulge, NO pod and NO restaurant at any height — it is not a CN Tower,
-      not a Fernsehturm, not a needle. Open framework throughout, so the cream
-      background shows through the bracing
+      the tower is a four-legged steel lattice mast: straight tapering sides of
+      visible criss-cross triangular bracing all the way up, three horizontal
+      cross-braces spaced along its height, and at the very top a bare crossed
+      antenna spire — two thin plain rods, thinner than the mast below them,
+      ending in points. The width of the tower decreases smoothly from base to
+      tip with nothing wider than the section beneath it. Open framework
+      throughout, so the cream background shows through the bracing
     escalation: rings contract block by block, outermost first
+    # Countable escalation. The percentage phrasing ("about eighty percent
+    # through that change") never rendered monotonically across six blocks —
+    # block 6 came back with MORE rings than block 1, twice. Models render
+    # things they can count. Stating an exact remaining count out of a stated
+    # original is the difference between a quantity and a mood.
+    countable:
+      noun: hand-drawn marker rings radiating from the mast
+      start: 8
+      end: 2
     lettering_risk: low
 
   - id: fuse

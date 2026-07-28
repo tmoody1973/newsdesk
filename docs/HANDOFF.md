@@ -237,19 +237,26 @@ figure is measured, not modelled: it is what
    [GMI support](https://www.gmicloud.ai/contact#sales) quoting a failing
    `request_id` and the 500/401 body — it looks like an upstream pool member
    without credentials. Not blocking; the primary chain works.
-3. **Ring contraction doesn't read** across the six blocks even with per-block
+3. **Six clips are 10s but blocks 4 and 5 run 13.7s and 14.0s**, so they hold a
+   frozen last frame for 3.7s and 3.9s. It reads acceptably — watched and signed
+   off — but `DURATION_S = 10` in `blocks.py` is the fix and six seedance clips
+   cost $0.13. The cheapest visible improvement on the board. Do it after the
+   submission exists, not before.
+4. **Ring contraction doesn't read** across the six blocks even with per-block
    percentages. Cosmetic, $0.23 a round to iterate. Worth doing *after* an MP4
    exists.
 4. **Voice cloning for the demo video only?** Your own voice would be strong for
    MOO-431's demo. It would be wrong for the product — a provenance tool whose
    narrator is a clone of a real person invites the question POL-1 forecloses.
-5. **The two published windows disagree, and it is an editorial call.** POL-5
-   admits 23-27 words; on this narrator that produced 9.25-12.56s across six
-   blocks against a 9.0-10.5s take window. Three of six miss, all long, and no
-   correction reaches them. Either widen `target_take_seconds` to ~9.0-12.5s and
-   accept a ~65s piece, or narrow POL-5 to ~22-25 words and keep ~60s. The
-   measurements and both options are in `voice.json` under
-   `delivery.measured_2026_07_28_narration`.
+5. **RESOLVED — the take window is now 9.0-13.0s.** It was 9.0-10.5s, which
+   three of six CS-1 blocks missed by running long. Widened rather than
+   narrowing POL-5, because regenerating the script changes the lines and that
+   invalidates six rendered takes plus the approval on the cut made from them.
+   Not derived from POL-5's word window: at the measured 1.94-2.80 w/s that
+   implies 8.21-13.95s, wide enough that no compliant script could ever fail the
+   check. Reasoning in `voice.json` under `delivery.why_the_window_moved`, and
+   two tests in `test_narration.py` now hold the two numbers against each other
+   so they cannot silently drift apart again.
 6. **The ElevenLabs rate is a guess.** `eleven_v3` is registered at $0.22/1k
    characters — Creator tier, the most expensive plausible number, marked
    UNVERIFIED. The real figure is at

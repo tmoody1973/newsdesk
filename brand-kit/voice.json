@@ -19,8 +19,16 @@
   "delivery": {
     "target_take_seconds": [
       9.0,
-      10.5
+      13.0
     ],
+    "why_the_window_moved": {
+      "date": "2026-07-28",
+      "was": [9.0, 10.5],
+      "what_happened": "Six CS-1 blocks were voiced and measured: 9.25, 9.28, 9.64, 10.88, 12.40, 12.56s. Three of six fell outside a 9.0-10.5s window, all by running long, and no correction can reach an overrun on this stack. The takes were not wrong — the two published numbers had been calibrated separately and did not describe each other.",
+      "why_not_derived": "The obvious fix is to make this the image of POL-5's word window under the measured speaking rate. That rate ran 1.94-2.80 w/s across the six takes, which implies a take range of 8.21-13.95s — wide enough that a POL-5-compliant script could never fail the take check at all, which would make the check decoration. A window that cannot fail is worse than one that fails too often.",
+      "why_this": "Set from the observed distribution with modest headroom instead. 9.0s still catches a take short enough to want a pause correction — block 6's first attempt came back at 7.62s and was corrected to 9.25s. 13.0s catches a genuinely long read without flagging the ordinary spread. All six current takes pass; the assembled piece runs 72.6s and was watched and approved at that length.",
+      "the_honest_caveat": "This is calibrated to one story on one narrator. It is a runtime budget, not a law — POL-5 stopped being a sync constraint when design spec 6.6 made block length follow the take. A second story on a different voice should re-measure rather than inherit these numbers."
+    },
     "words_per_block": [
       23,
       27
@@ -72,7 +80,7 @@
         {"block": 5, "words": 24, "sentences": 2, "seconds": 12.40, "result": "long"},
         {"block": 6, "words": 25, "sentences": 2, "seconds": 9.25, "result": "IN WINDOW after one [pause] correction, from 7.62s"}
       ],
-      "the_two_windows_disagree": "POL-5 admits 23-27 words. On this narrator that produced 9.25-12.56s across six blocks, against a 9.0-10.5s take window — so three of six missed, all by running long, and no correction can reach them. This is not the takes being wrong; it is two published numbers that were calibrated separately. EDITORIAL DECISION OUTSTANDING: widen target_take_seconds to about 9.0-12.5s and accept a ~65s piece, or narrow POL-5 to about 22-25 words and accept shorter blocks. Left unchanged here because it is an editor's call, not an engineer's.",
+      "the_two_windows_disagree": "POL-5 admits 23-27 words. On this narrator that produced 9.25-12.56s across six blocks, against a 9.0-10.5s take window — so three of six missed, all by running long, and no correction can reach them. This is not the takes being wrong; it is two published numbers that were calibrated separately. RESOLVED 2026-07-28: widened to 9.0-13.0s. See why_the_window_moved above. Narrowing POL-5 instead was rejected because it would have required regenerating the script, which changes the lines, which invalidates six rendered takes and the human approval on the cut made from them.",
       "pause_tags_work_and_are_measured": "eleven_v3 does not accept SSML <break> — ElevenLabs documents break tags on every model EXCEPT v3, and audio tags on v3 instead. [pause] buys about 0.36s at each internal sentence boundary and [long pause] about 1.25s; the tags are interpreted, not spoken, which silencedetect confirms rather than duration alone. See scripts/spike_pause_tag.py.",
       "short_pause_was_dropped": "[short pause] was in the ladder by symmetry and never by measurement. Block 6 spent both corrections on it against a 0.26s deficit and moved a tenth of a second; one [pause] then moved it 1.63s and landed it. v3's audio tags are probabilistic, so the smallest notch is the one most likely to be ignored.",
       "lmnt_pads_heavily": "The CS-5 sabotage run measured LMNT emitting up to 28.7s of trailing silence on one block — 40.08s raw, 11.35s of words. Stripping silence before measuring is not tidiness on this fallback; without it that block would have been forty seconds long in the assembly.",

@@ -26,8 +26,9 @@ through_lines:
     use_when: Reach, coverage, or a service going dark.
     framing: >
       a tall broadcast tower rendered as a torn-paper cutout in flat charcoal
-      on cream card, taped at one corner, with hand-drawn black marker rings
-      radiating from its mast
+      on cream card, taped at one corner, with concentric hand-drawn black
+      marker rings nested one inside the next, all sharing the mast as their
+      common centre
     # The silhouette bible. Added 2026-07-28 because "a tall broadcast tower" is
     # ambiguous and every model resolves it to a different landmark — one run
     # produced a lattice mast, a CN-Tower-style observation deck, a pagoda form
@@ -63,10 +64,34 @@ through_lines:
     # block 6 came back with MORE rings than block 1, twice. Models render
     # things they can count. Stating an exact remaining count out of a stated
     # original is the difference between a quantity and a mood.
+    #
+    # v2, 2026-07-28. v1 was `start: 8` with the noun "hand-drawn marker rings
+    # radiating from the mast", and block 1 came back with eight separate
+    # circles scattered AROUND the mast rather than eight rings around it.
+    # Eight is too many to nest legibly at 576x1024, so the count instruction
+    # ("EXACTLY 8, count them") outran the arrangement instruction ("radiating
+    # from the mast") and the model satisfied the one it could count.
+    # Two changes, same defect: drop the start count to a nestable 6, and say
+    # the arrangement positively — "concentric", "nested", "common centre" —
+    # rather than leaving "radiating" to carry it alone.
+    #
+    # 6→1 rather than the 5→2 first proposed, because a six-block story needs
+    # six DISTINCT counts (test_a_countable_escalation_falls_by_a_whole_unit —
+    # two blocks sharing a count is the non-monotonic defect that killed the
+    # percentage phrasing). 5→2 interpolates to 5,4,4,3,3,2. 6→1 is one ring
+    # per block exactly, and leaves one lone ring in the finale rather than an
+    # empty mast, so the kicker still has the motif to pay off.
+    #
+    # The noun deliberately does NOT repeat "nested one inside the next" from
+    # the framing clause above: the final block draws exactly 1, and "draw 1
+    # ring nested one inside the next" is a self-contradiction handed to the
+    # model on the one block that has to settle and hold. Arrangement lives in
+    # the object description, where it is true at any count; the count clause
+    # states only the count.
     countable:
-      noun: hand-drawn marker rings radiating from the mast
-      start: 8
-      end: 2
+      noun: concentric hand-drawn marker rings centred on the mast
+      start: 6
+      end: 1
     lettering_risk: low
 
   - id: fuse

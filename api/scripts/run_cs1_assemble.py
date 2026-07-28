@@ -66,6 +66,66 @@ def _keys(store, prefix: str) -> list[str]:
             return keys
 
 
+def _block_runs(store) -> dict[int, list[tuple[str, str, dict]]]:
+    """Every `block-N` run under the prefix, newest last, as (created_at, key, run).
+
+    The prefix accumulates. By 2026-07-28 it held **eleven** runs named `block-1`
+    across four days of re-rolls, two of which had video. Both of the functions
+    below used to walk the listing and assign `found[n] = ...` on every match, so
+    the winner was whichever manifest sorted last — and the path segment between
+    the date and the file is a random run UUID, which makes "last" arbitrary.
+
+    Two ways that bites, and the second one is worse:
+
+      * `clip_keys` could hand assembly the PREVIOUS render's clips, so a
+        re-render costs a dollar and silently ships the old video.
+      * `block_steps` did not filter on video at all, so a block's receipt
+        lineage could be rehydrated from a `--stills-only` run — a step record
+        naming an image model and no clip, attached to a block that has one.
+
+    That is assumption #25 one level up: the mapping WITHIN a run was fixed by
+    reading `run.name`, but the choice BETWEEN runs was still sort order.
+    `created_at` is in every manifest; order by it and take the newest.
+    """
+    runs: dict[int, list[tuple[str, str, dict]]] = {}
+    for key in _keys(store, CLIP_PREFIX):
+        if not key.endswith("manifest.json"):
+            continue
+        run = json.loads(store.get(key)).get("run", {})
+        name = str(run.get("name", ""))
+        if not name.startswith("block-"):
+            continue
+        # "block-3-still" and "block-3-retry-<model>" are legs of a block, not
+        # blocks; only the two-step run carries the pairing assembly needs.
+        tail = name.removeprefix("block-")
+        if not tail.isdigit():
+            continue
+        runs.setdefault(int(tail), []).append(
+            (str(run.get("created_at", "")), key, run)
+        )
+    return {n: sorted(v) for n, v in runs.items()}
+
+
+def _videos(run: dict) -> list[str]:
+    return [
+        a["url"]
+        for step in run.get("steps", [])
+        for a in step.get("assets", [])
+        if str(a.get("media_type", "")).startswith("video")
+    ]
+
+
+def _newest_with_video(store) -> dict[int, tuple[str, dict]]:
+    """The most recent run per block that actually produced a clip."""
+    chosen: dict[int, tuple[str, dict]] = {}
+    for n, entries in _block_runs(store).items():
+        for _created, key, run in reversed(entries):
+            if _videos(run):
+                chosen[n] = (key, run)
+                break
+    return chosen
+
+
 def clip_keys(store) -> dict[int, str]:
     """Map block number to clip key, read from each run's own manifest.
 
@@ -74,25 +134,10 @@ def clip_keys(store) -> dict[int, str]:
     order would pair the wrong picture with the wrong line, and that failure
     looks like a style problem rather than a bug.
     """
-    found: dict[int, str] = {}
-    for key in _keys(store, CLIP_PREFIX):
-        if not key.endswith("manifest.json"):
-            continue
-        run = json.loads(store.get(key)).get("run", {})
-        name = str(run.get("name", ""))
-        if not name.startswith("block-"):
-            continue
-        videos = [
-            a["url"]
-            for step in run.get("steps", [])
-            for a in step.get("assets", [])
-            if str(a.get("media_type", "")).startswith("video")
-        ]
-        if videos:
-            found[int(name.removeprefix("block-"))] = (
-                key.rsplit("/", 1)[0] + "/assets/" + videos[0].rsplit("/", 1)[-1]
-            )
-    return found
+    return {
+        n: key.rsplit("/", 1)[0] + "/assets/" + _videos(run)[0].rsplit("/", 1)[-1]
+        for n, (key, run) in _newest_with_video(store).items()
+    }
 
 
 def block_steps(store) -> dict[int, tuple[dict, ...]]:
@@ -101,16 +146,15 @@ def block_steps(store) -> dict[int, tuple[dict, ...]]:
     Rehydrated rather than summarised: these carry the provider, params,
     timestamps and asset sha256 from the run that actually made the clip, so the
     receipt's lineage is the SDK's own record and not a retelling of it.
+
+    Read from the SAME run `clip_keys` chose, not independently — otherwise the
+    receipt describes one run and the video comes from another, which is the
+    exact claim the receipt exists to make true.
     """
-    found: dict[int, tuple[dict, ...]] = {}
-    for key in _keys(store, CLIP_PREFIX):
-        if not key.endswith("manifest.json"):
-            continue
-        run = json.loads(store.get(key)).get("run", {})
-        name = str(run.get("name", ""))
-        if name.startswith("block-"):
-            found[int(name.removeprefix("block-"))] = tuple(run.get("steps", []))
-    return found
+    return {
+        n: tuple(run.get("steps", ()))
+        for n, (_key, run) in _newest_with_video(store).items()
+    }
 
 
 def fetch(store, key: str, dest: Path) -> Path:

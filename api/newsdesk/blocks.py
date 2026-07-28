@@ -35,7 +35,28 @@ from newsdesk.config import BUCKETS, backend
 # Settled by measurement, not preference. `seedream-5.0-lite` silently ignores
 # `aspect_ratio` and returns 2048x2048 regardless; `gemini-2.5-flash-image`
 # honours it and returned 768x1344.
-IMAGE_MODEL = os.getenv("NEWSDESK_IMAGE_MODEL", "gemini-2.5-flash-image")
+#
+# 2026-07-28: `gemini-2.5-flash-image` (Nano Banana 1) went DOWN on this key —
+# submit times out, zero bytes, 6/6 blocks, every attempt. It stayed the default
+# here for a day while runs were driven by an inline env var, which meant the
+# committed default was a dead model and a fresh clone rendered nothing.
+#
+# Successor, measured the same day: `gemini-3-pro-image-preview` — Nano Banana
+# Pro. Resolves server-side to `gemini-3-pro-image`, honours `aspect_ratio`, and
+# returns **768x1376 true 9:16**, above the 576x1024 of the bria-fibo stopgap and
+# just above the 768x1344 the 2.5 model used to give. Same family this pipeline
+# was designed around, so the palette and collage language it was tuned for still
+# land — measured side by side on CS-1, it is the first roll where the map motif
+# rendered as an actual map and the crowd motif as archival cutouts.
+#
+# It is slower to submit than bria-fibo and drops ~2 of 6 concurrent submits to a
+# read timeout, which is why `run_still()` below exists. Do not swap this back to
+# a faster model to avoid the timeouts; retry the slow good one.
+IMAGE_MODEL = os.getenv("NEWSDESK_IMAGE_MODEL", "gemini-3-pro-image-preview")
+
+# The measured stopgap, kept because it is the only image model verified to hold
+# 9:16 when the gemini family is unreachable. 576x1024, $0.039/asset.
+IMAGE_FALLBACK = os.getenv("NEWSDESK_IMAGE_FALLBACK", "bria-fibo")
 
 # The chain is inverted from what the design assumed, and every line of this is
 # measured rather than reasoned:
@@ -244,6 +265,67 @@ def build_pipeline(
             aspect_ratio=ASPECT_RATIO,
         )
     )
+
+
+def still_only_pipeline(
+    prompt: BlockPrompt, *, image_provider: Any, model: str = "",
+) -> Pipeline:
+    """The image leg alone — the cheap way to judge six blocks before animating."""
+    return Pipeline(f"block-{prompt.block}-still").step(
+        image_provider,
+        model=model or IMAGE_MODEL,
+        prompt=prompt.render_for_image(),
+        modality=Modality.IMAGE,
+        **IMAGE_PARAMS,
+    )
+
+
+async def run_still(
+    prompt: BlockPrompt,
+    *,
+    image_provider: Any,
+    sink_: Any = None,
+    model: str = "",
+    fallback: str = "",
+) -> tuple[str | None, float, str]:
+    """One still, retried on the same model then dropped to the fallback.
+
+    Existed as nothing at all until 2026-07-28: the stills path called the
+    Pipeline directly, so a transient GMI read timeout failed that block outright
+    at $0 and the run came back 4/6. `run_block` has carried this retry for the
+    video leg since MOO-424; the image leg simply never got it, and the gap only
+    became visible once the default image model became one slow enough to time
+    out on submit (see IMAGE_MODEL).
+
+    Same shape as `run_block`: same model first for every transient failure, only
+    then down the chain. Returns `(url, cost_usd, model_used)`; url is None when
+    every attempt failed. Cost accumulates across attempts, including the ones
+    that produced nothing — a run's spend is what it spent, not what it kept.
+    """
+    chain = [model or IMAGE_MODEL]
+    fb = fallback or IMAGE_FALLBACK
+    if fb and fb not in chain:
+        chain.append(fb)
+
+    spent = 0.0
+    for candidate in chain:
+        for attempt_n in range(len(RETRY_DELAYS_S) + 1):
+            if attempt_n:
+                await asyncio.sleep(RETRY_DELAYS_S[attempt_n - 1])
+            try:
+                res = await still_only_pipeline(
+                    prompt, image_provider=image_provider, model=candidate
+                ).arun(sink=sink_, raise_on_failure=False, timeout=1200)
+                step = res.run.steps[0]
+                spent += float(getattr(step, "cost_usd", None) or 0.0)
+                if step.assets and step.assets[0].url:
+                    return step.assets[0].url, spent, candidate
+                failure = str(getattr(step, "error", "") or step.status)
+            except Exception as exc:  # noqa: BLE001 — classified, then retried
+                failure = str(exc)
+            if not _is_transient(failure) or attempt_n == len(RETRY_DELAYS_S):
+                break
+    return None, spent, chain[-1]
 
 
 def video_only_pipeline(

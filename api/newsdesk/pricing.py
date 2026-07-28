@@ -35,6 +35,18 @@ IMAGE_RATES = {
     "bria-fibo": 0.039,
     "seedream-5.0-lite": 0.035,
     "gemini-2.5-flash-image": 0.039,
+    # UNVERIFIED, and unverified in a different way from the others — this is
+    # Google's own published list price for Gemini 3 Pro Image, used as a proxy
+    # for what GMI resells it at, which is not published anywhere we can reach.
+    # It is 3.4x the 2.5 rate, so a run that reports ~$0.80 of images is
+    # reporting an upper bound rather than a measured cost. Registered anyway:
+    # the first six-block roll on this model reported $0.000 for six images,
+    # and a receipt claiming a video cost nothing to make is worse than one
+    # carrying a number labelled as an estimate. Replace with the real GMI rate
+    # the moment the console shows it — see the open question in HANDOFF.md
+    # about the credit balance, which is the same missing number.
+    "gemini-3-pro-image-preview": 0.134,
+    "gemini-3-pro-image": 0.134,
     "flux-kontext-pro": 0.05,
     "seededit-3-0-i2i-250628": 0.03,
     "reve-edit-20250915": 0.007,

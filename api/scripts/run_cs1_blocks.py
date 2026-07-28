@@ -29,6 +29,7 @@ from newsdesk.blocks import (
     build_pipeline,
     register_seedance_ratio,
     read_result,
+    run_still,
     sink,
 )
 from newsdesk.brandkit import load
@@ -85,16 +86,15 @@ def main() -> int:
 
     async def one(prompt):
         if stills_only:
-            from genblaze_core import Modality, Pipeline
-
-            pipe = Pipeline(f"block-{prompt.block}").step(
-                image_provider, model=IMAGE_MODEL, prompt=prompt.render_for_image(),
-                modality=Modality.IMAGE, **IMAGE_PARAMS,
+            # Via run_still, not a bare Pipeline: a transient GMI read timeout
+            # used to fail the block outright at $0 and the run came back 4/6.
+            url, cost, used = await run_still(
+                prompt, image_provider=image_provider, sink_=sink(f"cs1-{tl_id}")
             )
-        else:
-            pipe = build_pipeline(
-                prompt, image_provider=image_provider, video_provider=video_provider
-            )
+            return prompt.block, (url, cost, used), None
+        pipe = build_pipeline(
+            prompt, image_provider=image_provider, video_provider=video_provider
+        )
         try:
             res = await pipe.arun(
                 sink=sink(f"cs1-{tl_id}"), raise_on_failure=False, timeout=1200
@@ -115,11 +115,11 @@ def main() -> int:
             failures += 1
             continue
         if stills_only:
-            step = res.run.steps[0]
-            cost = float(getattr(step, "cost_usd", None) or 0.0)
+            url, cost, used = res
             total += cost
-            url = step.assets[0].url if step.assets else None
-            print(f"block {n}  {step.status}  ${cost:.3f}  {url}")
+            flag = "  FALLBACK" if used != IMAGE_MODEL else ""
+            print(f"block {n}  {'ok' if url else 'failed'}  ${cost:.3f}  {used}{flag}")
+            print(f"          {url}")
             failures += 0 if url else 1
             continue
         try:

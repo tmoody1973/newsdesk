@@ -490,7 +490,13 @@ def _video_chain(index: int, clip_s: float, block: BlockTiming) -> str:
 # what makes uneven gaps audible as breathing rather than as dead air. A fixed
 # quiet level would be inaudible under the voice and still too loud between
 # lines.
-DUCK = "threshold=0.015:ratio=9:attack=25:release=450:makeup=1"
+#
+# Softened from ratio=9 on 2026-07-28, for the same listen that raised the bed.
+# A 9:1 ratio does not duck a bed, it removes one — and since the voice covers
+# about 88% of the runtime, "hardly noticeable" was mostly this rather than the
+# static level. 5:1 steps the music back under speech and leaves it audible,
+# which is a duck rather than a gate.
+DUCK = "threshold=0.03:ratio=5:attack=25:release=450:makeup=1"
 
 # Long enough that the bed arrives and leaves rather than switching on and off.
 BED_FADE_IN_S = 2.0

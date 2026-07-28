@@ -51,14 +51,21 @@ MOVEMENTS: dict[str, tuple[int, ...]] = {
 MODEL = os.getenv("NEWSDESK_MUSIC_MODEL", "music_v2")
 
 # Where the bed sits in the clear, in LUFS. The narration measures about
-# -17.4 LUFS, so this puts the bed roughly 15dB under it before the sidechain
-# pushes it further down under speech — the range a documentary bed lives in.
+# -17.4 LUFS, so this leaves the music roughly 9dB under it before the sidechain
+# pushes it further down under speech.
 #
 # A target rather than a fixed gain, because the fixed gain was wrong in a way
 # that only measurement showed: the composed bed came back at **-14.3 LUFS**,
 # louder than the voice it sits under. Any hand-picked multiplier would have
 # been guessing at a number the file already knows.
-BED_TARGET_LUFS = -32.0
+#
+# Moved from -32 to -26 on 2026-07-28 after listening: "very low and hardly
+# noticeable". -32 is where a corporate-video bed sits — present but not heard.
+# This is lo-fi, where the music is part of the texture rather than a floor
+# under it, so it wants the level a documentary score gets, not the one a
+# conference-room explainer gets. The genre changed the target; the method for
+# reaching it did not.
+BED_TARGET_LUFS = -26.0
 
 # Fallback multiplier if loudness cannot be measured. Deliberately conservative:
 # too quiet is a bed nobody notices, too loud is a bed that buries the story.

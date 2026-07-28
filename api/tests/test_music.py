@@ -127,10 +127,12 @@ def test_a_bed_louder_than_the_target_is_turned_down():
     """The composed bed came back at -14.3 LUFS — louder than the -17.4 LUFS
     narration it sits under. A hand-picked multiplier was guessing at a number
     the file already knew."""
-    from newsdesk.music import gain_for
+    from newsdesk.music import BED_TARGET_LUFS, gain_for
 
     assert gain_for(-14.3) < 1.0
-    assert gain_for(-14.3) == pytest.approx(0.1303, abs=0.0005)
+    assert gain_for(-14.3) == pytest.approx(
+        10 ** ((BED_TARGET_LUFS + 14.3) / 20), abs=0.0005
+    )
 
 
 def test_a_quiet_bed_is_turned_up():
@@ -145,8 +147,38 @@ def test_an_unmeasurable_bed_falls_back_to_the_conservative_gain():
     assert gain_for(None) == BED_GAIN
 
 
-def test_the_target_leaves_the_voice_clearly_on_top():
-    """A documentary bed lives 12-18dB under dialogue. Narration is ~-17.4 LUFS."""
+NARRATION_LUFS = -17.4
+
+
+def test_the_bed_sits_in_the_published_range_under_the_voice():
+    """Two conventions, and the piece has to pick one deliberately.
+
+    Speech-first mixes (corporate, conference, most explainers) put the bed
+    12-18dB under dialogue: present, never heard. Music-forward mixes (video
+    essays, brand film, anything where the score is part of the identity) run
+    6-12dB under. Below about 6dB the bed starts masking consonants; past about
+    18dB it is a floor rather than a score.
+
+    Newsdesk sits in the music-forward band on purpose — the lo-fi bed is part
+    of the same warm-paper identity the pictures carry, and at 12-18dB it was
+    reported as "very low and hardly noticeable". This test is the guard rail on
+    that decision, not the decision itself.
+    """
     from newsdesk.music import BED_TARGET_LUFS
 
-    assert 12 <= (-17.4 - BED_TARGET_LUFS) <= 18
+    separation = NARRATION_LUFS - BED_TARGET_LUFS
+    assert 6 <= separation <= 12, f"{separation}dB is outside the music-forward band"
+
+
+def test_the_duck_is_a_duck_and_not_a_gate():
+    """Dialogue ducking runs 2:1 to 5:1 for maybe 6dB of gain reduction.
+
+    A 9:1 ratio does not step a bed back, it removes one — and with speech over
+    88% of the runtime that was most of why the music could not be heard.
+    """
+    import re
+
+    from newsdesk.assembly import DUCK
+
+    ratio = float(re.search(r"ratio=(\d+(?:\.\d+)?)", DUCK).group(1))
+    assert 2 <= ratio <= 5, f"ratio={ratio} is gating, not ducking"

@@ -21,10 +21,21 @@ import sys
 from pathlib import Path
 
 from newsdesk.config import ConfigError, require
-from newsdesk.pipeline import STAGES, Pipeline, PipelineError
+from newsdesk.pipeline import STAGES, Pipeline, PipelineError, StageResult
 from newsdesk.storyfile import StoryFileError, load_story
 
 USAGE = __doc__
+
+# What each stage actually needs, so a run asks for exactly the keys it will
+# use. `gate` appears here deliberately with an empty list: it is the stage that
+# must run on a machine holding no credentials at all.
+_CREDENTIALS = {
+    "script": ["GMI_API_KEY"],
+    "gate": [],
+    "blocks": ["GMI_API_KEY", "B2_KEY_ID", "B2_APP_KEY"],
+    "narration": ["ELEVENLABS_API_KEY", "LMNT_API_KEY", "B2_KEY_ID", "B2_APP_KEY"],
+    "assembly": ["B2_KEY_ID", "B2_APP_KEY"],
+}
 
 
 def _flag(name: str) -> bool:
@@ -72,11 +83,14 @@ def main(argv: list[str] | None = None) -> int:
     stills_only = _flag("--stills-only")
 
     # Credentials are demanded per stage, not up front. `--only gate` must run
-    # on a machine with no keys at all — that is the property CS-4 rests on.
-    needs_money = {"script", "blocks", "narration"} & set(stages)
-    if needs_money:
+    # on a machine with no keys at all — that is the property CS-4 rests on, and
+    # asking for a TTS key before a refusal would quietly destroy it.
+    needed: list[str] = []
+    for stage in stages:
+        needed += _CREDENTIALS.get(stage, [])
+    if needed:
         try:
-            require("GMI_API_KEY", "B2_KEY_ID", "B2_APP_KEY")
+            require(*dict.fromkeys(needed))
         except ConfigError as exc:
             print(f"FAIL  {exc}")
             return 1
@@ -105,7 +119,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(f"\nspend     ${pipe.spent:.3f}")
-    if needs_money:
+    # Only persist when the run touched B2 anyway. A gate-only run has no
+    # credentials by design and must not try to write state.
+    if any("B2_KEY_ID" in _CREDENTIALS.get(s, []) for s in stages):
         print(f"state     b2://newsdesk-runs/{pipe.save()}")
     return 0
 
@@ -130,15 +146,42 @@ def _run_stage(pipe: Pipeline, stage: str, *, stills_only: bool):
                 image_provider=image, video_provider=video, stills_only=stills_only
             )
         )
-    if stage in ("narration", "assembly"):
-        # Not yet driven from here. Both still work; they are still reached by
-        # scripts/run_cs1_narration.py and scripts/run_cs1_assemble.py, which
-        # remain hardcoded to CS-1. Printing this rather than silently
-        # succeeding, because a run that reports "ok" for a stage it did not
-        # perform is the failure this whole handoff is a reaction to.
-        print(f"todo  {stage:10}  not yet wired into the orchestrator — "
-              f"use scripts/run_cs1_{stage}.py (CS-1 only)")
-        return None
+    if stage == "narration":
+        from genblaze_elevenlabs import ElevenLabsTTSProvider
+        from genblaze_lmnt import LMNTProvider
+
+        from newsdesk.brandkit import load as load_kit
+        from newsdesk.narration import speaker
+        from newsdesk.pricing import register_all
+
+        elevenlabs, lmnt = ElevenLabsTTSProvider(), LMNTProvider()
+        register_all(elevenlabs=elevenlabs, lmnt=lmnt)
+        return asyncio.run(
+            pipe.stage_narration(
+                speak=speaker({"elevenlabs": elevenlabs, "lmnt": lmnt}),
+                kit_voice=load_kit().voice,
+            )
+        )
+    if stage == "assembly":
+        # The cut lives in scripts/run_cs1_assemble.py, which is imported rather
+        # than reimplemented: it is a working, verified path that has produced a
+        # manifest surviving `genblaze verify` byte for byte, and a second
+        # implementation of it would be a second thing to keep true.
+        import sys as _sys
+        from pathlib import Path as _Path
+
+        scripts = str(_Path(__file__).resolve().parents[1] / "scripts")
+        if scripts not in _sys.path:
+            _sys.path.insert(0, scripts)
+        import run_cs1_assemble as cut
+
+        cut.configure(pipe.story_file)
+        code = cut.main()
+        return pipe._record(StageResult(
+            "assembly", code == 0,
+            detail="MP4 cut, manifest embedded, verify it with `genblaze verify --fetch`"
+            if code == 0 else "assembly refused or failed — see above",
+        ))
     raise PipelineError(f"unknown stage {stage}")
 
 

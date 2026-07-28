@@ -92,6 +92,18 @@ class StoryFile:
         """
         return f"{self.id}-{self.through_line}/"
 
+    @property
+    def narration_prefix(self) -> str:
+        """Where this story's voice takes land.
+
+        Separate from the clips because re-rolling art direction must not
+        invalidate narration that is already cut and approved — and because the
+        CS-5 sabotage run needs somewhere to write that cannot overwrite the
+        healthy run's takes. A deliberately crippled run quietly replacing good
+        audio is a strange way to prove the fallback works.
+        """
+        return f"{self.id}-narration"
+
 
 def _require(node: Any, field: str, where: str) -> Any:
     if not isinstance(node, dict):

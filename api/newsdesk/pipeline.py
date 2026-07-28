@@ -42,10 +42,11 @@ from typing import Any, Callable, Sequence
 from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
 from newsdesk.decisions import Ledger
+from newsdesk.narration import narrate, store_take, take_window, voice_specs
 from newsdesk.policy.gate import check
 from newsdesk.scene import ThroughLine, build_block_prompt
 from newsdesk.script import generate_script
-from newsdesk.state import Block, RunState
+from newsdesk.state import Attempt, Block, RunState
 from newsdesk.storyfile import StoryFile
 
 BLOCKS = 6
@@ -230,6 +231,80 @@ class Pipeline:
         return self._record(StageResult(
             "blocks", True, cost_usd=spent,
             detail=f"{BLOCKS}/{BLOCKS} ready" + (" (stills only)" if stills_only else ""),
+        ))
+
+    async def stage_narration(self, *, speak: Any, kit_voice: dict[str, Any]) -> StageResult:
+        """Six takes on the published narrator, stored under this story's prefix.
+
+        Resumable on the same principle as the script: a block that already has
+        a `voice_uri` is left alone. Re-voicing is not merely a repeat charge —
+        a new take has a DIFFERENT duration, and §6.6 derives every block's
+        length on the timeline from that number. Re-voicing one block silently
+        re-cuts the whole video.
+        """
+        done = [b for b in self.state.blocks if b.voice_uri]
+        if len(done) == len(self.state.blocks) and self.state.blocks:
+            return self._record(StageResult(
+                "narration", True, skipped=True,
+                detail=f"{len(done)} takes already voiced",
+            ))
+
+        lines = [(b.n, b.narration) for b in sorted(self.state.blocks, key=lambda b: b.n)]
+        if not lines:
+            return self._record(StageResult(
+                "narration", False, detail="no script to voice — run the script stage",
+            ))
+
+        primary, fallback = voice_specs(kit_voice)
+        window = take_window(kit_voice)
+        takes = [
+            store_take(t, prefix=self.story_file.narration_prefix)
+            for t in await narrate(
+                lines, specs=[primary, fallback], window=window, speak=speak
+            )
+        ]
+
+        spent = sum(t.cost_usd for t in takes)
+        failed = [str(t.n) for t in sorted(takes, key=lambda t: t.n) if not t.ok]
+        review = sum(1 for t in takes if t.status == "review")
+
+        for take in sorted(takes, key=lambda t: t.n):
+            self.state = self.state.with_block(
+                take.n,
+                status="ready" if take.ok else (
+                    "failed" if take.status == "failed" else "voicing"
+                ),
+                voice_uri=take.uri,
+                voice_duration_s=take.duration_s,
+                attempts=tuple(
+                    Attempt(
+                        n=i + 1,
+                        provider=a.get("provider", "?"),
+                        model=a.get("model", "?"),
+                        status=str(a.get("status")),
+                        cost_usd=a.get("cost_usd"),
+                        note=a.get("detail"),
+                    )
+                    for i, a in enumerate(take.attempts)
+                ),
+            ).log(
+                "narrate",
+                f"block {take.n} voiced by {take.provider} at {take.duration_s}s",
+                block=take.n, provider=take.provider, model=take.model,
+                cost_usd=take.cost_usd,
+            )
+
+        if failed:
+            return self._record(StageResult(
+                "narration", False, cost_usd=spent,
+                detail=f"blocks {', '.join(failed)} were not voiced",
+            ))
+
+        runtime = sum(t.duration_s or 0.0 for t in takes)
+        note = f", {review} outside the take window" if review else ""
+        return self._record(StageResult(
+            "narration", True, cost_usd=spent,
+            detail=f"{len(takes)} takes, {runtime:.1f}s of narration{note}",
         ))
 
     # --- helpers ------------------------------------------------------------

@@ -47,9 +47,19 @@ from newsdesk.receipt import (BlockRecord, ReceiptError, build_run, embed, extra
                               music_step, publishable)
 from newsdesk.state import RunState
 
+# Set by main() from the story file. Module-level rather than threaded through
+# every helper because they are a run's identity, not a parameter of the cut —
+# and because keeping the shape of the original script keeps a working, verified
+# path working. They were literal constants until 2026-07-28, which is the whole
+# reason this file could only ever assemble CS-1.
+# The CS-1 defaults are the pre-2026-07-28 literals, unchanged, so the command
+# in HANDOFF.md keeps working against the state and takes already in B2 under
+# `cs1-narration/`. `--story` overrides all four.
 RUN_ID = "cs1-narration"
+NARRATION_PREFIX = "cs1-narration"
 CLIP_PREFIX = "cs1-tower-signal/"
 WORK = Path("out/assemble")
+SLUG = "cs1"
 
 
 def arg(flag: str, default: str | None = None) -> str | None:
@@ -163,12 +173,32 @@ def fetch(store, key: str, dest: Path) -> Path:
     return dest
 
 
+def configure(story_file) -> None:
+    """Point this module at one story. Call before main()."""
+    global RUN_ID, NARRATION_PREFIX, CLIP_PREFIX, WORK, SLUG
+    RUN_ID = story_file.run_id
+    # Takes are NOT under the run id: narration is written to its own prefix so
+    # a re-rolled art direction cannot invalidate audio that is already cut, and
+    # so the CS-5 sabotage run has somewhere to write that will not overwrite
+    # the healthy run's takes.
+    NARRATION_PREFIX = story_file.narration_prefix
+    CLIP_PREFIX = story_file.clip_prefix
+    SLUG = story_file.id
+    WORK = Path("out/assemble") / story_file.id
+
+
 def main() -> int:
     try:
         require("B2_KEY_ID", "B2_APP_KEY")
     except ConfigError as exc:
         print(f"FAIL  {exc}")
         return 1
+
+    story_path = arg("--story")
+    if story_path:
+        from newsdesk.storyfile import load_story
+
+        configure(load_story(story_path))
 
     state = RunState.load(RUN_ID)
     approver = arg("--approve")
@@ -206,7 +236,7 @@ def main() -> int:
     WORK.mkdir(parents=True, exist_ok=True)
     clips = [fetch(store, mapping[b.n], WORK / f"clip-{b.n:02d}.mp4") for b in blocks]
     takes = [
-        fetch(store, f"{RUN_ID}/take-{b.n:02d}.mp3", WORK / f"take-{b.n:02d}.mp3")
+        fetch(store, f"{NARRATION_PREFIX}/take-{b.n:02d}.mp3", WORK / f"take-{b.n:02d}.mp3")
         for b in blocks
     ]
 
@@ -256,7 +286,7 @@ def main() -> int:
         print(f"          {lufs} LUFS → gain {bed_gain} → {BED_TARGET_LUFS} LUFS "
               f"in the clear, ducked further under the voice")
 
-    out = WORK / "cs1.mp4"
+    out = WORK / f"{SLUG}.mp4"
     render(blocks, clips, takes, ass_path=ass_path, out=out,
            music=bed, music_gain=bed_gain)
     measured = probe_duration(out)
@@ -265,7 +295,7 @@ def main() -> int:
         print(f"WARN      rendered length differs from the plan by "
               f"{abs(measured - runtime):.2f}s")
 
-    mastered = WORK / "cs1-master.mp4"
+    mastered = WORK / f"{SLUG}-master.mp4"
     mastered, gain = master(out, mastered)
     lufs_out, peak_out = measure_loudness(mastered)
     print(f"mastered  {gain:+.2f} dB → {lufs_out} LUFS, true peak {peak_out} dBFS")
@@ -321,7 +351,7 @@ def main() -> int:
         print(f"\nBLOCKED  {exc}")
         return 1
 
-    embedded = WORK / "cs1-embedded.mp4"
+    embedded = WORK / f"{SLUG}-embedded.mp4"
     embed(out, manifest, embedded)
     back = extract(embedded)
 
@@ -332,7 +362,7 @@ def main() -> int:
     print(f"round trip  extracted hash {back.canonical_hash[:16]}… "
           f"{'MATCH' if back.canonical_hash == manifest.canonical_hash else 'MISMATCH'}")
 
-    key = f"{RUN_ID}/cs1.mp4"
+    key = f"{RUN_ID}/{SLUG}.mp4"
     store.put(key, embedded.read_bytes(), content_type="video/mp4")
     url = store.get_durable_url(key)
     print(f"published  {url}")

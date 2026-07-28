@@ -1,122 +1,119 @@
 import Link from "next/link";
 
 import { listRuns } from "@/lib/b2";
+import type { RunState } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, string> = {
-  drafting: "text-graphite",
-  generating: "text-canary",
-  awaiting_approval: "text-approval-blue",
-  published: "text-approval-blue",
-  blocked: "text-stamp-red",
+/** The mockup's five status tags. Blocked is solid accent; published is solid
+ *  blue; everything mid-flight is quiet. Colour is never the only signal — the
+ *  label says the state too. */
+const TAG: Record<string, { style: React.CSSProperties; label: string }> = {
+  drafting: { style: { background: "var(--color-neutral-100)", color: "var(--color-neutral-800)" }, label: "Drafting" },
+  generating: { style: { background: "var(--color-neutral-100)", color: "var(--color-neutral-800)" }, label: "Generating" },
+  awaiting_approval: { style: { background: "#dde6f2", color: "#1d3f73" }, label: "Awaiting approval" },
+  published: { style: { background: "#2b5da8", color: "#fff" }, label: "Published" },
+  blocked: { style: { background: "var(--color-accent)", color: "#fff" }, label: "Blocked" },
 };
+
+function Blocks({ run }: { run: RunState }) {
+  const total = run.blocks.length || 6;
+  const ready = run.blocks.filter((b) => b.status === "ready").length;
+  const pct = Math.round((ready / total) * 100);
+  const fill =
+    run.status === "blocked" ? "var(--color-accent)"
+    : run.status === "published" || run.status === "awaiting_approval" ? "#2b5da8"
+    : "var(--color-neutral-700)";
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span className="mono" style={{ fontSize: 12 }}>{ready}/{total}</span>
+      <span style={{ display: "inline-block", width: 60, height: 6, background: "var(--color-neutral-300)" }}>
+        <span style={{ display: "block", width: `${pct}%`, height: "100%", background: fill }} />
+      </span>
+    </span>
+  );
+}
 
 export default async function Desk() {
   // A run with no words in it is not a story — it is scaffolding that touched
-  // the bucket, and the smoke test from MOO-422 leaves exactly that: six
-  // placeholder blocks, no facts, no narration. Filtered on narration rather
-  // than on block count, because the block count is 6 from the moment a run is
-  // created and would have made this check a no-op that only looked careful.
+  // the bucket. Filtered on narration, not on block count: block count is 6 from
+  // the moment a run is created and would make this a no-op that looked careful.
   const runs = (await listRuns()).filter((run) =>
     run.blocks.some((block) => block.narration.trim().length > 0),
   );
+  const awaiting = runs.filter((r) => r.status === "awaiting_approval").length;
 
   return (
     <main>
-      <h1 className="font-display text-4xl uppercase tracking-wide">The Desk</h1>
-      <p className="mt-2 max-w-2xl text-graphite">
-        Every story on the board. One <span className="mono">state.json</span> per run in
-        Backblaze B2 — there is no database, and this page is a renderer over that file
-        rather than a second source of truth.
-      </p>
+      <div
+        style={{
+          display: "flex", alignItems: "baseline", gap: 16,
+          borderBottom: "2px solid var(--color-divider)", paddingBottom: 14,
+        }}
+      >
+        <h1 className="anton" style={{ fontSize: 32, letterSpacing: ".01em", margin: 0 }}>
+          THE DESK
+        </h1>
+        <span className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)" }}>
+          {runs.length} {runs.length === 1 ? "story" : "stories"} · {awaiting} awaiting approval
+        </span>
+        <span style={{ flex: 1 }} />
+        <Link href="/new" className="btn btn-primary" style={{ fontSize: 16, padding: "12px 22px" }}>
+          Start a story
+        </Link>
+      </div>
 
-      {runs.length === 0 ? (
-        <div className="mt-10 border-2 border-dashed border-graphite/50 p-10 text-center">
-          <p className="font-display text-xl uppercase">Nothing on the board.</p>
-          <p className="mt-2 text-graphite">Start with facts — the video comes later.</p>
-        </div>
-      ) : (
-        <div className="mt-8 overflow-x-auto border-2 border-ink bg-pasteboard">
-          <table className="w-full min-w-[42rem] text-left text-sm">
-            <thead className="border-b-2 border-ink">
-              <tr className="mono text-xs uppercase tracking-wider text-graphite">
-                <th className="px-4 py-3">Story</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Blocks</th>
-                <th className="px-4 py-3">Approver</th>
-                <th className="px-4 py-3">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((run) => {
-                const ready = run.blocks.filter((b) => b.status === "ready").length;
-                return (
-                  <tr key={run.run_id} className="border-b border-graphite/25 last:border-0">
-                    <td className="px-4 py-4">
-                      <Link
-                        href={`/runs/${run.run_id}`}
-                        className="font-medium text-approval-blue underline-offset-2 hover:underline"
-                      >
-                        {run.story}
-                      </Link>
-                      <div className="mono mt-1 text-xs text-graphite">{run.run_id}</div>
-                    </td>
-                    <td className={`mono px-4 py-4 text-xs uppercase ${STATUS[run.status] ?? ""}`}>
-                      {run.status.replace(/_/g, " ")}
-                      {run.final?.uri ? (
-                        <div className="mt-1 normal-case text-graphite">
-                          {typeof run.final.runtime_s === "number"
-                            ? `${(run.final.runtime_s as number).toFixed(1)}s`
-                            : null}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="mono px-4 py-4 text-xs">
-                      {ready}/{run.blocks.length || 6}
-                    </td>
-                    <td className="px-4 py-4 text-xs">
-                      {run.approval ? (
-                        run.approval.approver
-                      ) : (
-                        <span className="text-graphite">— not approved</span>
-                      )}
-                    </td>
-                    <td className="mono px-4 py-4 text-xs text-graphite">
-                      {(run.created_at ?? "").slice(0, 16).replace("T", " ")}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {runs.length > 0 ? (
+        <table className="table" style={{ marginTop: 4 }}>
+          <thead>
+            <tr>
+              <th>Story</th>
+              <th>Status</th>
+              <th>Blocks</th>
+              <th>Approver</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => {
+              const tag = TAG[run.status] ?? TAG.drafting;
+              return (
+                <tr key={run.run_id}>
+                  <td style={{ fontWeight: 600 }}>
+                    <Link href={`/runs/${run.run_id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                      {run.story}
+                    </Link>
+                  </td>
+                  <td>
+                    <span className="tag" style={tag.style}>{tag.label}</span>
+                  </td>
+                  <td><Blocks run={run} /></td>
+                  <td>{run.approval ? run.approval.approver : "—"}</td>
+                  <td className="mono" style={{ fontSize: 12, color: "var(--color-neutral-600)" }}>
+                    {(run.created_at ?? "").slice(0, 10)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      ) : null}
 
-      <section className="mt-12 grid gap-4 md:grid-cols-3">
-        {[
-          {
-            title: "Facts",
-            body: "A story is a set of facts, each carrying a source. A fact without one cannot be submitted — enforced by a pure function with no provider access.",
-          },
-          {
-            title: "Policy",
-            body: "Every block prompt is checked before generation. A rejected prompt costs $0, and a test walks the gate's import graph to prove it cannot reach a provider.",
-          },
-          {
-            title: "Approval",
-            body: "Assembly is unreachable without a named human. Their name and timestamp become part of the video's permanent record.",
-          },
-        ].map((wall, i) => (
-          <div key={wall.title} className="border-2 border-ink p-5">
-            <div className="mono text-xs uppercase tracking-widest text-graphite">
-              Wall {i + 1}
-            </div>
-            <h2 className="mt-1 font-display text-xl uppercase">{wall.title}</h2>
-            <p className="mt-2 text-sm text-graphite">{wall.body}</p>
-          </div>
-        ))}
-      </section>
+      <div
+        style={{
+          marginTop: 40, border: "1px dashed var(--color-divider)",
+          padding: 28, maxWidth: 520,
+        }}
+      >
+        <p style={{ fontWeight: 600, margin: "0 0 4px" }}>Nothing on the board?</p>
+        <p style={{ fontSize: 13, color: "var(--color-neutral-700)", margin: "0 0 12px" }}>
+          Start with facts — the video comes later.
+        </p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Link href="/new" className="btn btn-primary">Start a story</Link>
+          <Link href="/new?case=cs2" className="btn btn-ghost">Load a case study</Link>
+        </div>
+      </div>
     </main>
   );
 }

@@ -1,48 +1,39 @@
 @import "tailwindcss";
+/* The design system from stamp-system-design-handoff/project/_ds/modernist-*.
+   Vendored verbatim, not re-derived: it carries the real tokens, the 0-radius,
+   the 2px rules and the component classes the mockup's markup uses. The spec in
+   newsdesk-ui-ux-spec.md is the summary of this file, not the other way round. */
+@import "./_ds/modernist.css";
 
-/* The Paste-Up Room. Architectural trace paper, plan-check stamps, registration
-   marks. Deliberately not a SaaS dashboard and not the hairline-rule broadsheet
-   cliché that "newsroom tool" invites.
-
-   Everything here stays quiet so the stamps can be loud. That is the whole
-   design rule — resist adding a fifth accent. */
+/* Anton for stamps and screen titles only; IBM Plex Mono for every piece of
+   provenance. Archivo — the design system's face — carries everything else. */
 @theme {
-  --color-pasteboard: #e8e6df;
-  --color-ink: #1a1917;
-  --color-canary: #f2c744;
-  --color-stamp-red: #c8372d;
-  --color-approval-blue: #2b5da8;
-  --color-graphite: #6b675f;
-
   --font-display: var(--font-anton), sans-serif;
-  --font-sans: var(--font-public-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-
-  --radius-sm: 2px;
 }
 
-html { background: var(--color-pasteboard); }
+.mono { font-family: var(--font-plex-mono), ui-monospace, monospace; }
+.anton { font-family: var(--font-anton), sans-serif; font-weight: 400; }
 
-body {
-  background: var(--color-pasteboard);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  /* Bumwad. A faint blueprint grid so the surface reads as a board rather than
-     as a page — visible enough to notice, quiet enough to ignore. */
-  background-image:
-    linear-gradient(rgba(26, 25, 23, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(26, 25, 23, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
+/* The rail: 64px, its own surface, a 2px rule against the working area. */
+.rail-cell {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  color: var(--color-neutral-600);
 }
+.rail-cell[data-active="true"] { background: #f2c744; color: #1a1917; }
 
-/* Machine truth always renders in mono. Hashes, model ids, timestamps, source
-   ids — if a machine produced it, it does not get the body face. */
-.mono { font-family: var(--font-mono); font-variant-ligatures: none; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .stamp-land { animation: stamp-settle 120ms cubic-bezier(0.2, 0, 0, 1); }
+.stamp {
+  font-family: var(--font-anton), sans-serif; text-transform: uppercase;
+  letter-spacing: .05em; display: inline-flex; align-items: baseline; gap: 10px;
+  line-height: 1;
+  /* Ink grain. The mockup's turbulence mask, kept because it is what makes the
+     stamp read as pressed rather than drawn. */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.75'%20numOctaves='2'/%3E%3CfeColorMatrix%20values='0%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.55%200.55'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.75'%20numOctaves='2'/%3E%3CfeColorMatrix%20values='0%200%200%200%201%200%200%200%200%201%200%200%200%200%201%200%200%200%200.55%200.55'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E");
 }
-@keyframes stamp-settle {
-  from { transform: scale(1.12) rotate(var(--stamp-rot, -3deg)); opacity: 0; }
-  to   { transform: scale(1) rotate(var(--stamp-rot, -3deg)); opacity: 1; }
-}
+/* Treatment 1a — rubber classic. The mockup's default. 1b/1c/1d are still on
+   the table; this is a pick-one and Tarik has not picked yet. */
+.st-a { font-size: 26px; padding: 8px 16px 6px; border: 3.5px solid currentColor; transform: rotate(-3deg); }
+.st-a.sm { font-size: 17px; padding: 5px 10px 4px; border-width: 2.5px; }
+.st-blue { color: #2b5da8; } .st-red { color: var(--color-accent); } .st-gray { color: var(--color-neutral-600); }
+.subnote { font-family: var(--font-plex-mono), monospace; font-size: 10px; letter-spacing: 0; text-transform: none; }

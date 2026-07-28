@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Anton, IBM_Plex_Mono, Public_Sans } from "next/font/google";
-import Link from "next/link";
+import { Anton, Archivo, IBM_Plex_Mono } from "next/font/google";
 
 import "./globals.css";
+import { Rail } from "@/components/Rail";
 
-// Anton is already the burned-subtitle face in the videos. Using it for stamps
-// and display means the tool and the media it produces are visibly the same
-// product — the UI spec's continuity rule, made literal.
+// Archivo is the design system's face and carries the chrome. Anton is for
+// stamps and screen titles only — it is also the burned-subtitle face in the
+// videos, which is the UI spec's continuity rule made literal. Plex Mono
+// carries every piece of provenance: hashes, model ids, timestamps, fact ids.
+const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo" });
 const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton" });
-const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-public-sans" });
 const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
   subsets: ["latin"],
@@ -21,39 +22,16 @@ export const metadata: Metadata = {
     "Verified facts in, a broadcast-style explainer out, with an editorial policy gate in front of it and a verifiable provenance receipt embedded in the file.",
 };
 
-const RAIL = [
-  { href: "/", label: "Desk" },
-  { href: "/policy", label: "Policy" },
-  { href: "/redteam", label: "Red team" },
-];
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${anton.variable} ${publicSans.variable} ${plexMono.variable}`}>
-        <div className="mx-auto max-w-6xl px-5 py-6">
-          <header className="mb-8 flex flex-wrap items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
-            <Link href="/" className="font-display text-2xl uppercase tracking-wide">
-              Newsdesk
-            </Link>
-            <nav className="flex gap-5 text-sm">
-              {RAIL.map((item) => (
-                <Link key={item.href} href={item.href} className="hover:text-approval-blue">
-                  {item.label}
-                </Link>
-              ))}
-              <a
-                href="https://github.com/tmoody1973/newsdesk"
-                className="text-graphite hover:text-approval-blue"
-              >
-                Source
-              </a>
-            </nav>
-          </header>
-          {children}
-          <footer className="mono mt-16 border-t border-graphite/40 pt-4 text-xs text-graphite">
-            Its most important feature is what it refuses to make.
-          </footer>
+      <body
+        className={`${archivo.variable} ${anton.variable} ${plexMono.variable}`}
+        style={{ fontFamily: "var(--font-archivo), system-ui, sans-serif" }}
+      >
+        <div style={{ display: "flex", minHeight: "100vh" }}>
+          <Rail />
+          <div style={{ flex: 1, padding: "28px 36px", minWidth: 0 }}>{children}</div>
         </div>
       </body>
     </html>

@@ -39,6 +39,17 @@ MOTION = (
 
 AUDIO = "Quiet room tone with paper rustle; one soft tape peel on entry. No voice"
 
+# The through-line only works if the viewer recognises the SAME object each time.
+# The first six-block run held the palette perfectly and lost the object: blocks
+# 1, 2 and 6 rendered lattice masts while 4 and 5 rendered observation towers
+# with decks. Palette was pinned by naming it; identity has to be pinned the
+# same way rather than assumed to carry.
+IDENTITY = (
+    "This is the identical object in every block of this story — same silhouette, "
+    "same proportions, same materials, same position in frame. Only its state "
+    "changes between blocks. Do not redesign it"
+)
+
 
 @dataclass(frozen=True)
 class ThroughLine:
@@ -86,6 +97,8 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
 
     parts[0] += "."
 
+    parts.append(f"{IDENTITY}.")
+
     if through_line.escalation:
         parts.append(f"{_stage(through_line.escalation, block_n, blocks)}.")
 
@@ -96,20 +109,33 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
 def _stage(escalation: str, block_n: int, blocks: int) -> str:
     """Where the through-line has got to by this block.
 
-    The menu describes the escalation as a whole ("rings contract block by
-    block"); the prompt needs its state now. Three coarse stages rather than six
-    fine ones — a model cannot render "the fourth of six increments", and asking
-    it to invites invented detail.
+    The menu describes the escalation as a process ("rings contract block by
+    block"); the prompt needs its state now, as a quantity.
+
+    The first version used three coarse buckets across six blocks, on the theory
+    that a model cannot render "the fourth of six increments". The six-block run
+    showed the real cost of that: the change did not read monotonically — block 2
+    looked FULLER than block 1 — because two adjacent blocks were handed the
+    identical description and the model was free to interpolate either way. A
+    percentage is coarse enough to be renderable and monotonic enough to be
+    legible, which the bucket was not.
     """
-    # The menu describes the escalation as a process ("rings contract block by
-    # block"); these wrappers turn it into a state without needing each entry to
-    # be written six ways.
+    percent = round(100 * (block_n - 1) / max(blocks - 1, 1))
     if block_n <= 1:
-        return f"The progression has not started — {escalation}, shown at its earliest state"
+        return (
+            f"The progression has not started. {escalation.capitalize()} — "
+            f"show the object complete and unchanged, zero percent through that change"
+        )
     if block_n >= blocks:
-        return f"The progression is complete — {escalation}, now at its furthest extent"
-    stage = "just under way" if block_n <= blocks // 2 else "well advanced"
-    return f"The progression is {stage} — {escalation}, partway through"
+        return (
+            f"{escalation.capitalize()} — this is the final block and the change is "
+            f"one hundred percent complete, at its furthest extent"
+        )
+    return (
+        f"{escalation.capitalize()} — this is block {block_n} of {blocks} and the "
+        f"change is about {percent} percent complete, visibly further along than "
+        f"the previous block and not yet finished"
+    )
 
 
 def build_block_prompt(through_line: ThroughLine, block_n: int, blocks: int = 6) -> BlockPrompt:

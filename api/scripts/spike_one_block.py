@@ -21,7 +21,14 @@ import sys
 
 from genblaze_gmicloud import GMICloudImageProvider, GMICloudVideoProvider
 
-from newsdesk.blocks import VIDEO_FALLBACKS, VIDEO_MODEL, build_pipeline, read_result, sink
+from newsdesk.blocks import (
+    VIDEO_FALLBACKS,
+    VIDEO_MODEL,
+    build_pipeline,
+    read_result,
+    register_seedance_ratio,
+    sink,
+)
 from newsdesk.config import ConfigError, require
 from newsdesk.policy.gate import check
 from newsdesk.pricing import register_all
@@ -63,6 +70,7 @@ def main() -> int:
 
     image_provider, video_provider = GMICloudImageProvider(), GMICloudVideoProvider()
     register_all(image=image_provider, video=video_provider)
+    register_seedance_ratio(video_provider)
 
     pipe = build_pipeline(
         prompt, image_provider=image_provider, video_provider=video_provider

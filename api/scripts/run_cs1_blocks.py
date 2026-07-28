@@ -27,6 +27,7 @@ from newsdesk.blocks import (
     VIDEO_MODEL,
     BlockError,
     build_pipeline,
+    register_seedance_ratio,
     read_result,
     sink,
 )
@@ -73,6 +74,7 @@ def main() -> int:
     image_provider = GMICloudImageProvider()
     video_provider = GMICloudVideoProvider()
     register_all(image=image_provider, video=video_provider)
+    register_seedance_ratio(video_provider)
 
     print(f"through-line  {through_line.label}")
     print(f"image         {IMAGE_MODEL} {IMAGE_PARAMS}")

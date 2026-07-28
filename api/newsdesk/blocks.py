@@ -41,25 +41,36 @@ IMAGE_MODEL = os.getenv("NEWSDESK_IMAGE_MODEL", "gemini-2.5-flash-image")
 #
 #   seedance-1-0-pro-fast          404 — the undated slug does not exist. GMI
 #                                  carries dated builds; example_slugs are real.
-#   seedance-1-0-pro-fast-251015   renders, but returned 1248x704 LANDSCAPE with
-#                                  aspect_ratio="9:16" on the wire AND a portrait
-#                                  first_frame. It ignored both.
-#   seedance-2-0-260128            500 "Backend error (401)" at $0 — an
-#                                  entitlement failure, not a transient one.
-#                                  Not enabled on this contract.
+#   seedance-1-0-pro-fast-251015   returned 1248x704 LANDSCAPE with a portrait
+#                                  first_frame. Read at the time as "the model
+#                                  ignores aspect ratio". It was not — genblaze
+#                                  emits `aspect_ratio` and GMI reads `ratio`, so
+#                                  the parameter arrived under a name nothing
+#                                  looked at (see register_seedance_ratio).
+#                                  With the alias: 704x1248, TRUE 9:16, $0.022.
+#   seedance-2-0-fast-260128       the real 2.0 slug per GMI's docs — genblaze's
+#                                  example_slugs name seedance-2-0-260128, which
+#                                  the docs do not. Both return 500 "Backend
+#                                  error (401)" at $0: an entitlement failure,
+#                                  not a transient one. GMI runs a waitlist at
+#                                  seedance2.gmicloud.ai.
 #   kling-image2video-v1.6-pro     404, not in the catalogue.
-#   kling-image2video-v2.1-master  720x1280, TRUE 9:16, 10.4s, $0.28. The only
-#                                  video model verified to deliver vertical.
+#   kling-image2video-v2.1-master  720x1280, TRUE 9:16, 10.4s, $0.28 — works with
+#                                  no alias needed, at 12.7x the seedance price.
 #
-# Seedance stays as the fallback despite its framing being wrong. A landscape
-# clip is a degraded block, not a broken run — the assembler can letterbox it and
-# the manifest records the substitution. Same call voice.json makes about the
-# LMNT fallback: a visible substitution is more honest than a silent one, and
-# both beat a gap.
-VIDEO_MODEL = os.getenv("NEWSDESK_VIDEO_MODEL", "kling-image2video-v2.1-master")
+# So seedance leads and Kling is the fallback that needs no special handling.
+# Six blocks of video is $0.13 rather than $1.68.
+VIDEO_MODEL = os.getenv("NEWSDESK_VIDEO_MODEL", "seedance-1-0-pro-fast-251015")
 VIDEO_FALLBACKS = os.getenv(
-    "NEWSDESK_VIDEO_FALLBACKS", "seedance-1-0-pro-fast-251015"
+    "NEWSDESK_VIDEO_FALLBACKS", "kling-image2video-v2.1-master"
 ).split(",")
+
+SEEDANCE_SLUGS = (
+    "seedance-1-0-pro-fast-251015",
+    "seedance-2-0-fast-260128",
+    "seedance-2-0-260128",
+    "seedance-1-0-pro-250528",
+)
 
 ASPECT_RATIO = "9:16"
 DURATION_S = 10
@@ -68,6 +79,39 @@ DURATION_S = 10
 # documented, and MOO-424 reproduced on GMI, that framing does not inherit
 # between steps.
 IMAGE_PARAMS: dict[str, Any] = {"aspect_ratio": ASPECT_RATIO}
+
+
+def register_seedance_ratio(provider: Any) -> None:
+    """Teach the seedance specs GMI's native name for aspect ratio.
+
+    Genblaze normalizes the canonical param to `aspect_ratio` and the seedance
+    family's allowlist accepts it — but GMI's own docs for both
+    `seedance-1-0-pro-fast-251015` and `seedance-2-0-fast-260128` call it
+    **`ratio`**. There is no alias between the two, so `aspect_ratio` reached the
+    wire under a name the API does not read, was ignored, and the job fell back
+    to its 16:9 default. That is how a request for 9:16 with a portrait
+    `first_frame` returned 1248x704: not a model refusing vertical, a parameter
+    arriving under the wrong name.
+
+    Same shape as the `guidance_scale` → `cfg_scale` alias the family already
+    carries; this one is simply missing. Registered here rather than patched
+    upstream so the fix ships with the app and is visible in the run's params.
+    """
+    import dataclasses
+
+    for slug in SEEDANCE_SLUGS:
+        try:
+            spec = provider.models.get(slug)
+        except Exception:  # noqa: BLE001 — a slug this account lacks is not fatal
+            continue
+        provider.models.register(
+            dataclasses.replace(
+                spec,
+                param_aliases={**(spec.param_aliases or {}), "aspect_ratio": "ratio"},
+                param_allowlist=frozenset(spec.param_allowlist or ()) | {"ratio"},
+            ),
+            override=True,
+        )
 
 
 class BlockError(RuntimeError):

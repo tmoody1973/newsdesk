@@ -28,7 +28,7 @@ from pathlib import Path
 from genblaze_core import Asset, Modality, Pipeline
 from genblaze_gmicloud import GMICloudVideoProvider
 
-from newsdesk.blocks import ASPECT_RATIO, DURATION_S, sink
+from newsdesk.blocks import ASPECT_RATIO, DURATION_S, register_seedance_ratio, sink
 from newsdesk.config import ConfigError, require
 from newsdesk.pricing import register_all
 from newsdesk.scene import ThroughLine, build_block_prompt
@@ -42,8 +42,10 @@ STILL_URL = (
 )
 STILL_SHA = "1c10765f67352f3c1a53b0855f78f5ad6169383f57be49019babd1ee22200426"
 
+# GMI's seedance docs use `ratio`, not `aspect_ratio`. The earlier landscape
+# result was this parameter being silently ignored, not the model refusing 9:16.
 CANDIDATES = [
-    ("kling-image2video-v1.6-pro", "the cheap Kling build — $0.098 vs $0.28"),
+    ("seedance-1-0-pro-fast-251015", "with aspect_ratio aliased to GMI's `ratio`"),
 ]
 
 
@@ -82,9 +84,10 @@ def main() -> int:
     still = Asset(url=STILL_URL, sha256=STILL_SHA, media_type="image/png")
     provider = GMICloudVideoProvider()
     register_all(video=provider)
+    register_seedance_ratio(provider)
 
     print(f"first_frame  {STILL_URL.rsplit('/', 1)[-1]}  (768x1344 portrait, reused)")
-    print(f"asking for   aspect_ratio={ASPECT_RATIO}  duration={DURATION_S}\n")
+    print(f"asking for   ratio={ASPECT_RATIO}  resolution=720p  duration={DURATION_S}\n")
 
     async def run_one(model: str, why: str):
         pipe = Pipeline(f"aspect-{model}").step(
@@ -95,6 +98,7 @@ def main() -> int:
             external_inputs=[still],
             duration=DURATION_S,
             aspect_ratio=ASPECT_RATIO,
+            resolution="720p",
         )
         try:
             res = await pipe.arun(

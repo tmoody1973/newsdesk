@@ -554,6 +554,37 @@ def build_filtergraph(
     return ";".join(parts)
 
 
+# Where the finished file is delivered, in LUFS. YouTube and Spotify normalise
+# to -14, Apple to -16, EBU R128 broadcast to -23. -16 is the safe crossing
+# point: loud enough that social platforms do not leave it sounding thin, quiet
+# enough that it is not fighting a broadcast chain.
+#
+# This matters because platforms normalise **down and not up** — a loud file
+# gets turned down, a quiet one just plays quiet next to everything around it.
+# The first cut measured -17.4 LUFS and would have played noticeably under.
+DELIVERY_LUFS = -16.0
+
+# Streaming ceiling. A file that peaks near 0 dBFS clips when a platform
+# re-encodes it to a lossy codec, which is audible and unfixable afterwards.
+TRUE_PEAK_CEILING_DB = -1.0
+
+
+def master_gain_db(measured_lufs: float, true_peak_db: float) -> float:
+    """How much to move the finished mix, in dB, bounded by its own headroom.
+
+    A static gain rather than `loudnorm`, for the same reason the bed uses one:
+    a normaliser compresses the loudness range, and the loudness range IS the
+    arc — the trough is supposed to be quieter than the lift.
+
+    Headroom wins ties. A file that clips on a platform's lossy re-encode is
+    worse than one that plays a little quiet, so the true-peak ceiling caps the
+    gain even when that leaves the piece short of target.
+    """
+    wanted = DELIVERY_LUFS - measured_lufs
+    allowed = TRUE_PEAK_CEILING_DB - true_peak_db
+    return round(min(wanted, allowed), 2)
+
+
 def render(
     blocks: Sequence[BlockTiming],
     clips: Sequence[Path],
@@ -614,3 +645,38 @@ def anton_is_resolvable() -> bool:
     """
     proc = subprocess.run(["fc-list"], capture_output=True, text=True)
     return "anton" in proc.stdout.lower()
+
+
+def measure_loudness(path: Path, *, ffmpeg: str | None = None) -> tuple[float | None, float | None]:
+    """(integrated LUFS, true peak dBFS) for a finished file."""
+    binary = ffmpeg or resolve_ffmpeg(needs_subtitles=False)
+    proc = subprocess.run(
+        [binary, "-i", str(path), "-af", "ebur128=peak=true:framelog=quiet",
+         "-f", "null", "-"],
+        capture_output=True, text=True,
+    )
+    lufs = re.search(r"I:\s*(-?\d+(?:\.\d+)?)\s*LUFS", proc.stderr)
+    peak = re.search(r"Peak:\s*(-?\d+(?:\.\d+)?)\s*dBFS", proc.stderr)
+    return (float(lufs.group(1)) if lufs else None,
+            float(peak.group(1)) if peak else None)
+
+
+def master(src: Path, out: Path, *, ffmpeg: str | None = None) -> tuple[Path, float]:
+    """Bring the finished mix to delivery loudness. Audio only; video is copied.
+
+    `-c:v copy` is the whole point of doing this as a second pass rather than
+    inside the render: the picture is already correct and re-encoding it to
+    change an audio gain would cost a generation of quality for nothing.
+    """
+    lufs, peak = measure_loudness(src, ffmpeg=ffmpeg)
+    if lufs is None or peak is None:
+        raise AssemblyError(f"could not measure {src.name} — refusing to guess a gain")
+    gain = master_gain_db(lufs, peak)
+    _run(
+        [ffmpeg or resolve_ffmpeg(needs_subtitles=False), "-y", "-loglevel", "error",
+         "-i", str(src), "-c:v", "copy", "-af", f"volume={gain}dB",
+         "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
+         "-movflags", "+faststart", str(out)],
+        what=f"mastering to {DELIVERY_LUFS} LUFS",
+    )
+    return out, gain

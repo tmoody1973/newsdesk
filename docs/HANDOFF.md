@@ -4,19 +4,24 @@
 **Branch:** `tarikjmoody/moo-425-moo-419-brand-kit-and-script` (11 commits ahead of `main`)
 **Linear:** [Newsdesk — Backblaze Generative Media Hackathon](https://linear.app/moodyco/project/newsdesk-backblaze-generative-media-hackathon-5f68ce40d2cc) · team `MOO`
 **Deadline:** submit **Aug 2**, hard cut **Aug 3, 5:00 PM EDT**
-**Spend:** ~$5 of ~$25 · `uv run pytest tests/ -q` → **209 passed**, zero network, $0
+**Spend:** ~$6 of ~$25 · `uv run pytest tests/ -q` → **272 passed**, zero network, $0
 
 ## The one thing that matters
 
 **Nothing has produced a finished MP4 yet.** Facts, script, stills, clips *and
 now voice* all work end to end. What is missing is assembly.
 
-**MOO-428 (approval + assemble + embed + verify) is the only thing on the
-critical path.** Do not start the vision check, the web UI, the Parquet audit or
-the second policy check before it. Everything it needs already exists: six clips
-in `b2://newsdesk-assets/cs1-{through-line}/`, six trimmed takes in
-`b2://newsdesk-assets/cs1-narration/`, and `voice_duration_s` per block in
-`b2://newsdesk-runs/cs1-narration/state.json`.
+**There is a finished MP4 and `genblaze verify --fetch` returns OK on it.**
+72.61s, -16.0 LUFS, true peak -2.2 dBFS, burned Anton captions, a ducked lo-fi
+bed with a four-movement arc, and an embedded manifest naming the approver and
+tracing twelve claims to six facts. Watched and signed off 2026-07-28.
+
+    uv run python scripts/run_cs1_assemble.py --approve "Your Name"
+    uv run genblaze verify --fetch out/assemble/cs1-embedded.mp4
+
+**MOO-431 is now the only thing on the critical path** — deploy, judge access
+code, demo video, submission. Due Aug 2. Do not start the vision check, the
+Parquet audit or the second policy check before it.
 
 ## Where to read first
 
@@ -41,10 +46,10 @@ assumption.
 
 ## Status
 
-**Done:** MOO-415, 416, 417, 418, **419**, 420, 421, 422, **425**, **426**, 432, 433.
-**Effectively done:** MOO-424 — six blocks generate end to end and CS-5 passes;
-only ring-contraction legibility is open, and it is cosmetic.
-**Open:** MOO-423, **428**, 427, 429, 430, 431.
+**Done:** MOO-415, 416, 417, 418, **419**, 420, 421, 422, **424**, **425**,
+**426**, **428**, 432, 433. Ring-contraction legibility remains open on 424 and
+is cosmetic.
+**Open:** MOO-423, 427, 429, 430, **431**.
 
 What works, verified against real output:
 

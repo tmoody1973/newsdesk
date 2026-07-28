@@ -28,6 +28,8 @@ from newsdesk.assembly import (
     approved_or_raise,
     clip_action,
     plan_timeline,
+    master,
+    measure_loudness,
     probe_duration,
     render,
     subtitle_cues,
@@ -217,6 +219,12 @@ def main() -> int:
     if abs(measured - runtime) > 0.5:
         print(f"WARN      rendered length differs from the plan by "
               f"{abs(measured - runtime):.2f}s")
+
+    mastered = WORK / "cs1-master.mp4"
+    mastered, gain = master(out, mastered)
+    lufs_out, peak_out = measure_loudness(mastered)
+    print(f"mastered  {gain:+.2f} dB → {lufs_out} LUFS, true peak {peak_out} dBFS")
+    out = mastered
 
     # --- the receipt -------------------------------------------------------
     raw_steps = block_steps(store)

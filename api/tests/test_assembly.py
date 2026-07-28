@@ -389,3 +389,36 @@ def test_nothing_in_the_graph_re_times_audio_or_video(timeline):
     assert "setpts=" not in graph.replace("setpts=PTS-STARTPTS", "").replace(
         "asetpts=N/SR/TB", ""
     )
+
+
+# --- delivery master --------------------------------------------------------
+
+
+def test_the_master_gain_reaches_the_platform_target():
+    """Platforms normalise DOWN, not up. A quiet file just plays quiet."""
+    from newsdesk.assembly import DELIVERY_LUFS, master_gain_db
+
+    assert master_gain_db(-17.4, -3.6) == pytest.approx(DELIVERY_LUFS + 17.4, abs=0.05)
+
+
+def test_the_master_never_pushes_past_the_true_peak_ceiling():
+    """A file that clips on a lossy encode is worse than one that plays quiet.
+
+    Headroom is the binding constraint, not the loudness target.
+    """
+    from newsdesk.assembly import TRUE_PEAK_CEILING_DB, master_gain_db
+
+    gain = master_gain_db(-30.0, -0.5)  # very quiet, almost no headroom
+    assert -0.5 + gain <= TRUE_PEAK_CEILING_DB + 0.01
+
+
+def test_an_already_loud_mix_is_turned_down_not_left_alone():
+    from newsdesk.assembly import master_gain_db
+
+    assert master_gain_db(-11.0, -6.0) < 0
+
+
+def test_a_mix_already_at_target_is_left_alone():
+    from newsdesk.assembly import DELIVERY_LUFS, master_gain_db
+
+    assert master_gain_db(DELIVERY_LUFS, -6.0) == pytest.approx(0.0, abs=0.01)

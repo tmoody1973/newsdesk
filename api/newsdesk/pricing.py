@@ -79,7 +79,9 @@ def register_all(*, image=None, video=None, audio=None) -> None:
 
 def estimate_run(blocks: int = 6, *, seconds: int = 10, video_model: str) -> float:
     """Projected USD for one full story, for the budget guard and the README."""
-    image = IMAGE_RATES["seedream-5.0-lite"] * blocks
+    # gemini, not seedream: seedream silently ignores aspect_ratio and returns
+    # square, so it is not a model this pipeline can actually use.
+    image = IMAGE_RATES["gemini-2.5-flash-image"] * blocks
     if video_model in VIDEO_SECOND_RATES:
         video = VIDEO_SECOND_RATES[video_model] * seconds * blocks
     else:

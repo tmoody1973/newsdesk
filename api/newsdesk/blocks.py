@@ -36,14 +36,29 @@ from newsdesk.config import BUCKETS, backend
 # honours it and returned 768x1344.
 IMAGE_MODEL = os.getenv("NEWSDESK_IMAGE_MODEL", "gemini-2.5-flash-image")
 
-# Default to the cheap one. seedance-1-0-pro-fast is $0.022/asset against
-# seedance-2.0's $0.52 for ten seconds — a full story is $0.94 versus $3.95. The
-# expensive model is for the hero run and the demo, not for iteration.
-# The undated slug 404s: "model seedance-1-0-pro-fast does not exist". GMI
-# carries dated builds and the registry's example_slugs are the real names.
-VIDEO_MODEL = os.getenv("NEWSDESK_VIDEO_MODEL", "seedance-1-0-pro-fast-251015")
+# The chain is inverted from what the design assumed, and every line of this is
+# measured rather than reasoned:
+#
+#   seedance-1-0-pro-fast          404 — the undated slug does not exist. GMI
+#                                  carries dated builds; example_slugs are real.
+#   seedance-1-0-pro-fast-251015   renders, but returned 1248x704 LANDSCAPE with
+#                                  aspect_ratio="9:16" on the wire AND a portrait
+#                                  first_frame. It ignored both.
+#   seedance-2-0-260128            500 "Backend error (401)" at $0 — an
+#                                  entitlement failure, not a transient one.
+#                                  Not enabled on this contract.
+#   kling-image2video-v1.6-pro     404, not in the catalogue.
+#   kling-image2video-v2.1-master  720x1280, TRUE 9:16, 10.4s, $0.28. The only
+#                                  video model verified to deliver vertical.
+#
+# Seedance stays as the fallback despite its framing being wrong. A landscape
+# clip is a degraded block, not a broken run — the assembler can letterbox it and
+# the manifest records the substitution. Same call voice.json makes about the
+# LMNT fallback: a visible substitution is more honest than a silent one, and
+# both beat a gap.
+VIDEO_MODEL = os.getenv("NEWSDESK_VIDEO_MODEL", "kling-image2video-v2.1-master")
 VIDEO_FALLBACKS = os.getenv(
-    "NEWSDESK_VIDEO_FALLBACKS", "kling-image2video-v2.1-master"
+    "NEWSDESK_VIDEO_FALLBACKS", "seedance-1-0-pro-fast-251015"
 ).split(",")
 
 ASPECT_RATIO = "9:16"

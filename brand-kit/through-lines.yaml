@@ -43,9 +43,15 @@ through_lines:
   - id: dollar-cut
     label: A dollar bill cut into strips
     use_when: Budgets, allocation, where money goes.
+    # "labelled paper strips" was here until 2026-07-28 and is a POL-4 violation
+    # written into the menu itself — an instruction to render text, on the object
+    # already marked lettering_risk: high. The strips are distinguished by width
+    # and by a marker line, never by a label; naming the categories is the
+    # receipt's job, not the frame's.
     framing: >
       a large banknote-shaped rectangle of plain pale green card, its surface
-      smooth and unengraved, being divided into labelled paper strips
+      smooth and unengraved, being divided into separate paper strips of
+      differing widths
     surface: >
       the card is flat matte green with a single hand-drawn marker line marking
       each division and nothing else printed on it

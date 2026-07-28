@@ -28,7 +28,10 @@ IMAGE_RATES = {
 # USD per asset. seedance-2.0 is billed per second and lives in SECOND_RATES.
 VIDEO_FLAT_RATES = {
     "seedance-1-0-pro-250528": 0.30,
-    "seedance-1-0-pro-fast": 0.022,
+    # Dated slug. The undated "seedance-1-0-pro-fast" 404s at submit, so a rate
+    # registered under that name would never have matched a real call and
+    # cost_usd would have stayed None while looking configured.
+    "seedance-1-0-pro-fast-251015": 0.022,
     "kling-image2video-v2.1-master": 0.28,
     "kling-image2video-v1.6-pro": 0.098,
 }

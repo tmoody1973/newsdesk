@@ -104,8 +104,12 @@ class BlockPrompt:
         """
         return cls(
             block=block,
+            # No attachment is named, because there is no longer one to name.
+            # MOO-424 removed the style-key image input — it made consistency
+            # worse — and a prompt that still says "match the attached key"
+            # points a model at nothing and invites it to invent the referent.
             style_reference=style_reference
-            or f"Match the attached style key EXACTLY — {style_tokens()}",
+            or f"Render in this house style EXACTLY — {style_tokens()}",
             scene=scene.strip(),
             motion=motion.strip(),
             audio=audio.strip(),

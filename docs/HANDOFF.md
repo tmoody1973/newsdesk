@@ -96,6 +96,48 @@ through-line (`record` — a record growing). CS-2 is the judge's designated
 cold-start story **and** the false-positive control — it has no policy landmines
 by design, so if it trips a gate, the gate is miscalibrated.
 
+### 2.5 THE PICTURES ARE BLAND — fix before anything ships
+
+Tarik, on watching the assembled CS-1: *"the video we created is bland!!!! I
+would never record that in a demo video."* He is right, and the causes are
+specific and mostly **already specified in this repo and simply not built**.
+
+`newsdesk-case-studies.md` CS-1 asks for: *"Motifs: map of dark stations
+spreading; ledger; paper-cutout rural landscape"* and *"Question-on-prop: WHO
+PAYS?"*. UI spec §3.2 asks for a per-block motif picker. **None of it exists.**
+`build_scene()` takes no motif parameter. The through-line is a wrapper and the
+story never gets inside it.
+
+Five causes, in order of impact:
+
+1. **Six identical compositions.** `scene.IDENTITY` says *"same position in
+   frame"*. That clamp was added because blocks 1/2/6 rendered lattice masts
+   while 4/5 rendered observation towers — it fixed object identity and
+   over-corrected onto the camera. Relax it to hold the object, not the framing:
+   wide, detail, low angle, overhead. Six centred wides is the single biggest
+   reason it reads flat.
+2. **No motifs.** Add a motif per block, threaded through `build_scene()`,
+   defaulted from the through-line and overridable in the wizard's Art Direction
+   step. This is what makes the pictures about *this* story.
+3. **One motion setting for all six.** `scene.MOTION` is a module constant —
+   the same slow push-in six times. Vary it per block.
+4. **~7.6s of frozen frame.** Blocks 4 and 5 hold their last frame for 3.7s and
+   3.9s. `DURATION_S = 10` in `blocks.py`; 12s costs $0.13 for six clips.
+5. **No question-on-prop.** CS-1's art direction calls for "WHO PAYS?" on a
+   prop. POL-4 bounds on-prop text; it does not forbid it.
+
+**And one that is not in any doc: no kinetic typography.** The house style is
+"Vox-style collage", and Vox lives on animated numbers. One point one billion
+dollars is the entire cold open and it currently appears as a caption in the
+same treatment as every other line. POL-4 forbids readable text in **generated**
+frames — it says nothing about compositing a *sourced* figure at assembly, where
+it is traceable to a fact and lands in the receipt like everything else. This is
+the missing signature of the style and probably the highest-impact single change.
+
+Cost to iterate: **$0.36 a round** ($0.23 stills + $0.13 clips). ~$19 of budget
+remains — about fifty rounds. Look at six stills side by side each time;
+`run_cs1_blocks.py --stills-only` is $0.23 and does not need the video leg.
+
 ### 3. The worker — Fly.io, Docker with ffmpeg + Anton
 
 Design spec §13. A run is ~5 minutes wall clock (blocks 2m14s, narration ~1m,

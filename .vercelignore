@@ -1,0 +1,22 @@
+# The deployment root is the REPO root, not `web/` — see vercel.json.
+#
+# That is not a preference. `web/app/policy/page.tsx` reads
+# `process.cwd()/../policy/policy.yaml`, and `web/next.config.mjs` sets
+# `outputFileTracingRoot` to the repo root for the same reason: there is exactly
+# one policy file and the page that publishes the rules must be reading the file
+# the gate enforces. Deploying `web/` alone put that file outside the upload,
+# which is what made the first attempt fail with a doubled `path0/path0` output
+# path — Next traced above its own deployment root.
+#
+# So the whole repo goes up, and everything the site does not need comes off
+# here rather than being copied into `web/` and drifting.
+
+api/
+tests/
+stories/
+docs/
+stamp-system-design-handoff/
+MEMORY/
+.remember/
+*.zip
+*.mp4

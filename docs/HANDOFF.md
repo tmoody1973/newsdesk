@@ -52,17 +52,19 @@ Five stages, resumable and individually addressable:
 - **The container was built and a caption burned inside it**, and the frame was
   looked at. Anton renders; it is not a fallback face.
 
-### NOT yet proven — the honest gap
+### Proven on Day 5 — the gap is closed
 
-**No single story has gone browser-start to browser-finish.** The path was proven
-in two halves that have never been joined:
+**A story went browser-start to browser-finish.** No CLI command touched the
+run. `what-a-billion-dollars-of-vinyl-says-abo`: five facts typed into the
+wizard, `record` picked from the menu, script written and repaired three times
+until every claim traced, gate passed at $0, six clips, six takes, six per-block
+approvals, stamped on Editor Review, published.
 
-- typed a story in the browser → got a script (`vinyl-outsold-cds-three-to-one`)
-- CLI-made blocks + narration → browser Editor Review → published (`cs2`)
+- **69.80s · −16.0 LUFS · −1.8 dBTP · 1080×1920 h264+aac · 75 MB**
+- **$1.2116** — $0.936 pictures, $0.276 voice — against the $1.20 estimate
+- Two frames pulled at 6s and 42s and looked at. Anton renders as Anton.
 
-The seam between them — **`Send to generation` actually triggering blocks and
-narration from the browser** — has never been run. ~$1.20, ~8 minutes.
-**This is the single highest-value thing left.**
+The demo now exists as a thing that happened, not a thing that should work.
 
 ---
 
@@ -102,28 +104,53 @@ whole argument. Widening the window is a calibration; dropping the rule is a cut
 
 ## Build order from here
 
-### 1. One story, browser start to finish · ~$1.20, ~8 min · **DO THIS FIRST**
-
-Start both servers, open the wizard, type a story, and press every button
-through to a stamped video. It closes the mandate honestly and it *is* the demo.
+### ~~1. One story, browser start to finish~~ · **DONE, Day 5, $1.2116**
 
 ```bash
-cd api && NEWSDESK_ACCESS_CODE=demo1234 uv run python -m newsdesk.server
-cd web && npm run dev          # needs NEXT_PUBLIC_WORKER_URL=http://localhost:8080
+cd api && uv run python -m newsdesk.server   # reads NEWSDESK_ACCESS_CODE from api/.env
+cd web && npm run dev                        # needs NEXT_PUBLIC_WORKER_URL=http://localhost:8080
 ```
 
-### 2. Deploy · Fly (worker) + Vercel (web)
+### ~~2. Deploy · Fly (worker) + Vercel (web)~~ · **LIVE, Day 5**
 
-Not started. `fly` is not even logged in. Needs:
+| | |
+|---|---|
+| **Site** | **https://newsdesk-rosy.vercel.app** — public, 200 |
+| **Worker** | **https://newsdesk-worker.fly.dev** — 2 machines in `ord`, checks passing |
 
-```bash
-fly secrets set GMI_API_KEY=... ELEVENLABS_API_KEY=... LMNT_API_KEY=... \
-                B2_KEY_ID=... B2_APP_KEY=... NEWSDESK_ACCESS_CODE=...
-fly deploy                      # from api/
-```
+`vercel --prod` from the **repo root**. `fly deploy` from `api/`. Both projects
+are already linked and their secrets are set — 7 on Fly, 4 on Vercel.
 
-`NEWSDESK_ACCESS_CODE` is all that stands between a public URL and anyone
-spending the GMI balance. `/health` reports whether it is set.
+**Three things about this deploy that will bite whoever touches it next:**
+
+1. **The Vercel Root Directory is `web`, and the whole repo is uploaded.**
+   `web/app/policy/page.tsx` reads `process.cwd()/../policy/policy.yaml` and
+   `next.config.mjs` traces from the repo root — both deliberate, so the Policy
+   page cannot drift from the file the gate enforces. Deploying `web/` alone
+   fails with a doubled `path0/path0` output path. Root Directory is a project
+   setting, not expressible in `vercel.json`; it was set with
+   `PATCH /v9/projects/{id}`. `.vercelignore` keeps `policy/` and drops the rest.
+2. **Vercel refuses to deploy a vulnerable Next.** 15.5.4 was blocked *after a
+   clean build*. Pinned to **15.5.22**. Delete `.next` after any Next bump or the
+   next build dies on `Cannot find module for page: /_not-found`.
+3. **This Mac's resolver has a stale NXDOMAIN for `newsdesk-worker.fly.dev`.**
+   `dig` is correct, `curl` is not — use `--resolve …:443:66.241.125.20` from the
+   shell. Chrome resolves it fine, so it is a local cache, not a deploy problem.
+
+**Proven against the live URLs, from the deployed origin:**
+
+- `POST /runs` with no code → **401**; with a wrong code → **401**
+- `POST /runs` with the right code and an unsourced fact → **422**, *"has no
+  sources. Every fact needs at least one."* Wall 1 holds in production, and no
+  run was created, so this probe left nothing on the Desk.
+- `fetch()` from `https://newsdesk-rosy.vercel.app` to the worker's `/health` →
+  **200** with `access_code_required: true`. CORS and DNS both work browser-side.
+- Policy, Desk and Receipt all render — the Desk reads the **private** runs
+  bucket server-side, so the B2 keys on Vercel are good.
+
+**Not yet done: a paid run through the deployed worker.** Every stage is proven
+locally against this same image, and the door is proven in production, but no
+story has been generated end-to-end on the Fly machine. ~$1.20.
 
 ### 3. README, demo video, submit
 
@@ -136,6 +163,32 @@ CS-1 convergence · per-block approvals persisted · "Reject with note" · the
 lineage drawer · URL ingest (designed in `docs/PLAN.md` §B4, unbuilt).
 
 ---
+
+## Day 5 — four defects the browser found that the tests could not
+
+Every one was invisible to 318 passing tests and obvious on a screen.
+
+1. **A blank `+ citation` row counted as a source.** `factProblem` tested
+   `sources.length === 0` and never the value, so an empty box turned the fact
+   green and the ledger read *"1 of 1 sourced"* over nothing. The backend does
+   refuse `{citation: ""}` — its `present` check is truthiness — so this was a
+   round trip, not a hole. Fixed with `filledSources`.
+2. **`slugify` cut the run id mid-word.** This story's id is
+   `what-a-billion-dollars-of-vinyl-says-abo`, and that fragment is printed on
+   the receipt and is the B2 prefix. Now cuts back to a whole word. Existing
+   runs keep their stored ids; only new stories change.
+3. **The receipt told every reader to verify `cs1.mp4`.** Hardcoded. The one
+   instruction on the page whose whole point is *"do not trust our website"*
+   was the one thing on it that was wrong. Now reads the run's own filename.
+4. **"Made by" named only ElevenLabs** on a run whose six clips were seedance,
+   because `stage_narration` **replaces** a block's `attempts` tuple and
+   `stage_blocks` never writes one. The receipt now reads the event log, which
+   is the audit trail and carries the model that ran on every stage.
+
+**Still open, both in `pipeline.py`:** `stage_narration` overwriting `attempts`
+is unfixed — #4 routes around it rather than repairing it. And the still's model
+(`gemini-3-pro-image-preview`) is **never logged at all** — only `video_model`
+reaches the record, so no receipt can name the model that made the picture.
 
 ## What changed on Day 4, and why
 

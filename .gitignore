@@ -13,3 +13,9 @@ scratch/
 out/
 tsconfig.tsbuildinfo
 .next/
+
+# Vercel CLI project link
+.vercel
+
+# Agent working notes (PRDs, session state). Not part of the product.
+MEMORY/

@@ -47,12 +47,24 @@ export function looksLikeUrl(value: string): boolean {
 
 export type FactProblem = "empty" | "unsourced" | "bad-url" | null;
 
+/** The sources actually written down.
+ *
+ *  `+ link` and `+ citation` add the row before anything is typed into it, so a
+ *  row is a slot, not an assertion. Counting slots is what let a fact with an
+ *  empty citation box read as sourced on Wall 1 — the ledger said "1 of 1
+ *  sourced" over a blank field. The backend refuses `{citation: ""}` (its
+ *  `present` check is truthiness, so an empty string is not a key that counts),
+ *  but that refusal arrives after a round trip, which is exactly what this file
+ *  exists to prevent. An unfilled slot is simply not there. */
+export function filledSources(fact: DraftFact): DraftSource[] {
+  return fact.sources.filter((s) => s.value.trim().length > 0);
+}
+
 export function factProblem(fact: DraftFact): FactProblem {
   if (!fact.text.trim()) return "empty";
-  if (fact.sources.length === 0) return "unsourced";
-  const badUrl = fact.sources.some(
-    (s) => s.kind === "url" && !looksLikeUrl(s.value),
-  );
+  const sources = filledSources(fact);
+  if (sources.length === 0) return "unsourced";
+  const badUrl = sources.some((s) => s.kind === "url" && !looksLikeUrl(s.value));
   return badUrl ? "bad-url" : null;
 }
 
@@ -73,7 +85,9 @@ export function factsReady(draft: Draft): boolean {
 }
 
 export function sourcedCount(draft: Draft): number {
-  return draft.facts.filter((f) => f.sources.length > 0 && f.text.trim()).length;
+  return draft.facts.filter(
+    (f) => filledSources(f).length > 0 && f.text.trim(),
+  ).length;
 }
 
 /** A short label for the ledger — the host for a url, the text for a citation. */
@@ -91,13 +105,24 @@ export function sourceLabel(source: DraftSource): string {
  *  Must satisfy the backend's `_ID_CHARS` — lowercase, digits, hyphens — or the
  *  post is refused. Generated from the title rather than asked for, because a
  *  journalist should not have to think about storage keys. */
+const SLUG_MAX = 40;
+
 export function slugify(title: string): string {
-  const base = title
+  const full = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  return base || "story";
+    .replace(/^-+|-+$/g, "");
+  if (full.length <= SLUG_MAX) return full || "story";
+
+  // Truncated — cut back to the last whole word. A bare `.slice(0, 40)` severed
+  // this project's first browser-made story mid-word, as
+  // `what-a-billion-dollars-of-vinyl-says-abo`, and that fragment is not an
+  // internal detail: the receipt prints it as the run id and every asset in B2
+  // lives under it. A single word longer than the limit is still cut hard,
+  // because a run needs an id more than it needs a pretty one.
+  const cut = full.slice(0, SLUG_MAX);
+  const lastWord = cut.lastIndexOf("-");
+  return (lastWord > 0 ? cut.slice(0, lastWord) : cut) || "story";
 }
 
 /** The exact JSON `POST /runs` expects — the same document shape as a

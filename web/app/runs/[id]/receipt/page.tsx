@@ -22,8 +22,22 @@ export default async function Receipt({ params }: { params: Promise<{ id: string
   const blocks = [...run.blocks].sort((a, b) => a.n - b.n);
   const runtime = blocks.reduce((sum, b) => sum + (b.voice_duration_s ?? 0), 0);
   const refusals = run.events.filter((e) => e.rule_id).length;
+  // Read from the event log, not from `block.attempts`.
+  //
+  // `stage_narration` replaces a block's `attempts` tuple rather than appending
+  // to it, and `stage_blocks` never wrote one — so `attempts` names the voice
+  // and nothing else, and this section listed `elevenlabs · eleven_v3` for a
+  // run whose six clips were made by seedance. The event log is the audit trail
+  // and it carries the model that actually ran on every stage, which is the
+  // claim the copy below already makes. Attempts are still folded in: they are
+  // where a fallback's rejected first try is recorded.
   const models = new Set(
-    run.blocks.flatMap((b) => b.attempts.map((a) => `${a.provider} · ${a.model}`)),
+    [
+      ...run.events.map((e) => ({ provider: e.provider, model: e.model })),
+      ...run.blocks.flatMap((b) => b.attempts),
+    ]
+      .filter((m) => m.model)
+      .map((m) => (m.provider ? `${m.provider} · ${m.model}` : m.model!)),
   );
 
   return (
@@ -146,9 +160,14 @@ export default async function Receipt({ params }: { params: Promise<{ id: string
               the assets it names are public — so this check does not need our permission
               and does not trust our website.
             </p>
+            {/* The filename comes from this run's own video. It was hardcoded to
+                `cs1.mp4` — so every receipt but CS-1's told the reader to verify
+                a file they had not downloaded, and the one instruction on the
+                page whose whole point is "do not trust our website" was the one
+                thing on it that was wrong. */}
             <pre className="mono mt-3 overflow-x-auto border-2 border-ink bg-ink/5 p-3 text-[11px]">
 {`curl -O ${video ?? "<video url>"}
-genblaze verify --fetch cs1.mp4`}
+genblaze verify --fetch ${video?.split("/").pop() || "<file>.mp4"}`}
             </pre>
             <p className="mono mt-2 text-[11px] text-graphite">
               A file that does not match its manifest fails with exit 1. One flipped byte is

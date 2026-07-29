@@ -199,28 +199,41 @@ class Pipeline:
         prompts = [build_block_prompt(through_line, n, BLOCKS) for n in range(1, BLOCKS + 1)]
         prefix = self.story_file.clip_prefix.rstrip("/")
 
-        async def one(prompt: Any) -> tuple[int, bool, float, str]:
+        async def one(prompt: Any) -> tuple[int, bool, float, str, str | None, str | None]:
             if stills_only:
                 url, cost, model = await run_still(
                     prompt, image_provider=image_provider, sink_=sink(prefix)
                 )
-                return prompt.block, bool(url), cost, model
+                return prompt.block, bool(url), cost, model, url, None
             result = await run_block(
                 prompt,
                 image_provider=image_provider,
                 video_provider=video_provider,
                 sink_=sink(prefix),
             )
-            return prompt.block, result.ok, result.cost_usd, result.video_model
+            return (
+                prompt.block, result.ok, result.cost_usd, result.video_model,
+                result.still_uri, result.clip_uri,
+            )
 
         outcomes = await asyncio.gather(*(one(p) for p in prompts))
 
         spent = sum(o[2] for o in outcomes)
         failed = [str(o[0]) for o in sorted(outcomes) if not o[1]]
-        for n, ok, cost, model in sorted(outcomes):
-            self.state = self.state.log(
+        for n, ok, cost, model, still, clip in sorted(outcomes):
+            # The URIs go ON the block, not only into the log. Without this the
+            # state carries no pictures at all, and every screen that shows a
+            # frame — the Run Board, Editor Review — renders grey rectangles for
+            # a run that completed perfectly. Found by looking at Editor Review
+            # against a real run, 2026-07-28.
+            self.state = self.state.with_block(
+                n,
+                status="ready" if ok else "failed",
+                still_uri=still,
+                clip_uri=clip,
+            ).log(
                 "blocks", f"block {n} {'ready' if ok else 'FAILED'} on {model}",
-                cost_usd=cost,
+                cost_usd=cost, block=n, model=model,
             )
 
         if failed:

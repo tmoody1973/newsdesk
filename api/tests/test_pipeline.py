@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pytest
 
+from dataclasses import replace
+
 from newsdesk.claims import Claim, ScriptBlock
 from newsdesk.pipeline import STAGES, Pipeline, PipelineError
 from newsdesk.state import Block, RunState
@@ -160,10 +162,12 @@ def test_an_unknown_through_line_names_what_is_on_offer(cs2, monkeypatch):
 
 
 class _FakeResult:
-    def __init__(self, ok=True, cost=0.156):
+    def __init__(self, ok=True, cost=0.156, n=1):
         self.ok = ok
         self.cost_usd = cost
         self.video_model = "seedance-1-0-pro-fast-251015"
+        self.still_uri = f"https://b2/still-{n}.png" if ok else None
+        self.clip_uri = f"https://b2/clip-{n}.mp4" if ok else None
 
 
 def test_every_block_cost_lands_in_the_run_log(cs2, monkeypatch):
@@ -176,7 +180,7 @@ def test_every_block_cost_lands_in_the_run_log(cs2, monkeypatch):
     monkeypatch.setattr(p, "sink", lambda prefix: None)
 
     async def fake_run_block(prompt, **kw):
-        return _FakeResult()
+        return _FakeResult(n=prompt.block)
 
     monkeypatch.setattr(p, "run_block", fake_run_block)
 
@@ -190,6 +194,39 @@ def test_every_block_cost_lands_in_the_run_log(cs2, monkeypatch):
     assert pipe.state.total_cost == pytest.approx(0.156 * 6)
 
 
+def test_the_pictures_land_on_the_block_not_only_in_the_log(cs2, monkeypatch):
+    """Editor Review and the Run Board render `still_uri`.
+
+    The stage recorded cost and status and threw the URIs away, so a run that
+    completed perfectly showed grey rectangles on every screen that displays a
+    frame. Caught by looking at Editor Review against a real run, not by a test
+    — hence this one.
+    """
+    import newsdesk.pipeline as p
+    from newsdesk.state import Block
+
+    monkeypatch.setattr(p, "load_kit", _kit)
+    monkeypatch.setattr(p, "sink", lambda prefix: None)
+
+    async def fake_run_block(prompt, **kw):
+        return _FakeResult(n=prompt.block)
+
+    monkeypatch.setattr(p, "run_block", fake_run_block)
+
+    pipe = _fresh(cs2)
+    # with_block only patches blocks that already exist — the script stage is
+    # what creates them, so a realistic state has them before blocks runs.
+    pipe.state = replace(
+        pipe.state, blocks=tuple(Block(n=i, narration=f"L{i}") for i in range(1, 7))
+    )
+    asyncio.run(pipe.stage_blocks(image_provider=object(), video_provider=object()))
+
+    for block in sorted(pipe.state.blocks, key=lambda b: b.n):
+        assert block.still_uri == f"https://b2/still-{block.n}.png"
+        assert block.clip_uri == f"https://b2/clip-{block.n}.mp4"
+        assert block.status == "ready"
+
+
 def test_one_dead_block_fails_the_stage_and_names_it(cs2, monkeypatch):
     """Five of six is not a video. The stage has to stop the run rather than
     hand assembly a gap it would fill with a frozen frame."""
@@ -199,7 +236,7 @@ def test_one_dead_block_fails_the_stage_and_names_it(cs2, monkeypatch):
     monkeypatch.setattr(p, "sink", lambda prefix: None)
 
     async def fake_run_block(prompt, **kw):
-        return _FakeResult(ok=prompt.block != 4, cost=0.156)
+        return _FakeResult(ok=prompt.block != 4, cost=0.156, n=prompt.block)
 
     monkeypatch.setattr(p, "run_block", fake_run_block)
 

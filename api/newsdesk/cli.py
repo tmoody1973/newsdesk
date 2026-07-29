@@ -22,6 +22,7 @@ from pathlib import Path
 
 from newsdesk.config import ConfigError, require
 from newsdesk.pipeline import STAGES, Pipeline, PipelineError, StageResult
+from newsdesk.state import RunState
 from newsdesk.storyfile import StoryFileError, load_story
 
 USAGE = __doc__
@@ -177,6 +178,19 @@ def _run_stage(pipe: Pipeline, stage: str, *, stills_only: bool):
 
         cut.configure(pipe.story_file)
         code = cut.main()
+
+        # Re-read what assembly wrote. It owns the state from here — it records
+        # the approval, flips status to `published` and attaches the final URI,
+        # all by saving to B2 directly. Without this the pipeline's own save()
+        # writes its stale in-memory copy back over the top, and the run reads
+        # as `drafting` with `approval: null` forever while the verified MP4 sits
+        # published beside it. Measured on CS-2, 2026-07-28: the manifest held
+        # the approver and `genblaze verify` passed, and state.json had lost it.
+        try:
+            pipe.state = RunState.load(pipe.story_file.run_id)
+        except Exception:  # noqa: BLE001 — a failed cut may not have written
+            pass
+
         return pipe._record(StageResult(
             "assembly", code == 0,
             detail="MP4 cut, manifest embedded, verify it with `genblaze verify --fetch`"

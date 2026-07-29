@@ -1,0 +1,57 @@
+# The worker. `fly deploy` from api/.
+#
+# Secrets are NOT here — set them with `fly secrets set`, which is why the env
+# block below carries only things that are safe to read in a public repo:
+#
+#   fly secrets set GMI_API_KEY=... ELEVENLABS_API_KEY=... LMNT_API_KEY=... \
+#                   B2_KEY_ID=... B2_APP_KEY=... NEWSDESK_ACCESS_CODE=...
+#
+# NEWSDESK_ACCESS_CODE is what stands between a public URL and anyone spending
+# the GMI balance. /health reports whether it is set, so a deploy that forgot it
+# is visible rather than quietly open.
+
+app = "newsdesk-worker"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NEWSDESK_MAX_CONCURRENT_RUNS = "3"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # A run is ~5 minutes and holds no HTTP connection while it works — POST /runs
+  # answers 202 immediately and the Run Board polls. So the machine must not be
+  # stopped for being idle mid-run: auto_stop would kill a container that is
+  # four minutes into rendering with nothing on the wire.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    # Polling is cheap; the actual work happens on background threads that no
+    # request is waiting on. The real cap is NEWSDESK_MAX_CONCURRENT_RUNS.
+    soft_limit = 50
+    hard_limit = 100
+
+[[vm]]
+  # ffmpeg render is the memory and CPU floor here, not the model calls: the
+  # CS-1 cut peaked well above what a shared-cpu-1x/256mb machine survives, and
+  # an OOM during render looks like a corrupt MP4 rather than an error.
+  size = "shared-cpu-2x"
+  memory = "4gb"
+
+[checks]
+  [checks.health]
+    type = "http"
+    port = 8080
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "20s"

@@ -147,9 +147,18 @@ export default function NewStory() {
                 gap: 16,
               }}
             >
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
-                Back
-              </button>
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
+                  Back
+                </button>
+                <p
+                  className="mono"
+                  style={{ fontSize: 11, color: "var(--color-neutral-600)", margin: 0, maxWidth: 520 }}
+                >
+                  Requests outside this menu are checked against policy. Real people&apos;s
+                  likenesses and photoreal news scenes will be blocked.
+                </p>
+              </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <input
                   className="input mono"

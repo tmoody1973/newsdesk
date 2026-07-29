@@ -63,10 +63,18 @@ export function ScriptReview({
             ? "every claim traces to a fact"
             : `${untraced.length} block${untraced.length > 1 ? "s" : ""} trace nothing`}
         </span>
+        {/* Blocked while any block traces nothing.
+            The backend's `unmapped_assertion` rule is sentence-scoped: a block
+            whose lines carry NO claim at all is read as framing and passes. That
+            is right for a closing image and wrong for a whole evidence block, and
+            it leaves the model a way out — assert nothing traceable and nothing
+            objects. Until the backend requires a claim per non-kicker block, this
+            is where that hole is closed, and it is closed in the direction the
+            product argues for. */}
         <button
           type="button"
           className="btn btn-primary"
-          disabled={sending || blocks.length === 0}
+          disabled={sending || blocks.length === 0 || untraced.length > 0}
           onClick={onSend}
         >
           {sending ? "Sending…" : "Send to generation"}

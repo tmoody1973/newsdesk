@@ -134,18 +134,11 @@ export function ArtDirection({
         }} />
       </section>
 
-      <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        borderTop: "2px solid var(--color-divider)", paddingTop: 16,
-      }}>
-        <p className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)", margin: 0, maxWidth: 640 }}>
-          Requests outside this menu are checked against policy. Real people&apos;s likenesses
-          and photoreal news scenes will be blocked.
-        </p>
-        <button type="button" className="btn btn-primary" style={{ whiteSpace: "nowrap" }}>
-          Write script
-        </button>
-      </div>
+      {/* The mockup's footer — the policy note and `Write script` — used to
+          live here. It moved to the wizard shell when this became a controlled
+          step, because the shell owns the access code, the busy state and the
+          call to the worker. Leaving a copy behind rendered two `Write script`
+          buttons, one of them dead. */}
     </div>
   );
 }

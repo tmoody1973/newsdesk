@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { LivePoll } from "@/components/LivePoll";
 import { Stamp } from "@/components/Stamp";
 import { finalVideo, getRun } from "@/lib/b2";
 
@@ -28,6 +29,13 @@ export default async function RunBoard({ params }: { params: Promise<{ id: strin
 
   const video = await finalVideo(id);
   const blocks = [...run.blocks].sort((a, b) => a.n - b.n);
+  // A run is finished when it has published or when the last thing that
+  // happened was an error. Anything else is still moving, so the board keeps
+  // refreshing — see LivePoll for why "stopped polling" must mean "stopped
+  // running" rather than "timer expired".
+  const errored = run.events.some((e) => e.kind === "error");
+  const done = run.status === "published" || errored;
+  const ready = blocks.filter((b) => b.clip_uri).length;
   const spend = run.events.reduce((sum, e) => sum + (e.cost_usd ?? 0), 0);
   const runtime = blocks.reduce((sum, b) => sum + (b.voice_duration_s ?? 0), 0);
 
@@ -38,11 +46,27 @@ export default async function RunBoard({ params }: { params: Promise<{ id: strin
           <h1 className="font-display text-3xl uppercase tracking-wide">{run.story}</h1>
           <p className="mono mt-1 text-xs text-graphite">{run.run_id}</p>
         </div>
-        {run.approval ? (
-          <Stamp kind="approved" label="Approved" suffix={run.approval.approver} />
-        ) : (
-          <Stamp kind="retry" label="Awaiting approval" rotate={2} />
-        )}
+        <div className="flex items-center gap-4">
+          <LivePoll done={done} label={`${ready} of ${blocks.length} ready`} />
+          {!done && (
+            <span className="mono text-xs text-stamp-red">
+              {errored ? "stopped" : "working"}
+            </span>
+          )}
+          {/* The way to the gate. Editor Review is the only screen that
+              collects an approver, so a board with no route to it is a run
+              that can be started and never finished. */}
+          {ready === blocks.length && blocks.length > 0 && !run.approval && (
+            <Link href={`/runs/${id}/review`} className="btn btn-primary">
+              Send to editor
+            </Link>
+          )}
+          {run.approval ? (
+            <Stamp kind="approved" label="Approved" suffix={run.approval.approver} />
+          ) : (
+            <Stamp kind="retry" label="Awaiting approval" rotate={2} />
+          )}
+        </div>
       </div>
 
       <div className="mono mt-6 flex flex-wrap gap-x-8 gap-y-2 border-y-2 border-ink py-3 text-xs">

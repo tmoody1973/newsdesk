@@ -234,6 +234,11 @@ class ScriptBlock:
         return tuple(seen)
 
 
+# The one role allowed to assert nothing. The kicker is the closing image —
+# "The tower still stands" — and demanding a citation for it is how a validator
+# that fires on everything gets switched off.
+KICKER_ROLE = "kicker"
+
 _SENTENCE_RE = re.compile(r"[^.!?]+[.!?]*")
 
 
@@ -307,7 +312,7 @@ class Problem:
 
     block: int
     kind: str  # unknown_fact | evidence_missing | spoken_missing |
-               # unmapped_number | unmapped_assertion
+               # unmapped_number | unmapped_assertion | untraced_block
     message: str
 
     def __str__(self) -> str:
@@ -383,6 +388,29 @@ def validate_block(story: Story, block: ScriptBlock) -> tuple[Problem, ...]:
     # sentences that a claim made load-bearing. See the module docstring: whole
     # line coverage flags the kicker, and a validator that fires on everything
     # gets switched off.
+    # A block that maps NOTHING is the escape hatch the sentence-scoping rule
+    # opens, and the generator found it on its own: CS-1 and CS-2 each came back
+    # with a block of pure unsourced prose ("CDs once dominated music retail...")
+    # that traced to nothing and drew no objection, because a sentence carrying
+    # no claim is read as framing.
+    #
+    # Framing is legitimate — for the KICKER, whose job is the closing image and
+    # which the format deliberately lets off the factual hook. Everywhere else a
+    # block is reporting, and a reporting block that traces to nothing is the
+    # thing this product exists to refuse.
+    #
+    # Scoped by role rather than by position so a story of another length keeps
+    # the same rule. An empty role means the block was rehydrated from state
+    # rather than generated, and re-litigating an already-validated script is
+    # not this function's job.
+    if block.role and block.role != KICKER_ROLE and not accepted:
+        problems.append(Problem(
+            block.n, "untraced_block",
+            f"this block traces to no fact at all. Its role is \"{block.role}\", "
+            f"which is reporting — only the kicker may be pure framing. Map at "
+            f"least one assertion to a fact, or replace the block.",
+        ))
+
     assertions: list[str] = []
     for sentence in _sentences(line):
         carried = [s for s in accepted if s in sentence]

@@ -196,6 +196,9 @@ RULES:
 - Any sentence containing a claim is read as reporting, so EVERY assertion in
   that sentence must be mapped. A sentence with no claim in it is treated as
   framing and needs none — which is where a closing image belongs.
+- Every block except the KICKER must carry at least one claim. A block of pure
+  framing is only allowed as the closing image; blocks 1-5 are reporting and
+  must each rest on a fact.
 - Use every fact at least once across the six blocks. A fact the journalist
   sourced and verified, left on the floor, is research thrown away — and the
   receipt lists it as entered but unused.
@@ -242,7 +245,13 @@ def parse_blocks(text: str, *, expect: int | None = BLOCK_COUNT) -> tuple[Script
             blocks.append(ScriptBlock(
                 n=int(b.get("n", i)),
                 narration=str(b["narration"]).strip(),
-                role=str(b.get("role", ROLES[i - 1])),
+                # `or`, not a dict default: `.get("role", ...)` only falls back
+                # when the KEY is absent, and the model returns `"role": ""`.
+                # An empty role reads as "rehydrated from state" to claims.py,
+                # which exempts the block from the per-block tracing rule — so a
+                # blank string here silently switched that rule off. Measured on
+                # CS-2, 2026-07-28: block 2 shipped tracing nothing.
+                role=str(b.get("role") or ROLES[i - 1]),
                 claims=tuple(
                     Claim(
                         spoken=str(c["spoken"]),
@@ -305,10 +314,14 @@ def _repair_prompt(
         )
         sections.append(
             f"These blocks missed the length window:\n\n{misses}\n\n"
-            "Where a line is short, lengthen it using detail already present in the "
-            "facts — never by adding a new assertion. Where a line is long, cut "
-            "qualifiers and restatement, not facts: if a claim has to go, drop its "
-            "claim entry too."
+            "Where a line is short, lengthen it by widening a claim you ALREADY "
+            "cite — take more words from that fact and extend the claim's `spoken` "
+            "to cover them. Do not add a new assertion and do not add framing "
+            "prose: since every non-kicker block must trace, filler words are the "
+            "one thing that cannot survive the next check, which is how a length "
+            "fix turns into a tracing failure and back again. Where a line is "
+            "long, cut qualifiers and restatement, not facts: if a claim has to "
+            "go, drop its claim entry too and shorten its `spoken` to match."
         )
 
     numbers = [p for p in unmapped if p.kind == "unmapped_number"]
@@ -321,6 +334,17 @@ def _repair_prompt(
             "For each one, either add a claim whose evidence is copied verbatim from the "
             "fact that supports it, or remove the quantity from the line. If no fact "
             "contains that figure, remove it — do not invent a source for it."
+        )
+
+    untraced = [p for p in unmapped if p.kind == "untraced_block"]
+    if untraced:
+        listed = "\n".join(f"  {p}" for p in untraced)
+        sections.append(
+            f"These blocks trace to nothing at all:\n\n{listed}\n\n"
+            "Only the kicker may be pure framing. Every other block is reporting, "
+            "so rewrite each of these around something a fact actually supports "
+            "and map it. Do not add a claim to the existing words — change the "
+            "words to say something you can cite."
         )
 
     assertions = [p for p in unmapped if p.kind == "unmapped_assertion"]

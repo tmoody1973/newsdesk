@@ -284,14 +284,30 @@ def test_an_unmapped_number_earns_one_repair_pass():
 
 
 def _payload_missing_f3() -> str:
-    """CS-1 with block 3 rewritten so nothing cites F3 and no number is orphaned."""
+    """CS-1 with block 3 re-pointed at F2, so F3 goes unused.
+
+    Rewritten 2026-07-28. The old version made block 3 carry NO claims at all,
+    which is now itself a violation (`untraced_block`) — so the test would have
+    been measuring the wrong refusal. An unused fact has to be isolated from
+    every other rule to prove it does not block on its own, so this block still
+    traces cleanly; it just traces somewhere else.
+    """
     payload = json.loads(_payload(cs1_blocks()))
     payload["blocks"][2]["narration"] = (
-        "Most of the corporation's staff was gone within months. Grants were "
-        "closed out. Nothing new was ever funded behind them, and no replacement "
-        "arrived."
+        "The corporation had routed federal money to more than fifteen hundred "
+        "local stations since nineteen sixty-seven. Then the pipeline closed. "
+        "Nothing replaced it."
     )
-    payload["blocks"][2]["claims"] = []
+    payload["blocks"][2]["claims"] = [
+        {
+            "spoken": "The corporation had routed federal money to more than "
+                      "fifteen hundred local stations",
+            "fact_id": "F2",
+            "evidence": "the conduit distributing federal funds to 1,500+ local "
+                        "public radio and",
+        },
+        {"spoken": "since nineteen sixty-seven", "fact_id": "F2", "evidence": "since 1967"},
+    ]
     return json.dumps(payload)
 
 

@@ -120,10 +120,20 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(f"\nspend     ${pipe.spent:.3f}")
-    # Only persist when the run touched B2 anyway. A gate-only run has no
-    # credentials by design and must not try to write state.
-    if any("B2_KEY_ID" in _CREDENTIALS.get(s, []) for s in stages):
-        print(f"state     b2://newsdesk-runs/{pipe.save()}")
+    # Persist unless the run was purely a refusal check.
+    #
+    # This used to be gated on the stage list containing B2 credentials, which
+    # was wrong in a way that printed success: `script` needs only GMI_API_KEY,
+    # so `--only script` reported "6 blocks" and then wrote nothing at all. The
+    # blocks existed in memory and were discarded on exit. Gate-only genuinely
+    # must not write — it is the one path that runs with no credentials — so the
+    # save is attempted and its failure is reported rather than assumed.
+    if stages != ["gate"]:
+        try:
+            print(f"state     b2://newsdesk-runs/{pipe.save()}")
+        except Exception as exc:  # noqa: BLE001 — a run that cannot save must say so
+            print(f"WARNING   the run finished but state was not saved: {exc}")
+            return 1
     return 0
 
 

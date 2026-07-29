@@ -32,7 +32,18 @@ export function ScriptReview({
   onSend: () => void;
   sending: boolean;
 }) {
-  const untraced = blocks.filter((b) => b.fact_ids.length === 0);
+  // The kicker is allowed to be pure framing — it is the closing image, and
+  // demanding a citation for "The tower still stands" is how a validator that
+  // fires on everything gets switched off. Every other block is reporting.
+  //
+  // This mirrors `claims.py`'s `untraced_block` rule rather than duplicating a
+  // judgement: since 2026-07-28 the backend refuses these during generation, so
+  // by the time a script reaches this screen it should already be clean. The
+  // check stays as a belt — a script generated before the rule landed, or
+  // resumed from older state, would otherwise slip through.
+  const untraced = blocks
+    .slice(0, -1)
+    .filter((b) => b.fact_ids.length === 0);
 
   return (
     <div
@@ -44,8 +55,8 @@ export function ScriptReview({
         gap: 14,
       }}
     >
-      {blocks.map((block) => (
-        <BlockCard key={block.n} block={block} />
+      {blocks.map((block, i) => (
+        <BlockCard key={block.n} block={block} isKicker={i === blocks.length - 1} />
       ))}
 
       <div
@@ -84,9 +95,9 @@ export function ScriptReview({
   );
 }
 
-function BlockCard({ block }: { block: Block }) {
+function BlockCard({ block, isKicker }: { block: Block; isKicker: boolean }) {
   const n = words(block.narration);
-  const traced = block.fact_ids.length > 0;
+  const traced = block.fact_ids.length > 0 || isKicker;
   const offLength = n < WORDS_MIN || n > WORDS_MAX;
 
   return (
@@ -144,7 +155,8 @@ function BlockCard({ block }: { block: Block }) {
               ?
             </span>
             <span className="mono" style={{ fontSize: 11, color: "var(--color-accent-700)" }}>
-              This line makes a claim that doesn&apos;t trace to a fact.
+              This block is reporting and traces to no fact. Only the kicker may
+              be pure framing.
             </span>
           </>
         )}

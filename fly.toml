@@ -1,4 +1,16 @@
-# The worker. `fly deploy` from api/.
+# The worker. `fly deploy` from the REPO ROOT — which is why this file lives
+# here and not in api/ next to the Dockerfile it names.
+#
+# flyctl takes the directory holding fly.toml as the Docker build context and
+# resolves `build.dockerfile` relative to it. The context has to be the repo
+# root because `policy/policy.yaml` lives there — one rulebook, published by the
+# web app and enforced by the gate — and Docker cannot COPY above its context.
+#
+# Building from api/ produced a worker whose gate refused all six blocks of a
+# live run with "checker unavailable ... blocked rather than assumed safe".
+# `--config api/fly.toml` does NOT fix it: flyctl still treats api/ as the
+# working directory, and then looks for api/api/Dockerfile. Moving the file is
+# the fix. See the note at the top of api/Dockerfile.
 #
 # Secrets are NOT here — set them with `fly secrets set`, which is why the env
 # block below carries only things that are safe to read in a public repo:
@@ -14,7 +26,8 @@ app = "newsdesk-worker"
 primary_region = "ord"
 
 [build]
-  dockerfile = "Dockerfile"
+  # Relative to the repo root, which is where `fly deploy` must be run.
+  dockerfile = "api/Dockerfile"
 
 [env]
   PORT = "8080"

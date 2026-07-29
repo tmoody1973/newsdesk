@@ -148,9 +148,48 @@ are already linked and their secrets are set — 7 on Fly, 4 on Vercel.
 - Policy, Desk and Receipt all render — the Desk reads the **private** runs
   bucket server-side, so the B2 keys on Vercel are good.
 
-**Not yet done: a paid run through the deployed worker.** Every stage is proven
-locally against this same image, and the door is proven in production, but no
-story has been generated end-to-end on the Fly machine. ~$1.20.
+**A paid run went end-to-end on the deployed worker.**
+`who-pays-when-the-signal-goes-quiet` — the CPB rescission, six facts typed into
+the deployed wizard, `tower-signal`, **$1.2251**, published from Fly at
+**71.47s / −16.0 LUFS / −3.0 dBTP**, 1080×1920. GMI, ElevenLabs and B2 all
+reachable from `ord`. Frames pulled at 8s and 55s and looked at: the tower holds
+across six independent renders, rings contract, Anton captions burned in.
+
+### Three ways the container is not your Mac
+
+All three found by running a real story against the deployed worker, all three
+**failed closed** — which is why they cost cents rather than a wrong video.
+
+1. **`gate.py` resolved `/policy/policy.yaml`.** `parents[3]` is right in the
+   repo and one level too deep in the container, where `newsdesk/` sits directly
+   under `/app`. Now searches upward.
+2. **`blockprompt.py` resolved `/brand-kit/style-tokens.txt`** — identical fault,
+   `parents[2]`, one directory over. Also searches upward. Both files also had to
+   be **copied into the image**: Wall 2 must work with no credentials at all, so
+   the gate cannot wait on a B2 sync of the kit.
+3. **Debian bookworm ships ffmpeg 5.1, whose `ebur128` rejects `framelog`.** The
+   filter failed to initialise, the summary read `0.0 LUFS` / `-inf dBFS`, and
+   `master()` refused to guess a gain. Option dropped; `parse_ebur128` now reads
+   the **last** `I:` in the log, because without `framelog=quiet` every frame
+   prints a running one and the first is 0.4s in and wrong by ~14 dB.
+
+The lesson is cheap and repeatable: **run the gate stage inside the built image
+before deploying.** `docker run --rm --env-file ./api/.env -v "$PWD/stories:/app/stories:ro"
+<image> python -m newsdesk /app/stories/cs1.yaml --only gate` costs $0 and would
+have caught the first two. It does not catch the third — a full assembly under
+Docker Desktop on an ARM Mac ran past ten minutes and had to be abandoned.
+
+### Known, not fixed
+
+- **A run that ever errored cannot be retried from the wizard.** `lastError`
+  scans the whole event history and `waitFor` returns on any error event, so the
+  journalist is shown a previous attempt's failure. A refused script is a
+  *normal* outcome here, so this breaks the loop the product is built around.
+- **Per-block approvals are not persisted** — re-opening Editor Review resets all
+  six to pending. Already on the "if time allows" list; confirmed in production.
+- **`POST /runs` with `assembly` demands an `approver`** even when the run is
+  already approved in B2, and re-stamping writes a new timestamp over the
+  original approval time.
 
 ### 3. README, demo video, submit
 

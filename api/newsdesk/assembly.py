@@ -647,18 +647,40 @@ def anton_is_resolvable() -> bool:
     return "anton" in proc.stdout.lower()
 
 
+def parse_ebur128(stderr: str) -> tuple[float | None, float | None]:
+    """(integrated LUFS, true peak dBFS) out of an `ebur128` run's stderr.
+
+    **Reads the LAST `I:` in the log, not the first.** With per-frame logging on,
+    every frame prints its running `I:` and the first match is a fraction of a
+    second into the file. The summary is printed last, so the last match is the
+    one that describes the whole programme.
+
+    That matters because `framelog=quiet` cannot be used to silence those lines:
+    Debian bookworm ships **ffmpeg 5.1**, whose `ebur128` rejects the option
+    outright — `Error applying options to the filter` — and then emits a summary
+    of `0.0 LUFS` and `-inf dBFS`. `-inf` does not match a numeric pattern, so
+    `master()` refused to guess a gain and the first production assembly failed
+    on the deployed worker while succeeding on macOS, where Homebrew's
+    ffmpeg-full is newer and accepts it.
+
+    Refusing was right. Passing an option the local ffmpeg happens to support
+    was not.
+    """
+    lufs = re.findall(r"\bI:\s*(-?\d+(?:\.\d+)?)\s*LUFS", stderr)
+    peak = re.findall(r"\bPeak:\s*(-?\d+(?:\.\d+)?)\s*dBFS", stderr)
+    return (float(lufs[-1]) if lufs else None,
+            float(peak[-1]) if peak else None)
+
+
 def measure_loudness(path: Path, *, ffmpeg: str | None = None) -> tuple[float | None, float | None]:
     """(integrated LUFS, true peak dBFS) for a finished file."""
     binary = ffmpeg or resolve_ffmpeg(needs_subtitles=False)
     proc = subprocess.run(
-        [binary, "-i", str(path), "-af", "ebur128=peak=true:framelog=quiet",
-         "-f", "null", "-"],
+        [binary, "-hide_banner", "-nostats", "-i", str(path),
+         "-af", "ebur128=peak=true", "-f", "null", "-"],
         capture_output=True, text=True,
     )
-    lufs = re.search(r"I:\s*(-?\d+(?:\.\d+)?)\s*LUFS", proc.stderr)
-    peak = re.search(r"Peak:\s*(-?\d+(?:\.\d+)?)\s*dBFS", proc.stderr)
-    return (float(lufs.group(1)) if lufs else None,
-            float(peak.group(1)) if peak else None)
+    return parse_ebur128(proc.stderr)
 
 
 def master(src: Path, out: Path, *, ffmpeg: str | None = None) -> tuple[Path, float]:

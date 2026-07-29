@@ -24,7 +24,34 @@ import yaml
 
 from newsdesk.blockprompt import BlockPrompt, negative_line
 
-POLICY_FILE = Path(__file__).resolve().parents[3] / "policy" / "policy.yaml"
+def _find_policy_file(start: Path | None = None) -> Path:
+    """Walk up from this module until `policy/policy.yaml` turns up.
+
+    This was `parents[3]`, which is right in the repo — `api/newsdesk/policy/`
+    is three levels under the root — and wrong in the container, where
+    `newsdesk/` sits directly under `/app` and the same expression resolved to
+    `/policy/policy.yaml`. The gate then refused every block on the deployed
+    worker with "checker unavailable ... blocked rather than assumed safe".
+
+    That refusal was correct and is the reason this is a path bug rather than an
+    incident: fail-closed meant a missing rulebook cost $0 instead of shipping
+    six ungated prompts. But a rule that cannot be read is not a rule, so the
+    lookup must not depend on how deep the package happens to sit.
+
+    Searching upward is layout-independent and still finds exactly one file —
+    there is one `policy/policy.yaml` and it is the one the web app publishes.
+    """
+    here = (start or Path(__file__)).resolve()
+    for parent in here.parents:
+        candidate = parent / "policy" / "policy.yaml"
+        if candidate.is_file():
+            return candidate
+    # Nothing found: hand back the repo-layout path so the error names the
+    # place a developer expects it, and let the caller fail closed.
+    return here.parents[3] / "policy" / "policy.yaml"
+
+
+POLICY_FILE = _find_policy_file()
 
 # Narration pacing, calibrated against the actual voice on 2026-07-28 rather
 # than inherited. Four takes on eleven_v3 / Marcus Louis:

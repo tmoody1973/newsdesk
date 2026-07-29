@@ -422,3 +422,73 @@ def test_a_mix_already_at_target_is_left_alone():
     from newsdesk.assembly import DELIVERY_LUFS, master_gain_db
 
     assert master_gain_db(DELIVERY_LUFS, -6.0) == pytest.approx(0.0, abs=0.01)
+
+
+# --- ebur128 parsing: the bug that only appeared on Debian ------------------
+#
+# `measure_loudness` passed `framelog=quiet`, which ffmpeg 5.1 (Debian bookworm,
+# i.e. the deployed container) rejects. The filter then failed to initialise and
+# printed a summary of zeros with `Peak: -inf dBFS`. `master()` refused to guess
+# a gain — correctly — and the first production assembly died there while every
+# local run passed, because Homebrew's ffmpeg-full is newer.
+#
+# The option is gone. What replaces it is reading the LAST match rather than the
+# first, since without `framelog=quiet` every frame prints a running `I:`.
+
+_FRAMELOG_THEN_SUMMARY = """\
+[Parsed_ebur128_0 @ 0x1] t: 0.4 TARGET:-23 LUFS M: -30.1 S:-120.7 I: -30.1 LUFS LRA: 0.0 LU
+[Parsed_ebur128_0 @ 0x1] t: 1.4 TARGET:-23 LUFS M: -19.8 S: -21.4 I: -21.9 LUFS LRA: 2.1 LU
+[Parsed_ebur128_0 @ 0x1] t: 2.4 TARGET:-23 LUFS M: -18.2 S: -19.0 I: -20.4 LUFS LRA: 3.0 LU
+[Parsed_ebur128_0 @ 0x1] Summary:
+
+  Integrated loudness:
+    I:         -16.0 LUFS
+    Threshold: -26.4 LUFS
+
+  True peak:
+    Peak:       -1.8 dBFS
+"""
+
+_BROKEN_FILTER = """\
+[Parsed_ebur128_0 @ 0x1] Error applying options to the filter.
+[AVFilterGraph @ 0x2] Error initializing filter 'ebur128' with args 'peak=true:framelog=quiet'
+[Parsed_ebur128_0 @ 0x1] Summary:
+
+  Integrated loudness:
+    I:           0.0 LUFS
+
+  True peak:
+    Peak:       -inf dBFS
+"""
+
+
+def test_integrated_loudness_comes_from_the_summary_not_the_first_frame():
+    """The first `I:` in the log is 0.4 seconds into the file, and wrong by 14 dB."""
+    from newsdesk.assembly import parse_ebur128
+
+    lufs, peak = parse_ebur128(_FRAMELOG_THEN_SUMMARY)
+    assert lufs == -16.0, "read a running per-frame value instead of the summary"
+    assert peak == -1.8
+
+
+def test_a_failed_filter_measures_nothing_rather_than_zero():
+    """`-inf` must not parse. A file measured at 0.0 LUFS would be mastered
+    ~9 dB down and ship silent, which is worse than a run that stops."""
+    from newsdesk.assembly import parse_ebur128
+
+    lufs, peak = parse_ebur128(_BROKEN_FILTER)
+    assert peak is None, "'-inf dBFS' parsed as a number — master() would guess a gain"
+    assert lufs == 0.0  # matches, but peak being None is what stops the run
+
+
+def test_measure_loudness_passes_no_version_specific_filter_options():
+    """ffmpeg 5.1 is what the container has; `framelog` is not portable to it."""
+    import inspect
+
+    from newsdesk import assembly
+
+    src = inspect.getsource(assembly.measure_loudness)
+    assert "framelog" not in src, (
+        "framelog= is rejected by ffmpeg 5.1 in the deployed image — the filter "
+        "fails to initialise and every assembly dies 'refusing to guess a gain'"
+    )

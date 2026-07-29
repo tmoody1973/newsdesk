@@ -46,12 +46,36 @@ WORKDIR /app
 # uv for the same resolution the project is developed against.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+# BUILD CONTEXT IS THE REPO ROOT, not `api/` — hence the `api/` prefixes.
+#
+#   docker build -f api/Dockerfile .        (from the repo root)
+#   fly deploy --config api/fly.toml        (from the repo root)
+#
+# Not a preference. `policy/policy.yaml` lives at the repo root because there is
+# exactly one of it and the web app publishes the same file the gate enforces.
+# Docker cannot COPY above its context, so a context of `api/` cannot reach it —
+# and the first deploy that tried shipped a worker whose gate refused every
+# block with "checker unavailable". Same root cause as the Vercel Root Directory
+# setting; the two deploys fail the same way for the same reason.
+#
 # Dependencies before source, so a code change does not re-resolve the world.
-COPY pyproject.toml uv.lock ./
+COPY api/pyproject.toml api/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY newsdesk ./newsdesk
-COPY scripts ./scripts
+COPY api/newsdesk ./newsdesk
+COPY api/scripts ./scripts
+
+# The rulebook and the kit. Both are searched for upward from the package, so
+# landing them at /app/policy and /app/brand-kit is what gate.py and
+# blockprompt.py find from /app/newsdesk/.
+#
+# The kit is copied even though a deployed run syncs the published one from B2
+# into NEWSDESK_BRAND_KIT_DIR. Wall 2 has to work with no credentials at all —
+# that is CS-4's whole acceptance criterion — so the gate cannot wait on a
+# fetch, and a gate with no kit refuses every block.
+COPY policy ./policy
+COPY brand-kit ./brand-kit
+
 RUN uv sync --frozen --no-dev
 
 # The brand kit and stories are read from B2 at runtime, not baked in — a run

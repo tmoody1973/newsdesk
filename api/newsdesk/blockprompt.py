@@ -17,9 +17,34 @@ from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 
-# api/newsdesk/blockprompt.py -> repo root
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BRAND_KIT = REPO_ROOT / "brand-kit"
+def _find_brand_kit(start: Path | None = None) -> Path:
+    """Walk up until a `brand-kit/` directory turns up.
+
+    This was `parents[2]`, which is right in the repo — `api/newsdesk/` is two
+    levels under the root — and wrong in the container, where `newsdesk/` sits
+    directly under `/app`, so it resolved to `/brand-kit` and the deployed gate
+    died on `FileNotFoundError: '/brand-kit/style-tokens.txt'`.
+
+    Same fault as `gate._find_policy_file`, one directory over, found the same
+    way: by running a real story against the deployed worker. Both files live at
+    the repo root because there is exactly one of each — POL-2 requires the
+    NEGATIVE line to be byte-identical to `brand-kit/negative.txt`, which a
+    second copy would quietly break.
+
+    `NEWSDESK_BRAND_KIT_DIR` still wins over this; see `kit_dir`. The search is
+    what the gate falls back to, and the gate has to work with no credentials
+    at all, so it cannot wait on a B2 sync.
+    """
+    here = (start or Path(__file__)).resolve()
+    for parent in here.parents:
+        candidate = parent / "brand-kit"
+        if candidate.is_dir():
+            return candidate
+    return here.parents[2] / "brand-kit"
+
+
+DEFAULT_BRAND_KIT = _find_brand_kit()
+REPO_ROOT = DEFAULT_BRAND_KIT.parent
 
 FIELDS = ("STYLE REFERENCE", "SCENE", "MOTION", "AUDIO", "NEGATIVE")
 

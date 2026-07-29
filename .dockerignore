@@ -1,0 +1,19 @@
+# The worker image builds from the REPO ROOT — see the note in api/Dockerfile.
+# Without this, 214 MB of `api/.venv` is uploaded as build context on every
+# deploy and then thrown away, because the image builds its own venv with uv.
+
+**/.venv
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/.next
+.git
+.vercel
+web/
+docs/
+stories/
+stamp-system-design-handoff/
+MEMORY/
+.remember/
+*.mp4
+*.zip

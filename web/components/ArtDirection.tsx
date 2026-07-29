@@ -26,12 +26,25 @@ const DEFAULTS: Record<string, string[]> = {
 };
 const FALLBACK = ["Prop with text", "Map", "Chart", "Ledger", "Cutout crowd", "Archival frame"];
 
-export function ArtDirection() {
-  const [chosen, setChosen] = useState("fuse");
-  const [motifs, setMotifs] = useState<string[]>(DEFAULTS.fuse ?? FALLBACK);
+/** Controlled on the through-line, uncontrolled on the motifs.
+ *
+ *  The through-line lives in the wizard's draft because it decides the run's
+ *  B2 prefix and has to survive the step-2 → step-3 → submit path. The motifs
+ *  do not reach the backend yet — scene.py derives them from the through-line
+ *  itself — so lifting them would be inventing state the pipeline ignores. When
+ *  per-block motif overrides land, they move up too. */
+export function ArtDirection({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const chosen = value;
+  const [motifs, setMotifs] = useState<string[]>(DEFAULTS[value] ?? FALLBACK);
 
   function pick(id: string) {
-    setChosen(id);
+    onChange(id);
     setMotifs(DEFAULTS[id] ?? FALLBACK);
   }
 

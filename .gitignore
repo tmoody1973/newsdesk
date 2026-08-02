@@ -19,3 +19,7 @@ tsconfig.tsbuildinfo
 
 # Agent working notes (PRDs, session state). Not part of the product.
 MEMORY/
+
+# Playwright MCP scratch (snapshots, console logs, screenshots)
+.playwright-mcp/
+cs6-*.png

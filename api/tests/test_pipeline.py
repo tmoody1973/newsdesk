@@ -259,17 +259,26 @@ def test_caption_is_the_last_stage():
 
 def test_caption_stage_stores_captions_on_the_run(cs2, monkeypatch):
     from newsdesk.caption import Caption
+    from newsdesk.claims import Claim
 
     def _fake(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
-        return state, ledger, (Caption(platform="linkedin", variant=1, hook="h",
-                                       body="b", cta="c",
-                                       hashtags=("#A", "#B", "#C")),)
+        return state, ledger, (Caption(
+            platform="linkedin", variant=1, hook="h", body="b", cta="c",
+            hashtags=("#A", "#B", "#C"),
+            claims=(Claim(spoken="h", fact_id="F1", evidence="e"),),
+        ),)
 
     monkeypatch.setattr("newsdesk.pipeline.generate_captions", _fake)
     pipe = _fresh(cs2)
     result = pipe.stage_caption()
     assert result.ok
     assert pipe.state.final["captions"][0]["platform"] == "linkedin"
+    # I4: the claim trail has to reach the receipt, not just the prose it
+    # produced — the whole feature's headline claim is that every caption
+    # traces to an entered fact.
+    assert pipe.state.final["captions"][0]["claims"] == [
+        {"spoken": "h", "fact_id": "F1", "evidence": "e"}
+    ]
 
 
 def test_caption_stage_is_ok_but_empty_when_nothing_traced(cs2, monkeypatch):
@@ -281,7 +290,31 @@ def test_caption_stage_is_ok_but_empty_when_nothing_traced(cs2, monkeypatch):
     pipe = _fresh(cs2)
     result = pipe.stage_caption()
     assert result.ok and result.detail == "no caption traced"
-    assert pipe.state.final.get("captions") == []
+    # I1: no prior captions existed, so there is nothing to preserve — but a
+    # refusal must not manufacture a `captions: []` entry either.
+    assert "captions" not in (pipe.state.final or {})
+
+
+def test_a_failed_caption_retry_leaves_existing_captions_intact(cs2, monkeypatch):
+    """I1: `caps` is empty on a provider outage or exhausted repair attempts.
+    Overwriting `final['captions']` with that empty result would erase a
+    batch a previous run already traced successfully — and captions are
+    deliberately safe to re-run (unlike the script stage), so this refusal
+    has to be a no-op, not data loss."""
+    def _none(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, ()
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _none)
+    pipe = _fresh(cs2)
+    existing = [{"platform": "linkedin", "variant": 1, "hook": "h", "body": "b",
+                 "cta": "c", "hashtags": ["#A", "#B", "#C"], "sources": [],
+                 "text": "h\n\nb\n\nc", "claims": []}]
+    pipe.state = replace(pipe.state, final={"captions": existing})
+
+    result = pipe.stage_caption()
+
+    assert result.ok and result.detail == "no caption traced"
+    assert pipe.state.final["captions"] == existing
 
 
 def _kit():

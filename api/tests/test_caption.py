@@ -71,6 +71,35 @@ def test_shouting_is_a_problem():
     assert any("exclamation" in p for p in caption_problems(_caption(body="Wow!!")))
 
 
+def test_a_real_call_letter_acronym_is_not_shouting():
+    """I2. WPBS, KUAC and KUOW are real station call letters from cs1's own
+    facts (fixtures.py CS1_ENTRIES) — the stories this product exists to tell
+    are ABOUT stations like these. A single acronym is a proper noun, not a
+    shout; only a RUN of two or more all-caps words is shouting. Real data,
+    not an invented acronym, because a made-up one proves less."""
+    for acronym in ("WPBS", "KUAC", "KUOW", "RIAA"):
+        problems = caption_problems(_caption(body=f"{acronym} felt the cut hardest."))
+        assert not any("caps" in p for p in problems), (acronym, problems)
+
+
+def test_a_run_of_all_caps_words_is_still_shouting():
+    """A single acronym passes; a phrase in all caps does not. This is the
+    line I2's fix has to hold — not just relaxing the check, but keeping it
+    for the thing the guide actually forbids."""
+    problems = caption_problems(_caption(body="STOP READING THE FINE PRINT"))
+    assert any("caps" in p for p in problems)
+
+
+def test_two_separate_exclamations_are_not_a_run():
+    """M2. One "!" in the hook and one in the CTA is normal punctuation, not
+    a run — the old `!.*!` with re.DOTALL spanned the whole caption and
+    refused this. A real run ("!!", "!!!") must still be caught."""
+    c = _caption(hook="Sixty-five thousand lead pipes!", body="Milwaukee is racing a 2037 deadline.",
+                 cta="Subscribe for more!")
+    assert not any("exclamation" in p for p in caption_problems(c))
+    assert any("exclamation" in p for p in caption_problems(_caption(body="Wow!!!")))
+
+
 def test_emoji_are_a_problem():
     assert any("emoji" in p for p in caption_problems(_caption(body="Big news 🚨")))
 

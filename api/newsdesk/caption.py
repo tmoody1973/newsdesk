@@ -38,8 +38,23 @@ MAX_HASHTAGS = 5
 # signal proper categorisation to the algorithm."
 REQUIRED_TAG = {"youtube": "#Shorts"}
 
-_ALL_CAPS_RE = re.compile(r"\b[A-Z]{4,}\b")
-_EXCLAIM_RUN_RE = re.compile(r"!\s*!|!.*!", re.DOTALL)
+
+# Shouting is a RUN of caps words, not a single one. The stories this product
+# exists to tell are about call letters and agencies — WPBS, KUAC, KUOW, RIAA
+# all appear as bare facts (grep -rhoE "\b[A-Z]{4,}\b" stories/*.yaml), and
+# each is one token standing alone. "THIS IS URGENT" is shouting because it is
+# a *phrase* in all caps; "KUOW" is a station. Requiring two or more
+# consecutive all-caps words tells them apart without ever reading the story's
+# facts, so this stays a pure function of the caption. Word length floor is 2,
+# not 4, so a run like "IS URGENT" still counts — it is the run that matters,
+# not the length of any one word in it.
+_ALL_CAPS_RE = re.compile(r"\b[A-Z]{2,}\b(?:\s+[A-Z]{2,}\b)+")
+
+# An exclamation *run* is consecutive marks ("!!", "!!!"), not two separate
+# sentences that each end in one. The old `!.*!` with re.DOTALL matched a hook
+# and a CTA each carrying a single "!" as if they were one shout spanning the
+# whole caption — refusing legitimate prose at the cost of a paid repair round.
+_EXCLAIM_RUN_RE = re.compile(r"!{2,}")
 _EMOJI_RE = re.compile(
     "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF]"
 )

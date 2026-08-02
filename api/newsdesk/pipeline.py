@@ -265,7 +265,17 @@ class Pipeline:
 
         Runs after assembly because the request was for captions once the video
         exists. It reads the script, not the video, so it is safe to re-run with
-        `--only caption` without touching a single rendered frame.
+        `--only caption` without touching a single rendered frame — unlike
+        `stage_script`, this stage does NOT skip when captions already exist,
+        because re-running is exactly how an operator retries a batch that
+        failed for a fixable reason (a provider outage, an over-strict check).
+        What it must never do is let that retry ERASE a batch that already
+        traced. `caps` is only () on a refusal — provider down, or
+        MAX_ATTEMPTS of repair exhausted — and writing `[]` over captions a
+        previous run traced successfully would silently discard good, paid-for
+        output. So the write is guarded: only a non-empty result replaces
+        `final["captions"]`. See `stage_script`, :138, for the same principle
+        applied to blocks instead of writes.
         """
         self.state, self.ledger, caps = generate_captions(
             self.state,
@@ -275,15 +285,23 @@ class Pipeline:
             through_line=self.state.art_direction.get("through_line", ""),
             chat_fn=chat_fn,
         )
-        payload = [
-            {"platform": c.platform, "variant": c.variant, "hook": c.hook,
-             "body": c.body, "cta": c.cta, "hashtags": list(c.hashtags),
-             "sources": list(c.sources), "text": c.text}
-            for c in caps
-        ]
-        self.state = replace(
-            self.state, final={**(self.state.final or {}), "captions": payload}
-        )
+        if caps:
+            payload = [
+                {"platform": c.platform, "variant": c.variant, "hook": c.hook,
+                 "body": c.body, "cta": c.cta, "hashtags": list(c.hashtags),
+                 "sources": list(c.sources), "text": c.text,
+                 # The claim trail, not just the prose it produced — the
+                 # receipt's whole point is that every caption traces to an
+                 # entered fact, and it cannot show that from prose alone.
+                 "claims": [
+                     {"spoken": cl.spoken, "fact_id": cl.fact_id, "evidence": cl.evidence}
+                     for cl in c.claims
+                 ]}
+                for c in caps
+            ]
+            self.state = replace(
+                self.state, final={**(self.state.final or {}), "captions": payload}
+            )
         return self._record(StageResult(
             "caption", True,
             detail=f"{len(caps)} captions" if caps else "no caption traced",

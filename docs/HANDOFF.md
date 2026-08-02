@@ -185,12 +185,27 @@ roles on Genblaze is the better "Use of Genblaze" story.
 2. **Never change secrets while a run is rendering.** A restart mid-`blocks`
    spends the money and saves nothing — state is written *after* each stage.
 
-### This Mac cannot reach GMI at all
+### ~~This Mac cannot reach GMI at all~~ · **CLEARED 2026-08-02, probe it before believing it**
 
-`403, Cloudflare error 1010` on every model, including DeepSeek. The Spectrum
-Security Shield block first recorded 2026-07-27. **Only the Fly worker can talk
-to GMI**, so all provider diagnosis has to run through it, and a local probe
-proves nothing. `curl` to `newsdesk-worker.fly.dev` also needs
+The old note, kept because it was true for six days: `403, Cloudflare error 1010`
+on every model including DeepSeek, Spectrum Security Shield, first recorded
+2026-07-27, *"only the Fly worker can talk to GMI"*.
+
+**It is no longer true.** Measured Aug 2 ~15:10 CDT from this Mac:
+`GET api.gmi-serving.com/v1/models` → **200 in 0.33s**, and
+`GET console.gmicloud.ai/api/v1/ie/requestqueue/apikey/requests` → **200 in 1.8s**.
+Both probes below ran locally. **Spend ten seconds on a `curl` before routing
+diagnosis through the worker** — three `fly ssh`/`fly machine exec` attempts were
+burned on a block that had already lifted.
+
+Two flyctl facts learned in the process, if the block ever returns:
+`fly ssh console` hangs after `Connecting to fdaa:…` on this machine (wireguard),
+but **`fly machine exec <id> --app newsdesk-worker "<cmd>"` works** — it goes over
+the Machines API. It **strips quote characters** from the command, though, so
+nothing containing a string literal survives; `python -cprint(1+1)` runs,
+`python -cprint("hi")` becomes `print(hi)`.
+
+`curl` to `newsdesk-worker.fly.dev` still needs
 `--resolve newsdesk-worker.fly.dev:443:66.241.125.20` — stale NXDOMAIN in this
 machine's resolver. Chrome is fine.
 
@@ -351,19 +366,141 @@ Disclose every provider and model — that is an explicit rule requirement, and
 after Day 6 the list must include Anthropic-direct as an available fallback even
 though it is currently dormant.
 
-### 6. Open experiments, both cheap, neither run
+### ~~6. Open experiments, both cheap, neither run~~ · **BOTH PROBED, Day 6 ~15:10 CDT, ≈$1.00**
 
-- **Sonnet 5 for the script role.** `script.py` measured haiku-4.5 as mapping
-  every claim first-pass, and its only failures were length. But Day 6's actual
-  defects were *writing* failures — a contradiction welded into one sentence, a
-  qualitative assertion riding untraced — which is where a stronger model earns
-  its keep. Script stage is cents; ~$0.02 → ~$0.08 to protect $1.20 of pictures.
-  **Probe the slug first** — `script.py` warns GMI's catalogue is
-  contract-specific, and `deepseek-ai/DeepSeek-V3` was documented as absent from
-  this account entirely.
-- **Does `seedance-2.0` still error?** Recorded 2026-07-28 as "flaky-50%, not
-  dead" after an earlier note called it dead. Worth one probe; it is a better
-  video model than `seedance-1-0-pro-fast-251015` if it holds.
+> Cost correction: this was first reported as ~$0.21, which was wrong — it priced
+> `seedance-2-0-fast-260128` as a flat rate. It bills **per second**, so one 5s
+> probe clip was $0.45, not $0.02. The mistake is the same one that makes the
+> swap unaffordable below, and it is kept here because a probe budget that is
+> wrong by 5× is exactly how a cheap experiment stops being cheap.
+
+Neither is *adopted* — both are now answered, and each carries one blocker that
+would have looked like something else if adopted blind.
+
+#### Probe 1 — Sonnet 5 for the script role: **available, cheaper, and it will 400 on the current code**
+
+`anthropic/claude-sonnet-5` **is on this contract**, at **$2/$10 per M** against
+sonnet-4.5's $3/$15 — newer *and* cheaper. Twelve Anthropic slugs are catalogued,
+including `claude-opus-5` ($5/$25), `claude-fable-5` ($10/$50), opus-4.5→4.8 and
+sonnet-4.6. A 16-token probe returns `'ok'` in ~3.6s. The haiku-4.5 control also
+answered in 2.1s, so **GMI's Anthropic-on-Bedrock path is fully recovered.**
+
+**The blocker: the Claude 5 family rejects `temperature`.**
+
+```
+anthropic/claude-sonnet-5   temperature=0.2  → 400  "`temperature` is deprecated for this model."
+anthropic/claude-opus-5     temperature=0.2  → 400  same
+anthropic/claude-sonnet-5   omitted          → 200  'ok'
+anthropic/claude-sonnet-5   temperature=1.0  → 200  'ok'
+```
+
+`script.py` passes `temperature=0.2` (line 699) and `0.4` (line 498). So setting
+`NEWSDESK_SCRIPT_MODEL=anthropic/claude-sonnet-5` **on its own fails every
+attempt with a 400 — which `judged()` records as a *reject*.** It would read as
+the claim checker refusing six blocks, not as a bad request. That is precisely
+the failure mode the `TIMEOUT_S` comment two lines above already warns about:
+*a timeout is recorded as a reject, so too short a value does not fail loudly.*
+The same trap, a different parameter.
+
+**FIXED, Day 6.** `script.py::accepts_temperature()` drops the kwarg for the
+Claude 5 family in `chat()` — the one funnel both call sites (`:498` at 0.4,
+`:699` at 0.2) route through, so neither caller had to change. `_anthropic_chat`
+now omits `temperature` from the body when it is `None` rather than defaulting
+to 0.2, or dropping it upstream would not have reached the wire. Matched on the
+family (`claude-<tier>-5`) rather than by slug so the next Claude 5 does not
+reintroduce it; 13 tests in `test_script.py` pin both directions, including that
+`claude-haiku-4.5` and `claude-sonnet-4.6` keep their temperature — *a guard
+that fires on everything is a guard that gets deleted.* **341 passing**, still
+$0 and no network.
+
+Verified live against GMI, not only against the fake: `chat("anthropic/claude-
+sonnet-5", temperature=0.2)` → `'Ok'` in 2.4s with the kwarg dropped, and
+`claude-haiku-4.5` still sends 0.2 and answers in 1.1s.
+
+**Not switched on.** `NEWSDESK_SCRIPT_MODEL` is still `anthropic/claude-haiku-4.5`.
+Flipping it is now a one-line secret change and safe, and costs **~$0.02 → ~$0.04**
+a run (sonnet-5 is exactly 2× haiku's rate, not the 3–4× §6 originally assumed).
+Run it against one real story before the demo — Day 6's defects were *writing*
+failures, which is the whole reason to want it, and that is not something a
+16-token probe can tell you.
+
+#### Probe 2 — `seedance-2.0`: **the 401 is gone; the fast variant runs end to end**
+
+| slug | submit | result |
+|---|---|---|
+| `seedance-2-0-fast-260128` | **200** | `success` — real MP4, **720×1280 true 9:16**, 5.04s, 24fps, 2.2 MB |
+| `seedance-1-0-pro-fast-251015` (control) | 200 | `success` — 704×1248, 5.04s, 6.8 MB |
+| `seedance-2-0-260128` | **402** | `Insufficient credits` |
+| `seedance-2-0-260128-upscale` | **402** | `Insufficient credits` |
+
+Not 401 anywhere. **The entitlement gap that GMI support had to provision is
+closed for the fast variant.** `ratio: "9:16"` was honoured, so
+`register_seedance_ratio` already covers it — `seedance-2-0-fast-260128` is
+in `SEEDANCE_SLUGS`. A frame was pulled and looked at: a lit paper-cutout city,
+genuine and on-brand, at a higher resolution than 1.0 delivers.
+
+**Do not swap `VIDEO_MODEL`. The economics kill it before the quality argument
+starts.** `pricing.py` already carries the rates and they are not comparable:
+
+| model | rate | six 10s blocks |
+|---|---|---|
+| `seedance-1-0-pro-fast-251015` | $0.022 **flat** | **$0.13** |
+| `seedance-2-0-260128` | $0.052 **per second** | **$3.12** |
+| `seedance-2-0-fast-260128` | $0.09 **per second** | **$5.40** |
+
+**41× the video cost, and 5.6× the entire current GMI cost of a run** — a $0.98
+video becomes $6.25. The 2.0 rate is per-second and 1.0-pro-fast's is flat, which
+is what makes the gap enormous rather than merely large. (The $0.09/s is marked
+UNVERIFIED in `pricing.py`, from GMI's pricing post; even at half it loses.)
+
+Two further caveats, if the price ever moves:
+
+1. **It is ~4× slower.** 134s to 1.0-pro-fast's 34s, on every one of six blocks.
+2. **This probe was text-to-video.** The app's path is image-to-video with the
+   still in `first_frame`, which is what carries style consistency across six
+   blocks. **That path is untested on 2.0** and is the only thing that matters —
+   consistency, not one pretty frame.
+
+So the answer to *"is 2.0 better?"* is: **yes, and irrelevant.** It renders at
+720×1280 against 704×1248 and looks it. It is not worth 5.6× a run.
+
+#### 💰 Found while probing: **`402 Insufficient credits` — and how to read the balance without the console**
+
+Open question 2 has never been answerable because `estimate_cost()` returns
+`None` and no API-key-readable balance endpoint exists — `/billing/credits`
+answers `401 Invalid access token` to an API key, so the console really is the
+only place the number lives. **But a 402 at submit is a free probe.** Submitting
+a model you know the price of and reading 402-vs-200 brackets the balance at $0.
+
+Measured that way at ~15:12 CDT: the production chain all cleared
+(`gemini-3-pro-image-preview` 200, `bria-fibo` 200,
+`seedance-1-0-pro-fast-251015` 200) while `seedance-2-0-260128` 402'd. **Tarik
+topped up $15 at ~15:17 and both previously-402 models went 200.** So the
+balance is healthy now, and the technique is on the shelf for next time.
+
+**What a run actually costs in GMI credits** — narration is ElevenLabs and is
+billed elsewhere, so it is *not* in this number:
+
+| leg | | |
+|---|---|---|
+| 6 stills | `gemini-3-pro-image-preview` @ $0.134 | $0.804 |
+| 6 clips | `seedance-1-0-pro-fast-251015` @ $0.022 flat | $0.132 |
+| script | haiku-4.5 ≈ $0.02 · sonnet-5 ≈ $0.04 | ~$0.03 |
+| | **GMI per video** | **≈ $0.98** |
+
+**$15 buys roughly 15 more videos.** Submission needs maybe three or four. The
+image leg is 82% of it, so if credits ever get tight the lever is
+`NEWSDESK_IMAGE_FALLBACK=bria-fibo` ($0.039 → $0.23 a run) at a real quality
+cost — that is a **cut**, and it drops the 768×1376 stills the Day 4 note says
+are the reason the pictures stopped being bland.
+
+#### Not a defect — a probe artifact worth not re-chasing
+
+A raw POST for `kling-image2video-v2.1-master` returns **404 "model does not
+exist"**, because the queue catalogue now spells it `Kling-Image2Video-V2.1-Master`.
+**The app is fine:** `_submit_request` calls `resolve_canonical()` first, and it
+maps the lowercase slug to the capitalised one — verified. The video fallback
+chain is intact. The 404 only appears when the SDK is bypassed, as this probe did.
 
 ### 7. If time allows
 
@@ -494,8 +631,13 @@ dialogue vanishes under lo-fi · **approval is not publication**.
    to a read timeout. Retry the slow good model; do not swap in a faster worse one.
 3. **`nano-banana`, `nano-banana-2`, `nano-banana-pro` are all 404 on GMI.** The
    slug is the Gemini one.
-4. **seedance 2.0 still 401s** — the key is not entitled. 1.0 and 1.5 return 200
-   on identical requests. Only GMI support can fix it.
+4. ~~**seedance 2.0 still 401s** — the key is not entitled. 1.0 and 1.5 return 200
+   on identical requests. Only GMI support can fix it.~~ **Overturned Day 6:**
+   `seedance-2-0-fast-260128` submits 200 and completes `success` on this same
+   key. Entitlement was provisioned upstream at some point between 07-28 and
+   08-02. The full `seedance-2-0-260128` now fails 402, not 401 — a balance
+   problem, not an access one. Wrong version kept because "only GMI support can
+   fix it" was read as permanent and it was not.
 5. **A dict default does not fire on an empty value.** `b.get("role", ROLES[i-1])`
    returns `""` when the model sends `"role": ""`. Use `or`.
 6. **Length and tracing oscillate.** Told to lengthen a line that must trace, the
@@ -531,8 +673,11 @@ dialogue vanishes under lo-fi · **approval is not publication**.
 
 1. **Deadline** — Aug 2 per the PRD, or the 8 days mentioned?
 2. **GMI credit balance.** Asked repeatedly, never answered; `estimate_cost()`
-   returns `None` and it can only come from the console.
-3. **Regenerate the GMI key** to get seedance 2.0 entitlement?
+   returns `None` and it can only come from the console. **Day 6 update:** a
+   `402 Insufficient credits` on `seedance-2-0-260128` proves it is *low but not
+   empty* — the production chain still submits. Still needs a console number.
+3. ~~**Regenerate the GMI key** to get seedance 2.0 entitlement?~~ **Moot** —
+   `seedance-2-0-fast-260128` returns 200 and completes on the current key.
 4. **ElevenLabs rates are guesses.** `eleven_v3` at $0.22/1k chars is UNVERIFIED
    and **Music is unregistered entirely**, so the bed reports as free.
 5. **Voice cloning for the demo only?** A provenance tool narrated by a clone of a

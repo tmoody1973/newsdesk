@@ -12,12 +12,14 @@ import pytest
 
 from newsdesk.endcard import (
     DURATION_S,
+    MAX_IMAGE_BYTES,
     MAX_URL_CHARS,
     EndCard,
     EndCardError,
     append_card,
     probe_image,
     render_card,
+    validate_bytes,
     validate_url,
 )
 
@@ -76,6 +78,23 @@ def test_an_end_card_records_that_no_model_made_it():
                    supplied_by="Tarik Moody")
     assert card.manifest_entry()["generated"] is False
     assert card.manifest_entry()["supplied_by"] == "Tarik Moody"
+
+
+# Task 5 review finding: validate_bytes shipped with zero test coverage.
+# No caller yet (Task 7 wires the upload path), but the function is callable
+# today, so the gap is in the test, not in a dependency.
+def test_an_empty_upload_is_refused():
+    with pytest.raises(EndCardError):
+        validate_bytes(b"")
+
+
+def test_an_oversized_upload_is_refused():
+    with pytest.raises(EndCardError):
+        validate_bytes(b"x" * (MAX_IMAGE_BYTES + 1))
+
+
+def test_an_upload_under_the_limit_is_accepted():
+    validate_bytes(b"x" * (MAX_IMAGE_BYTES - 1))
 
 
 def test_a_rendered_card_is_the_bed_fade_long(png: Path, tmp_path: Path):

@@ -1,0 +1,177 @@
+# Through-line objects — the paper-diorama art-direction menu.
+#
+# Same schema as brand-kit/through-lines.yaml, read by the same loader
+# (`scene.ThroughLine.from_kit`). Read the house file first: its comments record
+# WHY each field exists, and every one of those findings was paid for in renders.
+# The short version, because it decides how these entries are written:
+#
+#   * `framing` is card-and-paper language, never "archival photo cutout" —
+#     photo framing pulls printed detail onto surfaces that natively carry type.
+#   * `silhouette` exists because three ambiguous words resolve to four different
+#     objects across six blocks of the same story. Say the shape positively; do
+#     not list near-misses to exclude.
+#   * `countable` beats a percentage. A model cannot render "sixty percent
+#     through a change" monotonically, and twice returned block 6 fuller than
+#     block 1. It can render six things and it can render one.
+#
+# WHAT IS DIFFERENT HERE. In a sepia newsprint world the single burnt-orange
+# accent IS the through-line. There is no second accent to spend, so every entry
+# below is the orange object, and the escalation is that object changing. If a
+# scene ever reads with two orange elements, the through-line has been doubled
+# and the block is wrong — one accent, one object, one story.
+#
+# `scene:` below carries the two clauses that name a PALETTE rather than an
+# object. They are kit-wide because every menu item shares them, and they are
+# here rather than in code because the house constants (warm cream, navy and
+# coral) would otherwise contradict this kit's own STYLE line inside the same
+# prompt.
+
+version: 1
+
+scene:
+  ground: >
+    A vintage paper diorama interior built entirely from aged sepia newsprint
+    and cardboard, torn edges layered into canyon walls, lit by warm tungsten
+    light with deep shadows
+  anchor: >
+    One burnt-orange paper element is the only colour anywhere in the frame,
+    every other surface sepia newsprint, shadow and dust
+
+through_lines:
+  - id: keg-fuse
+    label: A powder keg with a lit fuse
+    use_when: A deadline, an ultimatum, a countdown nobody has stopped.
+    framing: >
+      a squat powder keg built from aged sepia newsprint and cardboard, banded
+      with torn paper hoops, a coiled burnt-orange paper fuse rising from its
+      lid and ending in a small torn burnt-orange flame
+    silhouette: >
+      the keg is a plain barrel: straight staves, two flat paper bands around
+      it, a flat circular lid, and nothing standing on that lid except the
+      fuse. It is the only keg in frame and it rests on the newsprint floor
+    escalation: the unburnt coils of fuse shorten toward the lid
+    # Counted rather than described, per the house menu's finding. Six coils is
+    # the largest count that still reads at 576x1024; the last block keeps one
+    # so the kicker has a motif left to pay off rather than a bare lid.
+    countable:
+      noun: unburnt coils of burnt-orange paper fuse still above the lid
+      start: 6
+      end: 1
+    lettering_risk: low
+
+  - id: hourglass
+    label: An hourglass running out
+    use_when: A term, a moratorium, a treaty with a date on it.
+    # This entry is why the moderation map is in scene-guidance.txt. The
+    # reference story wanted a mushroom cloud for exactly this beat and the
+    # phrase trips an NSFW flag before the job renders. The hourglass replaced
+    # it, and it fit the deadline theme better than the thing it replaced.
+    framing: >
+      an hourglass cut from layered sepia card, its frame charcoal newsprint,
+      the falling sand a thin stream of burnt-orange paper grains and a
+      burnt-orange drift already gathered in the lower bulb
+    silhouette: >
+      two equal bulbs joined at a narrow waist, held between two flat paper end
+      plates by three straight posts, standing upright on the newsprint floor
+    escalation: the upper bulb empties into the lower one
+    lettering_risk: low
+
+  - id: stamped-document
+    label: A document being stamped
+    use_when: A rule, a permit, a contract — something formally ended or approved.
+    framing: >
+      a large aged paper document lying open on the newsprint floor, a heavy
+      burnt-orange paper stamp head poised above it on a wooden handle, torn
+      burnt-orange ink marks already punched across the page
+    surface: >
+      the document is unprinted aged paper carrying only the burnt-orange stamp
+      marks and nothing else, an unbroken blank field, as though the type were
+      never set
+    escalation: another stamp mark lands across the page
+    countable:
+      noun: burnt-orange stamp marks punched across the document
+      start: 1
+      end: 6
+    # Documents natively carry type. The `surface` clause above is not optional
+    # decoration on this entry — it is what stops the model filling the page
+    # with garbled body copy, and it has to arrive in the sentence that
+    # introduces the object. See scene-guidance.txt.
+    lettering_risk: high
+
+  - id: note-stack
+    label: A stack of notes being drawn down
+    use_when: Money — a fund, a reserve, a budget spent down to nothing.
+    framing: >
+      a squared-up stack of plain burnt-orange paper rectangles the size of
+      banknotes, resting on the newsprint floor with one loose rectangle lifting
+      off the top
+    surface: >
+      each rectangle is flat burnt-orange paper with no portrait, no engraving
+      and no numerals on it, an unbroken smooth surface, as though it were cut
+      before it was ever printed
+    escalation: the stack loses one layer at a time
+    countable:
+      noun: burnt-orange paper rectangles left in the stack
+      start: 6
+      end: 1
+    lettering_risk: high
+
+  - id: censor-portraits
+    label: Portraits going dark behind censor bars
+    use_when: Accountability — who decided, and who stopped answering for it.
+    # Keep this one WIDE. Mid-shot and full-body descriptions of unnamed figures
+    # pass both engines; a close-up recognisable statesman face fails at render
+    # on seedance. The censor bar is doing two jobs here — it is the style
+    # signature and it is what defuses the likeness question. Never name anyone.
+    framing: >
+      a row of halftone newsprint portraits of anonymous suited figures pinned
+      flat to a paper wall, every face crossed by a heavy black censor bar, one
+      single portrait framed in torn burnt-orange paper
+    surface: >
+      the newsprint around the portraits is an even grey halftone field with no
+      headline and no body copy on it, as though that page had gone to press
+      with the type left out
+    escalation: a censor bar lands over one more portrait
+    countable:
+      noun: portraits still uncovered by a black censor bar
+      start: 6
+      end: 1
+    lettering_risk: high
+
+  - id: paper-city
+    label: A newsprint city, block by block
+    use_when: Spread, reach, something arriving one neighbourhood at a time.
+    framing: >
+      a miniature city of aged newsprint buildings rising from the diorama floor
+      in tight canyons, their rooftops flat, one rooftop capped in torn
+      burnt-orange paper
+    silhouette: >
+      the buildings are plain rectangular blocks of layered newsprint with flat
+      tops and no windows cut into them, packed shoulder to shoulder so the
+      canyons between them are narrow
+    escalation: more rooftops turn burnt-orange as it spreads
+    countable:
+      noun: rooftops capped in torn burnt-orange paper
+      start: 1
+      end: 6
+    lettering_risk: low
+
+# The letterpress label is this kit's signature and its one permitted piece of
+# readable text: ONE per scene, on a torn burnt-orange paper element, four words
+# at most (POL-4's element budget), and it must map to a fact the journalist
+# entered. The source says one or two words is the sweet spot and it is right —
+# four is the ceiling, not the target.
+#
+# The label is emitted by the script stage and validated by claims.py exactly as
+# a spoken claim is. Nothing here may hand a model a word to print; a kit that
+# authored its own on-prop text would be inventing a claim.
+label_on_prop:
+  allowed: true
+  max_words: 4
+  requires_fact_mapping: true
+  guidance: >
+    Distressed letterpress, printed on a torn burnt-orange paper element that is
+    already in the scene — a stamp, a band, a tag. One per scene and nowhere
+    else in frame. Shorter renders cleaner: at four words models begin
+    duplicating an element or garbling the longest word, and a garbled word
+    reads as a misquote of a real source rather than as an artefact.

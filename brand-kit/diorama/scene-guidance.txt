@@ -1,0 +1,190 @@
+SCENE authoring rules — the paper-diorama kit
+
+Source: ~/.claude/skills/vox-motion-graphics/references/diorama-doc.md, the
+"WHO BLINKS?" playbook, reverse-engineered from a reference video and then
+battle-tested on a nuclear-treaty explainer. Everything below that reads like an
+opinion was paid for in failed renders. Read the source before changing any of
+it; this file is where the parts that survived the translation to Newsdesk live,
+and it says plainly which parts did not survive and why.
+
+Use this kit when the brief says cinematic, dramatic, or investigative, or when
+the topic is geopolitics, money, or power. The house kit is an editorial collage
+and it explains; this one is a documentary diorama and it accuses.
+
+
+WHAT THE WORLD IS
+
+A miniature three-dimensional world built entirely out of aged sepia newspaper
+and cardboard, shot like a documentary: warm tungsten light, deep shadows, macro
+tilt-shift, film grain, dust in the air. Figures are monochrome archival cutouts
+with black censor bars over their eyes. Handcrafted paper materials only —
+nothing photoreal, nothing live-action, no 3D-render look.
+
+Exactly one burnt-orange element per scene. In a monochrome world the single
+accent is not decoration, it is the sentence: it says WHERE TO LOOK. Two orange
+elements in one frame is not a richer image, it is two sentences spoken at once,
+and it is the fastest way to make this style look cheap. The through-line object
+IS the orange element (through-lines.yaml) — so if the scene already has an
+orange prop and the through-line arrives orange as well, the block is wrong.
+
+
+THE FAKE-ONER — the shape every block is written in
+
+Every clip is ONE continuous, high-energy FPV camera move with aggressive speed
+ramps, and every clip begins and ends in full motion blur. That is what makes six
+hard cuts read as a single unbroken shot instead of six pretty postcards. A
+sequence of disconnected scenes reads as a museum slideshow; this is the whole
+difference between a banger and a slideshow, and it costs nothing extra to
+render.
+
+The shape, in the source's own order:
+
+  * The shot EMERGES from the motion-blurred element the previous shot ended in
+    — the dust, the whip, the fall, the flare. Block 1 emerges from black,
+    already moving.
+  * One IMPACT MOMENT roughly every three seconds: a slam, a stamp, a shockwave,
+    a snap, a rip. Ten seconds of drift with one event at the end is the failure
+    mode; three events is the target.
+  * At least one speed ramp per block, and alternate extreme macro against wide
+    between blocks. Whiplash the scale. Never two identically framed blocks
+    running.
+  * The shot ENDS fully motion-blurred mid-dive, mid-whip, mid-fall or mid-flare.
+    It does not settle. The one exception is the final block, which settles for
+    the first and only time and holds — that landing is only worth anything
+    because nothing before it landed.
+  * SOUND DESIGN: three to five concrete diegetic events, named as events rather
+    than as a mood. "Guillotine slam with dust whump, three accelerating page
+    rips, one massive stamp punch, rushing paper wind" is the register. Always
+    close with "No speech." — the narration is added in assembly and a clip that
+    invents its own voice is unusable.
+
+The worked example in the source is worth reading in full before writing the
+first block of any story. Its opening block does four things in ten seconds — a
+censor bar guillotining down onto a printed eye, three accelerating page rips
+through successive portraits, a stamp punching a word across a treaty, and a
+dive through the torn fibres into paper dust — and every one of them is a
+concrete physical event rather than an adjective.
+
+
+THE LETTERPRESS LABEL — this kit's signature, and its one narrowing
+
+Unlike the house style, which bans all in-clip text, this style CARRIES short
+letterpress text on props. That is its signature and it is the only reason the
+platform exclusion constant was ever split (policy.yaml POL-2 v3, POL-4).
+
+The rules, all of them enforced somewhere other than here:
+
+  * ONE label per scene. Not one per prop, not one per surface.
+  * Four words maximum — POL-4's element budget, enforced in claims.py. The
+    source says one or two words, or a number, is the sweet spot: EXPIRED, 1,000,
+    AUGUST. Both facts are true and they are not in tension: four is the ceiling
+    at which models start duplicating or garbling, and two is where the frame
+    actually looks composed. Write toward two.
+  * It must map to a fact the journalist entered. claims.py validates the label
+    exactly as it validates a spoken claim — a label that traces to nothing is
+    refused and repaired at $0, before a picture is bought. A word printed on a
+    prop is a claim in three words, and it borrows the credibility of the
+    sentence spoken over it.
+  * Always described as distressed letterpress on a TORN BURNT-ORANGE PAPER
+    ELEMENT — a stamp, a band, a tag. The label rides the accent; it never floats.
+  * Always fenced in the negative for that block: no text anywhere except the
+    label itself, no gibberish letters, no captions, no watermark.
+
+NOT YET WIRED, and this is the honest state of it: `ScriptBlock.label` is
+emitted by the script stage and validated by claims.py, and it survives a state
+round trip — but nothing splices it into the SCENE field yet, so no provider has
+been asked to print one. Doing that also needs the gate's POL-4 to be told which
+label was traced (`check(prompt, fact_ids=...)` is already the parameter for it,
+and pipeline.py currently calls `check(prompt)` with no fact ids). Until that is
+closed, diorama scenes render with no printed word at all, which is a plain
+diorama rather than a wrong one.
+
+
+THE MODERATION MAP — hard-won, and the reason this file exists
+
+These are engine refusals, not policy. Our own gate is upstream of all of it.
+
+  * NAMED POLITICIANS IN A VIDEO PROMPT FAIL. The job submits fine and dies at
+    render, which is the worst shape a failure can have — you find out after the
+    wait. Names are fine in the TTS narration; keep them out of the picture.
+  * CLOSE-UP RECOGNISABLE STATESMAN FACES fail even when unnamed and only
+    described. The reference route around this was to send face-forward blocks to
+    a different engine; here, don't write them. Stay at mid-shot or wider.
+  * MID-SHOT AND FULL-BODY descriptions of unnamed leaders pass — "a heavyset
+    elderly statesman with a long red tie", "a compact stern figure in a dark
+    coat". That is the register to write in.
+  * CENSOR BARS OVER THE EYES do two jobs at once: they are the style signature,
+    and they defuse the likeness question before it is asked. Use them on every
+    figure, not only the ones that worry you.
+  * "MUSHROOM CLOUD" TRIPS AN NSFW FLAG. The replacement on the reference story
+    was an hourglass silhouette, which fit the deadline theme better than the
+    thing it replaced — see the hourglass entry in through-lines.yaml. When a
+    literal image of a catastrophe is refused, reach for the silhouette that
+    carries the same meaning rather than a synonym for the same picture.
+
+
+WHAT DID NOT TRANSFER FROM THE SOURCE
+
+The source is written for a different provider stack. These are Newsdesk
+decisions, already made; they are recorded here so nobody re-derives them from
+the reference and quietly changes the pipeline back.
+
+  * ASPECT: 9:16, not the reference's 16:9. Newsdesk delivers 9:16 end to end,
+    the subtitle PlayRes is 1080x1920, and assembly is not aspect-aware. DO NOT
+    "FIX" THIS BACK to match the reference. This note is here, in guidance,
+    rather than in style-tokens.txt, because that file is sent to the provider
+    verbatim — an explanation of ourselves would have shipped inside the prompt
+    as an instruction about aspect ratio.
+  * ENGINE: seedance-1-0-pro-fast-251015. The source specifies seedance_2_0 at
+    reference grade, and 2.0 is genuinely better-looking; it bills per second,
+    which is about $5.40 for six ten-second blocks against $0.13. That is 41x the
+    video cost of a run. Escalate only if the look demonstrably fails on 1.0,
+    and say so with a frame rather than an impression.
+  * STYLE CONSISTENCY: each block's own still, passed through `first_frame` —
+    never image references. The source keeps a reusable style-key job id and a
+    library of prop assets and attaches them as `image_references`. On this stack
+    that made consistency WORSE: two scenes generated from one key came back with
+    a blue ground and a tan ground, while naming the palette in text locked it.
+    bria-fibo accepts `reference_images`, `image` and `image_url`, returns 200 on
+    all three, and reads none of them. GMI accepting a parameter has never meant
+    GMI reading it. The text lock is what works here.
+  * PRESET NOTICES and `declined_preset_id`: a provider-specific handshake on the
+    reference stack. Nothing equivalent exists on ours.
+  * MUSIC: out of scope for this kit. The engine's native drone and SFX bed
+    survives assembly under the voiceover, and the AUDIO field is what shapes it.
+
+
+TEXT BLEED — the house rules still apply, and they are not optional here
+
+Everything in brand-kit/scene-guidance.txt about keeping unwanted text out of a
+frame holds in this world too, and matters MORE, because this world is built out
+of newspaper. The short version, with the house file as the full account:
+
+  1. Never append a negation list to the end of SCENE. Keyword negation is what
+     the model handles worst, and it must render a thing before it can cancel it.
+  2. Name blankness as a positive property of the object, in the SAME SENTENCE
+     that introduces the object. "An unprinted aged paper document, an unbroken
+     blank field" works; "a document (no text)" does not.
+  3. Say what IS on the surface. Absence alone is not a subject.
+  4. "as though the type were never set" is a useful closer — it frames the
+     blankness as the object's history rather than as a restriction.
+  5. Objects that natively carry typography — documents, banknotes, front pages,
+     signs — need rules 2 and 3 applied explicitly. In through-lines.yaml those
+     entries are marked `lettering_risk: high` and carry a `surface` clause.
+  6. None of this is sufficient. POL-6's post-render vision check is the
+     enforcement; these rules only reduce how often it has to fire.
+
+Avoid the phrase "the words" anywhere in a framing clause. POL-4's deterministic
+half reads it as a request for on-screen text and blocks the block — caught by
+tests/test_kits.py running the gate against this kit's own menu.
+
+
+KNOWN GAP, so the first render is read correctly
+
+scene.py's six-beat vocabulary — the shot scales, motifs, impacts, entries,
+exits and sound events — is still written in HOUSE language, and some of it names
+house materials ("a big empty field of cream card", "a hand-drawn marker circle
+SNAPS closed"). The ground, the accent and the object come from this kit; those
+six arrays do not, yet. Expect a little collage vocabulary in the first renders,
+and if it reads as house-style contamination rather than as texture, that is the
+next thing to make kit-aware — not the style tokens, which are already right.

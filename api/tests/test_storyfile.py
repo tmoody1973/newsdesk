@@ -157,16 +157,23 @@ def test_shipped_story_ids_are_unique_and_match_their_filenames():
         seen[sf.id] = path
 
 
-def test_every_shipped_through_line_exists_in_the_brand_kit():
+def test_every_shipped_through_line_exists_in_its_own_kits_menu():
     """A typo here is only discovered at generation time, after the gate has
-    passed and the first image is about to be paid for."""
-    kit = yaml.safe_load(
-        (STORIES.parent / "brand-kit" / "through-lines.yaml").read_text(encoding="utf-8")
-    )
-    known = {e["id"] for e in kit["through_lines"]}
+    passed and the first image is about to be paid for.
+
+    Resolved against the story's OWN kit. This used to read the house menu for
+    every story, which was right while there was one kit and would have passed a
+    diorama story naming a house object — the one mistake it exists to catch.
+    """
+    from newsdesk.blockprompt import HOUSE_KIT
+
+    kit_root = STORIES.parent / "brand-kit"
     for path in sorted(STORIES.glob("*.yaml")):
         sf = load_story(path)
+        base = kit_root if sf.kit == HOUSE_KIT else kit_root / sf.kit
+        menu = yaml.safe_load((base / "through-lines.yaml").read_text(encoding="utf-8"))
+        known = {e["id"] for e in menu["through_lines"]}
         assert sf.through_line in known, (
-            f"{path.name} names through-line '{sf.through_line}', "
-            f"which the brand kit does not offer ({sorted(known)})"
+            f"{path.name} names through-line '{sf.through_line}', which the "
+            f"'{sf.kit}' kit does not offer ({sorted(known)})"
         )

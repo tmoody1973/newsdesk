@@ -95,3 +95,194 @@ def test_a_prompt_built_in_a_kit_carries_that_kits_style_and_exclusions(tmp_path
     house = BlockPrompt.build(1, scene="s", motion="m", audio="a")
     assert "the house look" in house.style_reference
     assert house.negative == "photorealism, house additions"
+
+
+# --- the diorama kit ---------------------------------------------------------
+#
+# The kit is six files and they are the deliverable. These check the things a
+# reader cannot check by eye: that every required file exists, that the pieces
+# the pipeline parses actually parse into what it expects, and that the two
+# hard-won pieces of knowledge — the moderation map and the 9:16 deviation —
+# are in the kit rather than in someone's memory.
+
+from pathlib import Path  # noqa: E402
+
+from newsdesk.brandkit import REQUIRED_TEXT  # noqa: E402
+
+KIT_ROOT = Path(__file__).resolve().parents[2] / "brand-kit"
+DIORAMA = KIT_ROOT / "diorama"
+
+
+def _kit_base(kit_id: str) -> Path:
+    return KIT_ROOT if kit_id == "house" else KIT_ROOT / kit_id
+
+
+@pytest.mark.parametrize("kit_id", ["house", "diorama"])
+def test_every_kit_carries_all_six_required_files(kit_id):
+    """Absent any one of these, it is not a kit."""
+    for name in REQUIRED_TEXT:
+        assert (_kit_base(kit_id) / name).is_file(), f"{kit_id} is missing {name}"
+
+
+def test_the_diorama_kit_records_why_it_is_9_16():
+    """The reference is 16:9. The deviation is deliberate and lives in guidance,
+    not in style-tokens.txt, which is sent to the provider verbatim."""
+    guidance = (DIORAMA / "scene-guidance.txt").read_text(encoding="utf-8")
+    assert "9:16" in guidance and "16:9" in guidance
+
+
+def test_the_diorama_kit_carries_the_moderation_map():
+    """Named politicians die at render; mushroom cloud trips NSFW. That cost
+    someone an afternoon and belongs in the kit, not in anyone's memory."""
+    guidance = (DIORAMA / "scene-guidance.txt").read_text(encoding="utf-8").lower()
+    assert "politician" in guidance
+    assert "mushroom cloud" in guidance
+    assert "censor bar" in guidance
+
+
+@pytest.mark.parametrize("kit_id", ["house", "diorama"])
+def test_no_kit_explains_itself_inside_the_two_provider_facing_files(kit_id):
+    """style-tokens.txt and negative.txt go on the wire verbatim. A comment in
+    either ships inside the prompt — which is how the 9:16 note would have
+    reached a provider as an instruction about aspect ratio."""
+    for name in ("style-tokens.txt", "negative.txt"):
+        text = (_kit_base(kit_id) / name).read_text(encoding="utf-8")
+        assert "#" not in text, f"{kit_id}/{name} carries a comment"
+        assert text.strip() == text.strip().splitlines()[0].strip() or "\n" not in text.strip()
+
+
+def test_the_diorama_style_tokens_are_the_sources_own_line():
+    """Verbatim from diorama-doc.md's STYLE block. Paraphrasing it is how a
+    house style drifts — and this is the file that IS the look."""
+    tokens = (DIORAMA / "style-tokens.txt").read_text(encoding="utf-8").strip()
+    for phrase in (
+        "cinematic vintage paper diorama",
+        "aged sepia newsprint world",
+        "monochrome halftone print",
+        "black censor bars over their eyes",
+        "single burnt-orange accent",
+        "distressed letterpress",
+        "warm tungsten light",
+        "macro tilt-shift shallow depth of field",
+        "film grain",
+        "handcrafted stop-motion paper feel",
+        "non-photorealistic, no live-action",
+    ):
+        assert phrase in tokens, f"style tokens dropped {phrase!r}"
+
+
+def test_the_diorama_negative_never_forbids_the_thing_the_kit_is_for():
+    """A blanket ban on letters would make the letterpress label impossible —
+    the whole reason Task 9 split the constant. It still refuses the failure
+    modes of on-prop text: gibberish, duplication, doubled lines."""
+    additions = (DIORAMA / "negative.txt").read_text(encoding="utf-8").strip()
+    # Split on commas: the terms are the whole exclusion, so "letters" is a
+    # blanket ban and "gibberish letters" is a quality bar on a permitted one.
+    terms = {t.strip() for t in additions.split(",")}
+    for banned in ("readable text", "letters", "words", "numbers", "subtitles",
+                   "captions"):
+        assert banned not in terms
+    for kept in ("gibberish letters", "repeated text", "doubled text"):
+        assert kept in additions
+
+
+def test_the_diorama_through_line_menu_matches_the_house_schema():
+    """Same fields, because `ThroughLine.from_kit` reads one shape. A menu that
+    invents its own keys loads clean and renders the object wrong."""
+    import yaml
+
+    house = yaml.safe_load((KIT_ROOT / "through-lines.yaml").read_text(encoding="utf-8"))
+    kit = yaml.safe_load((DIORAMA / "through-lines.yaml").read_text(encoding="utf-8"))
+
+    house_keys = {k for e in house["through_lines"] for k in e}
+    entries = kit["through_lines"]
+    assert len(entries) >= 6, "six blocks need at least six options to choose between"
+    for entry in entries:
+        assert set(entry) <= house_keys, f"{entry['id']} invents keys the loader ignores"
+        for required in ("id", "label", "use_when", "framing", "escalation",
+                         "lettering_risk"):
+            assert entry.get(required), f"{entry['id']} has no {required}"
+        assert "burnt-orange" in entry["framing"], (
+            f"{entry['id']} is not the burnt-orange object — the single accent in a "
+            f"sepia world IS the through-line"
+        )
+    assert any(e.get("countable") for e in entries), (
+        "a countable escalation is the one that renders monotonically; the menu "
+        "needs at least one"
+    )
+
+
+def test_every_diorama_through_line_loads_into_the_scene_builder():
+    """The menu is only art direction if `build_scene` can read it. Loaded the
+    way `pipeline.through_line()` loads it, doc and all."""
+    import yaml
+
+    from newsdesk.scene import GROUND, ThroughLine, build_scene
+
+    doc = yaml.safe_load((DIORAMA / "through-lines.yaml").read_text(encoding="utf-8"))
+    for entry in doc["through_lines"]:
+        tl = ThroughLine.from_kit(entry, doc=doc)
+        scene = build_scene(tl, 1)
+        assert GROUND not in scene, "the diorama ground is sepia newsprint, not cream"
+        assert "sepia" in scene.lower()
+        assert '"' not in scene and "'" not in scene, (
+            f"{entry['id']} puts a quoted string in SCENE — POL-4 reads that as a "
+            f"request for on-screen text and blocks the block"
+        )
+
+
+def test_the_diorama_voice_parses_into_what_narration_and_assembly_read():
+    """voice.json is not documentation: `voice_specs`, `take_window` and
+    `assembly_contract` all parse it, and each raises rather than defaulting."""
+    import json
+
+    from newsdesk.assembly import ROLES, assembly_contract
+    from newsdesk.narration import take_window, voice_specs
+
+    voice = json.loads((DIORAMA / "voice.json").read_text(encoding="utf-8"))
+    primary, fallback = voice_specs(voice)
+    assert primary.provider and primary.voice_id and fallback.voice_id
+
+    low, high = take_window(voice)
+    assert 5.0 < low < high < 20.0
+
+    contract = assembly_contract(voice)
+    assert set(ROLES) <= set(contract.tail_by_role), "a role with no tail gap"
+    assert all(
+        contract.tail_range[0] <= v <= contract.tail_range[1]
+        for v in contract.tail_by_role.values()
+    )
+
+
+def test_the_diorama_subtitles_burn():
+    """`ass_document` slices the kit file at [Script Info] and drops the probe
+    line. A header it cannot find produces a file ffmpeg rejects with 'Unable to
+    open', which names the filename and nothing about the content."""
+    from newsdesk.assembly import Cue, ass_document
+
+    raw = (DIORAMA / "subtitle.ass").read_text(encoding="utf-8")
+    doc = ass_document(raw, (Cue(start_s=0.0, end_s=1.0, text="ONE"),))
+
+    assert doc.startswith("[Script Info]")
+    assert "PlayResX: 1080" in doc and "PlayResY: 1920" in doc
+    assert "Style: Default," in doc
+    assert "Dialogue: 0,0:00:00.00,0:00:01.00,Default,,0,0,0,,ONE" in doc
+    assert "RESOLVED" not in doc, "the rendering probe must not survive into a cut"
+
+
+def test_every_diorama_block_prompt_passes_the_gate():
+    """Wall 2 against the kit as authored, at $0. Kit text is prompt text: a
+    framing clause that says `the governor` trips POL-1, a quoted word trips
+    POL-4, and either one blocks all six blocks of every story that picks it —
+    at run time, in front of whoever asked for the video."""
+    import yaml
+
+    from newsdesk.policy.gate import check
+    from newsdesk.scene import ThroughLine, build_block_prompt
+
+    doc = yaml.safe_load((DIORAMA / "through-lines.yaml").read_text(encoding="utf-8"))
+    for entry in doc["through_lines"]:
+        tl = ThroughLine.from_kit(entry, doc=doc)
+        for n in range(1, 7):
+            verdict = check(build_block_prompt(tl, n, 6, kit="diorama"))
+            assert verdict.passed, f"{entry['id']} block {n}: {verdict.explain()}"

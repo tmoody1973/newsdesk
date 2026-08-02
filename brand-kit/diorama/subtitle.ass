@@ -1,0 +1,63 @@
+; Newsdesk burned-in subtitle style — paper-diorama kit
+;
+; Bold condensed sans, uppercase, paper-cream ink on a hard black outline.
+;
+; INVERTED FROM THE HOUSE FILE, and for the same reason the house file gives.
+; The house ground is warm cream paper, so its captions are ink-dark inside a
+; pale pasteboard halo. This ground is aged sepia newsprint under tungsten light
+; with deep shadows, and dark type on it disappears into the shadow side of every
+; frame. So the fill is paper cream and the outline is press black — a caption
+; struck onto the sheet rather than one printed into it.
+;
+; SAME FACE AS THE HOUSE, deliberately. Anton IS a bold condensed sans, it is the
+; typeface the app's own stamps use, and it is the one face already verified as
+; resolvable on the machine that burns. A second family here would buy a marginal
+; difference in flavour and pay for it with the exact failure the house file
+; warns about: ffmpeg does not embed fonts, and a missing face falls back
+; SILENTLY to something else that nobody notices until the render is watched.
+; If this kit ever gets its own face, install it first and verify it the same way.
+;
+; Colours are tokens, not inventions, and each one is a real element of the style:
+;   paper cream   #EDE4D3  ->  &H00D3E4ED   the newsprint sheet itself
+;   press black   #14110D  ->  &H000D1114   the censor bar
+;   burnt orange  #C6541F  ->  &H001F54C6   the single accent, and the ONLY place
+;                                           a second colour is allowed on screen
+; ASS stores colour as &HAABBGGRR — bytes reversed from hex RGB, alpha 00 = opaque.
+;
+; The Number style carries the accent for the same reason the through-line object
+; does: in this world one colour means "look here", and spending it on anything
+; but the figure that matters spends the frame's only emphasis on nothing.
+;
+; PlayRes is the 9:16 delivery frame — 1080x1920, matching the house file, NOT the
+; reference style's 16:9. See scene-guidance.txt for why the aspect deviates and
+; why it must not be "fixed" back. libass scales outline and shadow with PlayRes
+; (ScaledBorderAndShadow: yes), so burning at another output size keeps these
+; proportions rather than producing hairline outlines.
+;
+; The outline is one point heavier than the house file (8 against 7) because
+; tungsten light on newsprint puts more mid-tone directly behind the type than a
+; flat cream ground does.
+;
+; PREREQUISITE FOR ASSEMBLY: Anton must be resolvable by libass on the machine
+; running the burn.  Verify with:  fc-list | grep -i anton
+
+[Script Info]
+Title: Newsdesk burned subtitles — diorama
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+YCbCr Matrix: TV.709
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Anton,72,&H00D3E4ED,&H00D3E4ED,&H000D1114,&H000D1114,0,0,0,0,100,100,2,0,1,8,3,2,90,90,220,1
+Style: Number,Anton,72,&H001F54C6,&H001F54C6,&H000D1114,&H000D1114,0,0,0,0,100,100,2,0,1,8,3,2,90,90,220,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+; Events are written per run by the assembler. This line is a rendering probe —
+; burn it once to confirm Anton actually resolved before committing a full run.
+; `assembly.ass_document` strips it, so it never survives into a cut.
+Dialogue: 0,0:00:00.00,0:00:03.00,Default,,0,0,0,,ANTON RESOLVED — DIORAMA STYLE OK

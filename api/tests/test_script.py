@@ -14,7 +14,13 @@ from fixtures import cs1_blocks, cs1_story
 from newsdesk.claims import normalize, validate_script
 from newsdesk.decisions import Ledger
 from newsdesk.policy.gate import check_narration
-from newsdesk.script import ScriptError, generate_script, parse_blocks
+from newsdesk.script import (
+    ScriptError,
+    accepts_temperature,
+    chat,
+    generate_script,
+    parse_blocks,
+)
 from newsdesk.state import RunState
 
 
@@ -537,3 +543,62 @@ def test_the_mapping_is_recorded_in_the_ledger():
         chat_fn=_fake_chat(_claim_reply(blocks)),
     )
     assert ledger.decisions[-1].role == "claim_map"
+
+
+# --- temperature, and the family that refuses it ----------------------------
+#
+# Measured 2026-08-02 on GMI: `anthropic/claude-sonnet-5` and `-opus-5` return
+# 400 "`temperature` is deprecated for this model" at 0.2, and 200 with it
+# omitted. The 4.x family accepts it. `judged()` records a 400 as a *reject*, so
+# without the guard a wrong parameter impersonates a governance decision — the
+# whole point of these tests is that only the checker gets to refuse.
+
+
+@pytest.mark.parametrize("model", [
+    "anthropic/claude-sonnet-5",
+    "anthropic/claude-opus-5",
+    "anthropic/claude-fable-5",
+    "anthropic/claude-sonnet-5-20260514",   # dated builds are the same family
+    "claude-sonnet-5",                      # Anthropic-direct ids carry no prefix
+])
+def test_the_claude_5_family_is_asked_without_a_temperature(model):
+    assert not accepts_temperature(model)
+
+
+@pytest.mark.parametrize("model", [
+    "anthropic/claude-haiku-4.5",           # the production script model
+    "anthropic/claude-sonnet-4.5",
+    "anthropic/claude-sonnet-4.6",
+    "anthropic/claude-opus-4.8",
+    "claude-haiku-4-5-20251001",            # the escape hatch's default id
+    "deepseek-ai/DeepSeek-V3-0324",
+])
+def test_every_other_model_keeps_its_temperature(model):
+    """A guard that fires on everything is a guard that gets deleted."""
+    assert accepts_temperature(model)
+
+
+def test_a_claude_5_call_reaches_the_provider_with_no_temperature(monkeypatch):
+    """The regex is only half of it — chat() has to actually drop the kwarg."""
+    seen: dict = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs, model=model)
+        return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr("newsdesk.script._gmi_chat", _spy)
+    chat("anthropic/claude-sonnet-5", prompt="hi", temperature=0.2, max_tokens=16)
+    assert "temperature" not in seen
+    assert seen["prompt"] == "hi" and seen["max_tokens"] == 16
+
+
+def test_a_claude_4_call_keeps_the_temperature_it_was_given(monkeypatch):
+    seen: dict = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs)
+        return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr("newsdesk.script._gmi_chat", _spy)
+    chat("anthropic/claude-haiku-4.5", prompt="hi", temperature=0.4, max_tokens=16)
+    assert seen["temperature"] == 0.4

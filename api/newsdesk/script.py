@@ -78,7 +78,7 @@ class _Reply:
         self.text = text
 
 
-def _anthropic_chat(model: str, *, prompt: str, temperature: float = 0.2,
+def _anthropic_chat(model: str, *, prompt: str, temperature: float | None = None,
                     max_tokens: int = 2000, timeout: float = 60.0,
                     **_: Any) -> _Reply:
     """`genblaze_gmicloud.chat`'s signature, answered by Anthropic directly."""
@@ -93,8 +93,10 @@ def _anthropic_chat(model: str, *, prompt: str, temperature: float = 0.2,
     body = _json.dumps({
         "model": model,
         "max_tokens": max_tokens,
-        "temperature": temperature,
         "messages": [{"role": "user", "content": prompt}],
+        # Omitted entirely rather than defaulted, so `accepts_temperature()`
+        # dropping it upstream actually reaches the wire as absent.
+        **({} if temperature is None else {"temperature": temperature}),
     }).encode()
     req = _rq.Request(
         "https://api.anthropic.com/v1/messages", data=body,
@@ -109,8 +111,34 @@ def _anthropic_chat(model: str, *, prompt: str, temperature: float = 0.2,
     ))
 
 
+# The Claude 5 family rejects `temperature` outright — 400, "`temperature` is
+# deprecated for this model" — at every value except its own default. Measured
+# 2026-08-02 against GMI on `anthropic/claude-sonnet-5` and `anthropic/claude-
+# opus-5`: 0.2 → 400, omitted → 200, 1.0 → 200. The 4.x family still accepts it.
+#
+# This matters more than a parameter usually would, because `judged()` records a
+# 400 as a *reject*. Point NEWSDESK_SCRIPT_MODEL at a 5 without this and every
+# attempt fails as what looks like the claim checker refusing six blocks — the
+# same trap TIMEOUT_S carries below, where too short a value fails as a refusal
+# rather than loudly. A wrong parameter must not be able to impersonate a
+# governance decision.
+#
+# Matched on the family rather than listed by slug so a new Claude 5 does not
+# reintroduce the bug on the day it ships. `-5` must follow the tier name, or
+# `claude-haiku-4.5` and `claude-sonnet-4.6` would match too.
+_NO_TEMPERATURE_RE = re.compile(r"claude-[a-z]+-5(?:[.\-]|$)")
+
+
+def accepts_temperature(model: str) -> bool:
+    """False for models that 400 on `temperature` at any value they don't pick."""
+    return not _NO_TEMPERATURE_RE.search(model)
+
+
 def chat(model: str, **kwargs: Any) -> Any:
     """Whichever provider `NEWSDESK_SCRIPT_PROVIDER` names."""
+    target = ANTHROPIC_MODEL if PROVIDER == "anthropic" else model
+    if not accepts_temperature(target):
+        kwargs = {k: v for k, v in kwargs.items() if k != "temperature"}
     if PROVIDER == "anthropic":
         return _anthropic_chat(ANTHROPIC_MODEL, **kwargs)
     return _gmi_chat(model, **kwargs)

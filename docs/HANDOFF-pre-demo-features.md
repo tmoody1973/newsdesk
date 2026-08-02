@@ -93,6 +93,60 @@ Feature 2 is therefore a library function, not a usable feature. Closing it need
 - `seedance-2-0-fast-260128` now works on GMI (the 401 entitlement gap closed), but bills **per second** — $5.40 a run against `seedance-1-0-pro-fast`'s $0.13 flat. Do not swap it in.
 - GMI credits: Tarik added $15 today. A `402 Insufficient credits` at submit is a free way to probe the balance; there is no API-readable balance endpoint.
 
+## The defect pattern — the most transferable thing this branch produced
+
+The final whole-branch review was asked whether thirteen defects had a common
+cause. They do, and it is one mistake, not thirteen:
+
+> **The code was written against the shape of the data in the test, and the
+> fixture was chosen because it made the test pass.**
+
+Run the list against it:
+
+- **Two unfalsifiable tests** — the fixture omitted the field the check reads
+  (`sources` was never parsed), so the assertion held vacuously.
+- **The test that would hit the network** — `state.save()` was invisible in a
+  world where the fixture state was a local object.
+- **The unescaped URL into ffmpeg** — the fixture URL was `radiomilwaukee.org`,
+  which needs no escaping.
+- **The missing idempotency guard** — the fixture ran the stage once.
+- **`EndCardError` escaping the CLI channel** — the fixture never made
+  `render_card` raise.
+
+**An instance survived into merged code**, and it is why the end card is cut:
+`Path(self.state.final["uri"])`. The test supplies `str(tmp_path / "final.mp4")`;
+production supplies `https://f003.backblazeb2.com/…`.
+
+**The guard, worth adding to `CLAUDE.md`:**
+
+> When a value crosses from one module to another, the test must supply what the
+> **producing** module actually produces — traced to the line that writes it.
+> Otherwise the test proves only that the two halves agree with the fixture.
+
+The three visual verifications on this branch are that rule applied to pixels.
+Nobody applied it to `final["uri"]`.
+
+**And one case where careful reasoning lost to looking.** Task 6's reviewer
+hand-traced the drawtext escaping against ffmpeg's *documented* quoting rules,
+cited them, and concluded in writing that it was correct. It was wrong — the
+documentation did not match the build's behaviour, and the "fixed" code was
+silently burning the rest of the filter string into the visible frame
+(`radiomilwaukee.org/its:here:expansion=none:fontcolor=0x000000`). No review
+caught it. Rendering a frame and reading it did.
+
+## Two accepted gaps from narrowing the caption checks
+
+Both are the intended consequence of fixing the acronym bug, not oversights.
+Worth tightening if anyone has time:
+
+- Scattered single all-caps words never form a "run", so
+  `"BREAKING update HUGE change MASSIVE news"` passes.
+- Multiple single exclamations never trigger `!{2,}`, so `"A! B! C! D!"` passes.
+
+Also: `test_a_run_of_all_caps_words_is_still_shouting` passes under both the old
+and new regex, so it does not prove the run semantics — the acronym tests carry
+that weight. It is a guard against a bad fix, not evidence of a good one.
+
 ## Calibration — how this session actually went
 
 **The plan had eight defects. Every one was caught by the agents executing it, not by its author:**

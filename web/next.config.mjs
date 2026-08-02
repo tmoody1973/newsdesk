@@ -7,5 +7,10 @@ export default {
   // rather than copied, so there is exactly one policy file and the page cannot
   // drift from the one the gate enforces.
   outputFileTracingRoot: new URL("..", import.meta.url).pathname,
-  outputFileTracingIncludes: { "/policy": ["../policy/policy.yaml"] },
+  // Every route that reads it needs its own entry — tracing is per-route, so a
+  // new page reading the same file 500s in production while working locally.
+  outputFileTracingIncludes: {
+    "/policy": ["../policy/policy.yaml"],
+    "/brand-kit": ["../policy/policy.yaml"],
+  },
 };

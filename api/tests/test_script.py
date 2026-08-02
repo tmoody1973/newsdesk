@@ -89,6 +89,27 @@ def test_wrong_block_count_raises():
         parse_blocks(json.dumps(partial))
 
 
+def test_a_present_label_is_parsed_onto_the_block():
+    payload = json.loads(_payload(cs1_blocks()))
+    payload["blocks"][0]["label"] = "REVENUE"
+    blocks = parse_blocks(json.dumps(payload))
+    assert blocks[0].label == "REVENUE"
+
+
+def test_label_defaults_to_none_when_the_key_is_absent():
+    """The house-kit case: nothing in the reply, nothing on the block."""
+    blocks = parse_blocks(_payload(cs1_blocks()))
+    assert all(b.label is None for b in blocks)
+
+
+def test_an_empty_string_label_is_treated_as_absent():
+    """A model that answers '' meant no label, not the literal empty string."""
+    payload = json.loads(_payload(cs1_blocks()))
+    payload["blocks"][0]["label"] = ""
+    blocks = parse_blocks(json.dumps(payload))
+    assert blocks[0].label is None
+
+
 # --- generation + the ledger ------------------------------------------------
 
 
@@ -191,6 +212,23 @@ def test_the_prompt_states_the_calibrated_pol5_window():
 
     prompt = build_prompt(cs1_story())
     assert "23" in prompt and "27" in prompt
+
+
+def test_the_house_kit_prompt_says_nothing_about_a_label():
+    """Default `kit`, no `kit` passed at all — both are the house kit."""
+    from newsdesk.blockprompt import HOUSE_KIT
+    from newsdesk.script import build_prompt
+
+    assert build_prompt(cs1_story()) == build_prompt(cs1_story(), kit=HOUSE_KIT)
+    assert "label" not in build_prompt(cs1_story())
+
+
+def test_a_non_house_kit_prompt_asks_for_a_label():
+    from newsdesk.script import build_prompt
+
+    prompt = build_prompt(cs1_story(), kit="diorama")
+    assert "label" in prompt
+    assert "diorama" in prompt
 
 
 def test_the_prompt_example_satisfies_pol5():

@@ -223,6 +223,11 @@ class ScriptBlock:
     narration: str
     role: str = ""
     claims: tuple[Claim, ...] = field(default_factory=tuple)
+    # The letterpress word printed on a prop, in the diorama style. None for the
+    # house kit — nothing on screen to hold to this standard — and validated
+    # exactly like a claim wherever a kit does emit one, so the word on the prop
+    # never carries a lower bar than the sentence spoken over it.
+    label: str | None = None
 
     @property
     def fact_ids(self) -> tuple[str, ...]:
@@ -238,6 +243,11 @@ class ScriptBlock:
 # "The tower still stands" — and demanding a citation for it is how a validator
 # that fires on everything gets switched off.
 KICKER_ROLE = "kicker"
+
+# POL-4's element budget for a prop label. Past it, models duplicate or garble
+# the words — the same failure mode POL-5's word window guards against, at a
+# much smaller size because a label has no sentence structure to keep it honest.
+LABEL_MAX_WORDS = 4
 
 _SENTENCE_RE = re.compile(r"[^.!?]+[.!?]*")
 
@@ -312,7 +322,8 @@ class Problem:
 
     block: int
     kind: str  # unknown_fact | evidence_missing | spoken_missing |
-               # unmapped_number | unmapped_assertion | untraced_block
+               # unmapped_number | unmapped_assertion | untraced_block |
+               # label_too_long | label_untraced
     message: str
 
     def __str__(self) -> str:
@@ -410,6 +421,25 @@ def validate_block(story: Story, block: ScriptBlock) -> tuple[Problem, ...]:
             f"which is reporting — only the kicker may be pure framing. Map at "
             f"least one assertion to a fact, or replace the block.",
         ))
+
+    # The letterpress word, held to the same standard as the sentence spoken
+    # over it. Checked against the block's DECLARED claims, not only the ones
+    # that survived the checks above — the fact-tracing question is separate
+    # from whether that claim's `spoken` phrase actually appears in the line.
+    if block.label:
+        words = block.label.split()
+        if len(words) > LABEL_MAX_WORDS:
+            problems.append(Problem(
+                block.n, "label_too_long",
+                f"label {block.label!r} is {len(words)} words; POL-4's element "
+                f"budget is {LABEL_MAX_WORDS}.",
+            ))
+        if not any(normalize(block.label) in normalize(c.evidence) for c in block.claims):
+            problems.append(Problem(
+                block.n, "label_untraced",
+                f"label {block.label!r} maps to no entered fact. A word printed "
+                f"on a prop is a claim in three words.",
+            ))
 
     assertions: list[str] = []
     for sentence in _sentences(line):

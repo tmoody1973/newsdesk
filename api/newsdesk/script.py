@@ -24,7 +24,8 @@ from typing import Any, Callable
 
 from genblaze_gmicloud.chat import chat as _gmi_chat
 
-from newsdesk.claims import Claim, ScriptBlock, validate_script
+from newsdesk.blockprompt import HOUSE_KIT
+from newsdesk.claims import LABEL_MAX_WORDS, Claim, ScriptBlock, validate_script
 from newsdesk.decisions import Ledger, judged
 from newsdesk.facts import Story
 from newsdesk.policy.gate import MAX_SENTENCES, MAX_WORDS, MIN_SENTENCES, MIN_WORDS, check_narration
@@ -212,6 +213,11 @@ _EXAMPLE_WORDS = len(_EXAMPLE.split())
 # miscounting it in the same breath.
 _EXAMPLE_SENTENCES = len([s for s in re.split(r"[.!?]+", _EXAMPLE) if s.strip()])
 
+# Appended to the JSON schema example only for a kit that carries a prop label
+# (see `_label_rules`). Absent for the house kit, so its schema hint is
+# byte-identical to what it was before this field existed.
+_LABEL_SCHEMA_HINT = ', "label": "..."'
+
 # Repair rounds, then stop. Design spec §6.4 caps retries on the principle that
 # repeated IDENTICAL failures mean the prompt is wrong, not the seed — surface it
 # to the editor rather than burning attempts. Cheap here because it is text, but
@@ -271,13 +277,42 @@ class ScriptError(ValueError):
     """Raised when the model's reply is not a usable six-block script."""
 
 
-def build_prompt(story: Story) -> str:
+def _label_rules(kit: str) -> str:
+    """The prop-label instruction — house kit gets none, and nothing changes.
+
+    Diorama scenes carry a physical prop in frame; the house kit does not, so
+    asking every model for a label it has nowhere to put would just teach it to
+    invent one. `label` is validated exactly like a claim (`claims.py`,
+    `validate_block`) — POL-4's element budget, and it must trace to the
+    evidence of one of THIS block's own claims — so the instruction states that
+    plainly rather than leaving the model to guess the rule from the schema.
+    """
+    if kit == HOUSE_KIT:
+        return ""
+    return f"""
+- This story renders through the "{kit}" kit, whose scenes carry a physical prop
+  in frame. Where a block's prop naturally carries a printed word, also emit:
+    label — one to {LABEL_MAX_WORDS} words, copied verbatim from the `evidence`
+            of one of THIS block's own claims. It is checked exactly like a
+            claim: too many words or a phrase that does not trace to that
+            evidence is refused.
+  Omit `label` for a block with no prop, or where no word in your evidence
+  fits cleanly — do not invent one to fill the field.
+"""
+
+
+def build_prompt(story: Story, *, kit: str = HOUSE_KIT) -> str:
     """The generation prompt. Carries the craft so the caller does not have to.
 
     The word window is stated with its reason attached. Told only "23-27 words",
     a model optimizes for the count and writes one long sentence — which is the
     exact failure the calibration takes measured: flowing lines run short and
     the take lands under the window.
+
+    `kit` decides whether the prop-label instruction appears at all. Threading
+    it further than this — so a real diorama run actually passes its kit in —
+    is `pipeline.py`'s job and belongs to the kit-resolution task; `kit` here
+    defaults to the house kit, so no existing caller's prompt changes.
     """
     facts = "\n".join(f"{f.id}: {f.text}" for f in story.facts)
     return f"""Write a six-block narration script for a short explainer video.
@@ -337,10 +372,10 @@ RULES:
 - Use every fact at least once across the six blocks. A fact the journalist
   sourced and verified, left on the floor, is research thrown away — and the
   receipt lists it as entered but unused.
-
+{_label_rules(kit)}
 Reply with JSON only, no commentary:
 {{"blocks": [{{"n": 1, "role": "cold open", "narration": "...",
-  "claims": [{{"spoken": "...", "fact_id": "F1", "evidence": "..."}}]}}]}}
+  "claims": [{{"spoken": "...", "fact_id": "F1", "evidence": "..."}}]{_LABEL_SCHEMA_HINT if kit != HOUSE_KIT else ""}}}]}}
 """
 
 
@@ -395,6 +430,12 @@ def parse_blocks(text: str, *, expect: int | None = BLOCK_COUNT) -> tuple[Script
                     )
                     for c in b.get("claims", ())
                 ),
+                # `b.get("label") or None`, same reasoning as `role` above: a
+                # model that returns `"label": ""` meant "no label", not the
+                # literal empty string — and house-kit stories never send this
+                # key at all, so this stays `None` for them without any kit
+                # check here.
+                label=(str(b["label"]).strip() or None) if b.get("label") else None,
             ))
         except (KeyError, TypeError, ValueError) as exc:
             raise ScriptError(f"block {i} is malformed: {exc}") from exc
@@ -546,6 +587,7 @@ def generate_script(
     story: Story,
     *,
     model: str = MODEL,
+    kit: str = HOUSE_KIT,
     chat_fn: Callable[..., Any] = chat,
 ) -> tuple[RunState, Ledger, tuple[ScriptBlock, ...]]:
     """Generate, check, and record. Returns no blocks unless every check passed.
@@ -553,9 +595,15 @@ def generate_script(
     `chat_fn` is injected so the whole path is testable at $0 with no network.
     That is not only convenience: it is the same property Wall 2 relies on, and
     it means the CS-3 strictness probe runs in CI rather than on a credit card.
+
+    `kit` only decides whether `build_prompt` asks for a prop `label` — it
+    defaults to the house kit, so a caller that never passes it (every current
+    one) gets exactly today's prompt and today's blocks. Threading a story's
+    real kit in from `pipeline.py` is the kit-resolution task's job, not this
+    one's.
     """
     story.validate()  # Wall 1 — nothing unsourced gets as far as a paid call
-    prompt = build_prompt(story)
+    prompt = build_prompt(story, kit=kit)
     accepted: list[ScriptBlock] = []
 
     def _say(ask: str, *, expect: int | None) -> tuple[tuple[ScriptBlock, ...], str]:

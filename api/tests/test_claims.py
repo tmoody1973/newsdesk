@@ -11,7 +11,7 @@ import dataclasses
 import pytest
 from fixtures import cs1_blocks, cs1_story
 
-from newsdesk.claims import Claim, ScriptBlock, validate_script
+from newsdesk.claims import LABEL_MAX_WORDS, Claim, ScriptBlock, validate_block, validate_script
 from newsdesk.facts import Source, Story
 
 
@@ -231,3 +231,37 @@ def test_plain_prose_is_not_number_bearing(phrase):
     from newsdesk.claims import number_tokens
 
     assert not number_tokens(phrase)
+
+
+# --- block labels: the letterpress word, validated like a claim ------------
+
+
+def test_a_block_with_no_label_is_unaffected():
+    story = cs1_story()
+    block = ScriptBlock(n=1, narration="A sentence with no claims in it at all.")
+    assert not [p for p in validate_block(story, block) if "label" in p.kind]
+
+
+def test_a_label_longer_than_four_words_is_rejected():
+    """POL-4's element budget. Past it, models duplicate or garble the words."""
+    story = cs1_story()
+    block = ScriptBlock(n=1, narration="Framing only.", label="one two three four five")
+    assert any(p.kind == "label_too_long" for p in validate_block(story, block))
+
+
+def test_a_label_that_maps_to_no_fact_is_rejected():
+    """The narrowing is gated. A letterpress word is a claim in three words."""
+    story = cs1_story()
+    block = ScriptBlock(n=1, narration="Framing only.", label="NINE TRILLION")
+    assert any(p.kind == "label_untraced" for p in validate_block(story, block))
+
+
+def test_a_label_drawn_from_a_mapped_fact_passes():
+    story = cs1_story()
+    fact = story.facts[0]
+    word = next(w for w in fact.text.split() if len(w) > 4)
+    block = ScriptBlock(
+        n=1, narration="Framing only.", label=word,
+        claims=(Claim(spoken=word, fact_id=fact.id, evidence=fact.text),),
+    )
+    assert not [p for p in validate_block(story, block) if "label" in p.kind]

@@ -106,3 +106,106 @@ def validate_url(raw: str) -> str:
     if not _DOMAINISH_RE.match(text):
         raise EndCardError(f"{raw!r} does not look like a website address")
     return text
+
+
+DELIVERY_W = 1080
+DELIVERY_H = 1920
+
+# The logo kit's paper and ink, not invented here. 816434d retuned the whole app
+# onto the supplied mark: paper #f9f6ee, ink #353334, red #f2322f. A card mixing
+# its own cream with the app's would read as a mistake rather than a choice —
+# which is the exact reason that commit moved the app's red four degrees of hue.
+DEFAULT_GROUND = "#f9f6ee"
+DEFAULT_INK = "0x353334"
+
+
+def _drawtext_escape(text: str) -> str:
+    """Escape for a single-quoted drawtext `text=` value.
+
+    validate_url's domain regex allows an unrestricted path segment, so a
+    colon or apostrophe can reach here even through validated input. The
+    surrounding quotes already protect ':', so only backslash (doubled) and
+    a literal quote need handling — and a quoted section cannot contain an
+    escaped quote directly, so a literal `'` needs ffmpeg's close-quote /
+    escaped-quote / reopen-quote sequence instead of a bare `\'`.
+    """
+    return text.replace("\\", "\\\\").replace("'", r"'\''")
+
+
+def render_card(
+    image: Path,
+    out: Path,
+    *,
+    url: str | None,
+    ffmpeg: str,
+    width: int = DELIVERY_W,
+    height: int = DELIVERY_H,
+    ground: str = DEFAULT_GROUND,
+    font: str | None = None,
+) -> Path:
+    """A DURATION_S still: the logo centred on the kit's ground, URL beneath.
+
+    Refuses on an unreadable image rather than rendering a blank card. The
+    publisher must not learn from someone else that their brand did not ship.
+    """
+    probe_image(image)  # raises EndCardError before anything is encoded
+
+    logo_h = int(height * 0.22)
+    chain = [
+        f"[1:v]scale=-1:{logo_h}:force_original_aspect_ratio=decrease[logo]",
+        f"[0:v][logo]overlay=(W-w)/2:(H-h)/2-{int(height * 0.04)}[withlogo]",
+    ]
+    last = "withlogo"
+    if url:
+        draw = (
+            f"[{last}]drawtext=text='{_drawtext_escape(url)}'"
+            f":fontcolor={DEFAULT_INK}:fontsize={int(height * 0.026)}"
+            f":x=(w-text_w)/2:y=h/2+{int(height * 0.10)}"
+        )
+        if font:
+            draw += f":fontfile='{font}'"
+        chain.append(f"{draw}[out]")
+        last = "out"
+
+    cmd = [
+        ffmpeg, "-y",
+        "-f", "lavfi", "-t", str(DURATION_S),
+        "-i", f"color=c={ground}:s={width}x{height}:r=30",
+        "-loop", "1", "-t", str(DURATION_S), "-i", str(image),
+        "-f", "lavfi", "-t", str(DURATION_S), "-i", "anullsrc=r=48000:cl=stereo",
+        "-filter_complex", ";".join(chain),
+        "-map", f"[{last}]", "-map", "2:a",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
+        "-c:a", "aac", "-ar", "48000", "-ac", "2",
+        "-t", str(DURATION_S), str(out),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0 or not out.exists():
+        raise EndCardError(f"end card render failed: {proc.stderr[-400:]}")
+    return out
+
+
+def append_card(video: Path, card: Path, out: Path, *, ffmpeg: str) -> Path:
+    """Concat the card after the mastered video.
+
+    Deliberately NOT done inside assembly's filtergraph. That file produced the
+    0.0 LUFS defect and the ffmpeg-5.1 framelog failure, and it is the wrong
+    file to open for a two-and-a-half second bumper. The trade is recorded in
+    the plan: the bed still fades under the last narration and the card holds in
+    silence, rather than the music resolving on the logo.
+    """
+    if not card.exists():
+        raise EndCardError("the end card segment is missing; refusing to publish "
+                           "a video the publisher believes is branded")
+    listing = out.with_suffix(".concat.txt")
+    listing.write_text(f"file '{video.resolve()}'\nfile '{card.resolve()}'\n")
+    proc = subprocess.run(
+        [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
+         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+         "-ar", "48000", "-ac", "2", str(out)],
+        capture_output=True, text=True,
+    )
+    listing.unlink(missing_ok=True)
+    if proc.returncode != 0 or not out.exists():
+        raise EndCardError(f"end card concat failed: {proc.stderr[-400:]}")
+    return out

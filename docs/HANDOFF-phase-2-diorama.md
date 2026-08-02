@@ -4,9 +4,8 @@
 **Branch** `main`, clean, **401 tests passing**, **26 commits ahead of origin — NOT pushed**
 **Phase 1 is merged** (`fcb7ae7`). Phase 2 is **zero code**: no `brand-kit/diorama/`, no `brand-kit/floor.txt`, no `kit_prefix`/`platform_floor`/`KNOWN_KITS`.
 
-Tarik chose Phase 2 over recording the demo video, having heard the argument for
-the demo twice. **The demo remains unrecorded.** That is a live risk, not a
-settled question — if time runs short, it is the thing to fall back to.
+Phase 2 is the current priority. The demo video is not yet recorded;
+`docs/CS-6-live-workflow-test.md` holds its protocol when it comes up.
 
 ---
 
@@ -233,5 +232,4 @@ dropped, per the mandate at the top of `docs/HANDOFF.md`:
 1. Task 12, the authoring interview — already deferred, no loss.
 2. Task 11's polish — ship the kit with fewer render iterations, and say the look
    is unproven rather than implying it was verified.
-3. **The whole of Phase 2** — and go record the demo. A judge watches the video;
-   nobody watches a kit file.
+3. **The whole of Phase 2**, and pick it up after submission.

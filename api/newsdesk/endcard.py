@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -119,19 +120,6 @@ DEFAULT_GROUND = "#f9f6ee"
 DEFAULT_INK = "0x353334"
 
 
-def _drawtext_escape(text: str) -> str:
-    """Escape for a single-quoted drawtext `text=` value.
-
-    validate_url's domain regex allows an unrestricted path segment, so a
-    colon or apostrophe can reach here even through validated input. The
-    surrounding quotes already protect ':', so only backslash (doubled) and
-    a literal quote need handling — and a quoted section cannot contain an
-    escaped quote directly, so a literal `'` needs ffmpeg's close-quote /
-    escaped-quote / reopen-quote sequence instead of a bare `\'`.
-    """
-    return text.replace("\\", "\\\\").replace("'", r"'\''")
-
-
 def render_card(
     image: Path,
     out: Path,
@@ -147,6 +135,19 @@ def render_card(
 
     Refuses on an unreadable image rather than rendering a blank card. The
     publisher must not learn from someone else that their brand did not ship.
+
+    The URL reaches drawtext via `textfile=`, not an inlined `text='...'`.
+    That wasn't the first attempt — inlining, even with escaping, was tried
+    and looked fine until the actual frame was checked (see git history on
+    this line for the escaping that didn't work): drawtext's value survives
+    two separate rounds of backslash-unescaping before drawtext reads it, and
+    a single-escaped apostrophe didn't error, it silently opened an
+    unterminated quote and burned the *rest of the filter string*
+    ("expansion=none:fontcolor=...:x=...:y=...") into the visible card as
+    text — worse than a crash, because nothing signals the mistake.
+    `textfile=` sidesteps the whole class of bug: only the *path* touches
+    the filtergraph string (and we choose that path, so it's always plain
+    hex), while the URL's actual bytes are read from disk untouched.
     """
     probe_image(image)  # raises EndCardError before anything is encoded
 
@@ -156,9 +157,12 @@ def render_card(
         f"[0:v][logo]overlay=(W-w)/2:(H-h)/2-{int(height * 0.04)}[withlogo]",
     ]
     last = "withlogo"
+    url_textfile: Path | None = None
     if url:
+        url_textfile = out.parent / f".endcard-url-{uuid.uuid4().hex}.txt"
+        url_textfile.write_text(url, encoding="utf-8")
         draw = (
-            f"[{last}]drawtext=text='{_drawtext_escape(url)}'"
+            f"[{last}]drawtext=textfile={url_textfile.resolve()}:expansion=none"
             f":fontcolor={DEFAULT_INK}:fontsize={int(height * 0.026)}"
             f":x=(w-text_w)/2:y=h/2+{int(height * 0.10)}"
         )
@@ -180,6 +184,8 @@ def render_card(
         "-t", str(DURATION_S), str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
+    if url_textfile is not None:
+        url_textfile.unlink(missing_ok=True)
     if proc.returncode != 0 or not out.exists():
         raise EndCardError(f"end card render failed: {proc.stderr[-400:]}")
     return out

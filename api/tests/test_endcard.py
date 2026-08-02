@@ -6,6 +6,7 @@ publisher owns the content, we own refusing anything that will not decode.
 """
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -149,6 +150,16 @@ def test_appending_a_missing_card_refuses_rather_than_publishing_without_it(
         append_card(body, tmp_path / "absent-card.mp4", tmp_path / "final.mp4", ffmpeg=ff)
 
 
+def _frame_png_bytes(ffmpeg: str, video: Path) -> bytes:
+    """First frame of `video` as PNG bytes. No OCR available, so tests that
+    need to know what a rendered card actually *shows* (not just that it
+    exists) compare these bytes instead."""
+    frame = video.with_suffix(".png")
+    subprocess.run([ffmpeg, "-y", "-i", str(video), "-frames:v", "1", str(frame)],
+                    capture_output=True, text=True, check=True)
+    return frame.read_bytes()
+
+
 def test_a_url_that_would_break_out_of_the_drawtext_quoting_still_renders(
     png: Path, tmp_path: Path
 ):
@@ -156,9 +167,55 @@ def test_a_url_that_would_break_out_of_the_drawtext_quoting_still_renders(
     (`\\S*`), so a caller that skips validate_url (or a URL with a quote in
     its path) can hand render_card a value that breaks drawtext's quoting.
     A crash here is a silently-missing end card, which is exactly what this
-    module exists to refuse."""
+    module exists to refuse.
+
+    Also a regression guard for a worse bug this exact case caught during
+    review: an earlier fix escaped the apostrophe with ffmpeg's
+    close-quote/escaped-quote/reopen-quote sequence inside an inlined
+    text='...' value. It didn't crash — it silently opened an unterminated
+    quote and burned the *rest of the filter string*
+    ("expansion=none:fontcolor=...:x=...:y=...") into the visible card as
+    text. Caught by actually reading the rendered frame, not by this
+    assertion; see render_card for the fix (textfile= instead of text=).
+    The comparison below pins the exact corrupted output that bug produced,
+    so this test would fail if the leak ever comes back."""
     from newsdesk.assembly import resolve_ffmpeg
+    ff = resolve_ffmpeg(needs_subtitles=False)
+
     out = tmp_path / "card.mp4"
-    render_card(png, out, url="radiomilwaukee.org/it's:here",
-                ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+    render_card(png, out, url="radiomilwaukee.org/it's:here", ffmpeg=ff)
     assert out.exists()
+
+    known_bad = tmp_path / "known_bad.mp4"
+    render_card(
+        png, known_bad,
+        url="radiomilwaukee.org/its:here:expansion=none:fontcolor=0x353334"
+            ":fontsize=49:x=(w-text_w)/2:y=h/2+192",
+        ffmpeg=ff,
+    )
+    assert _frame_png_bytes(ff, out) != _frame_png_bytes(ff, known_bad)
+
+
+def test_a_percent_brace_sequence_in_the_url_renders_literally_not_expanded(
+    png: Path, tmp_path: Path
+):
+    """drawtext's default expansion=normal scans text= for %{...} function
+    calls. validate_url's unrestricted path segment lets '%', '{', '}'
+    through, so a URL like "site.org/%{eif:1+1:d}" would silently become
+    "site.org/2" — a wrong website address burned into a published video,
+    worse than a crash because nothing signals the mistake.
+
+    No OCR available, so literalness is proven by pixel comparison instead:
+    render the %{...} URL and, separately, the string it would evaluate to.
+    If expansion were still active the two frames would match; with
+    expansion=none they must not. eif is used over %{gmtime} so the expected
+    "evaluated" text is deterministic rather than clock-dependent."""
+    from newsdesk.assembly import resolve_ffmpeg
+    ff = resolve_ffmpeg(needs_subtitles=False)
+
+    literal_out = tmp_path / "literal.mp4"
+    render_card(png, literal_out, url="site.org/%{eif:1+1:d}", ffmpeg=ff)
+    evaluated_out = tmp_path / "evaluated.mp4"
+    render_card(png, evaluated_out, url="site.org/2", ffmpeg=ff)
+
+    assert _frame_png_bytes(ff, literal_out) != _frame_png_bytes(ff, evaluated_out)

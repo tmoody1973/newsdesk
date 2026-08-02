@@ -1538,8 +1538,10 @@ def _publish_branded(path: Path, run_id: str) -> str:
         """
         spec = (self.state.final or {}).get("end_card_request")
         if not spec:
-            return StageResult(name="endcard", ok=True, skipped=True,
-                               detail="no end card requested")
+            return self._record(StageResult(
+                name="endcard", ok=True, skipped=True,
+                detail="no end card requested",
+            ))
         if not self.state.is_approved:
             raise PipelineError(
                 "the end card re-publishes the video, and publishing needs a "
@@ -1561,9 +1563,16 @@ def _publish_branded(path: Path, run_id: str) -> str:
             "uri": _publish_branded(branded, self.state.run_id),
             "end_card": card.manifest_entry(),
         })
-        self.state.save()
-        return StageResult(name="endcard", ok=True,
-                           detail=f"card appended, supplied by {card.supplied_by}")
+        # NO self.state.save() here. RunState.save() calls backend(...).put() —
+        # it reaches B2 over the network, and api/.env carries live credentials,
+        # so a stage that saves makes every test touching it hit the network and
+        # breaks the suite's $0 / no-network guarantee. No stage method saves;
+        # persistence is Pipeline.save(), called by the CLI. Found in Task 3,
+        # where the same line was written into the brief and caught before merge.
+        return self._record(StageResult(
+            name="endcard", ok=True,
+            detail=f"card appended, supplied by {card.supplied_by}",
+        ))
 ```
 
 Import `resolve_ffmpeg` from `newsdesk.assembly` at the top of `pipeline.py`.
@@ -1574,6 +1583,16 @@ In `api/newsdesk/cli.py`, beside the `caption` branch:
         if stage == "endcard":
             return pipe.stage_endcard()
 ```
+
+**Two more things Task 3 proved are required and easy to miss:**
+
+1. `cli.py` has a `_CREDENTIALS` map keyed by stage. Add
+   `"endcard": ["B2_KEY_ID", "B2_APP_KEY"]` — it re-uploads, so it needs them.
+   Without an entry, `--only endcard` fails deep inside the provider call
+   instead of with a friendly message at the door.
+2. `tests/test_pipeline.py` has a pre-existing `test_stage_order_is_fixed`
+   asserting the exact `STAGES` tuple. Adding a stage breaks it. Update it —
+   that is the test doing its job, not an obstacle.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 

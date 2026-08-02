@@ -45,7 +45,7 @@ from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
 from newsdesk.caption import generate_captions
 from newsdesk.decisions import Ledger
-from newsdesk.endcard import EndCard, append_card, render_card
+from newsdesk.endcard import EndCard, EndCardError, append_card, render_card
 from newsdesk.narration import narrate, store_take, take_window, voice_specs
 from newsdesk.policy.gate import check
 from newsdesk.scene import ThroughLine, build_block_prompt
@@ -195,7 +195,21 @@ class Pipeline:
         byte for byte, and its own call site says a second implementation would
         be a second thing to keep true. This reads what it produced instead.
         """
-        spec = (self.state.final or {}).get("end_card_request")
+        final = self.state.final or {}
+        # A card already on `final` means an earlier run of this stage already
+        # applied it and `final["uri"]` now points at the *branded* b2:// URI —
+        # not a local path. Re-running would hand that URI to `Path(...)` and
+        # die inside `append_card`'s ffmpeg concat instead of skipping cleanly,
+        # which is exactly the resumability this module promises (module
+        # docstring, :15). Checked first, before the "was one requested" branch
+        # below, since a leftover `end_card_request` is expected to still be
+        # sitting on `final` once applied.
+        if final.get("end_card"):
+            return self._record(StageResult(
+                name="endcard", ok=True, skipped=True,
+                detail="end card already applied",
+            ))
+        spec = final.get("end_card_request")
         if not spec:
             return self._record(StageResult(
                 name="endcard", ok=True, skipped=True,
@@ -209,11 +223,24 @@ class Pipeline:
 
         source = Path(self.state.final["uri"])
         card_mp4 = source.with_name("endcard.mp4")
-        render_card(Path(spec["local_path"]), card_mp4, url=spec.get("url"),
-                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
         branded = source.with_name("final-branded.mp4")
-        append_card(source, card_mp4, branded,
-                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+        try:
+            render_card(Path(spec["local_path"]), card_mp4, url=spec.get("url"),
+                        ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+            append_card(source, card_mp4, branded,
+                        ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+        except EndCardError as exc:
+            # EndCardError is a plain ValueError, not a PipelineError — cli.py
+            # only catches PipelineError around the stage loop, so left alone
+            # this crashes with a raw traceback. A corrupt logo is the path a
+            # journalist hits by uploading a bad image, not an operator error,
+            # so it goes through the same ok=False channel stage_blocks uses
+            # for a failed encode: cli.py prints "FAIL"/"stopped at endcard"
+            # cleanly AND still calls pipe.save(), so the approval already on
+            # this run survives a retry with a fixed image.
+            return self._record(StageResult(
+                name="endcard", ok=False, detail=str(exc),
+            ))
 
         card = EndCard(image_uri=spec["uri"], url=spec.get("url"),
                        supplied_by=self.state.approval.approver)

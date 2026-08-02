@@ -341,6 +341,62 @@ def test_the_end_card_is_recorded_as_supplied_not_generated(cs2, monkeypatch, tm
     assert entry["url"] == "radiomilwaukee.org"
 
 
+def test_the_endcard_stage_skips_when_a_card_is_already_applied(cs2, monkeypatch):
+    """A second pass over `--from endcard` (or any resume reaching this stage
+    again) must not re-encode: `final["uri"]` is already the branded b2://
+    URI, and treating it as a local path a second time is the exact bug this
+    guards against. render_card/append_card must not even be called."""
+    def _boom(*a, **kw):
+        raise AssertionError("stage re-rendered a card that was already applied")
+
+    monkeypatch.setattr("newsdesk.pipeline.render_card", _boom)
+    monkeypatch.setattr("newsdesk.pipeline.append_card", _boom)
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": "b2://newsdesk-runs/cs2/final-branded.mp4",
+        "end_card_request": {"local_path": "x.png", "uri": "b2://x", "url": None},
+        "end_card": {"image": "b2://x", "url": None, "supplied_by": "Tarik Moody",
+                     "generated": False},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert result.ok and result.skipped
+
+
+def test_a_render_failure_surfaces_through_the_pipelines_own_failure_channel(
+    cs2, monkeypatch, tmp_path,
+):
+    """A corrupt logo must fail as `StageResult(ok=False)`, the channel every
+    other stage failure uses — not leak `EndCardError` (a plain ValueError)
+    past cli.py's `except PipelineError` as a raw traceback in front of a
+    judge."""
+    from newsdesk.endcard import EndCardError
+
+    published = tmp_path / "final.mp4"
+    published.write_bytes(b"stub")
+
+    monkeypatch.setattr(
+        "newsdesk.pipeline.render_card",
+        lambda image, out, **kw: (_ for _ in ()).throw(
+            EndCardError("logo.png is not an image ffmpeg can read")
+        ),
+    )
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(published),
+        "end_card_request": {"local_path": "logo.png", "uri": "b2://x/logo.png",
+                             "url": None},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert not result.ok
+    assert "not an image" in result.detail
+
+
 def test_the_end_card_stage_refuses_an_unapproved_run(cs2, tmp_path):
     """Wall 3. Re-publishing a video is publishing; it needs a named human."""
     from newsdesk.pipeline import PipelineError

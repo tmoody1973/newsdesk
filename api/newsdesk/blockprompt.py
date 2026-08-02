@@ -48,6 +48,14 @@ REPO_ROOT = DEFAULT_BRAND_KIT.parent
 
 FIELDS = ("STYLE REFERENCE", "SCENE", "MOTION", "AUDIO", "NEGATIVE")
 
+# Which kits exist, named here rather than in brandkit.py so that a module
+# with no network access (this one) can be the shared source of truth.
+# brandkit.py and storyfile.py import these FROM here — never the reverse,
+# because brandkit.py reaches newsdesk.config.backend and gate.py imports
+# this module; test_structure.py fails the build if that path ever connects.
+HOUSE_KIT = "house"
+KNOWN_KITS = (HOUSE_KIT, "diorama")
+
 # Field labels are anchored at line start. A field's value runs until the next
 # label or end of text, so multi-line SCENE descriptions survive a round trip.
 _FIELD_RE = re.compile(

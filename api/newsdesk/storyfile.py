@@ -43,6 +43,7 @@ from typing import Any
 
 import yaml
 
+from newsdesk.blockprompt import HOUSE_KIT, KNOWN_KITS
 from newsdesk.facts import Source, Story
 
 # A run's B2 prefix is built from these, so they end up in object keys.
@@ -76,6 +77,7 @@ class StoryFile:
     id: str
     story: Story
     through_line: str
+    kit: str = HOUSE_KIT
 
     @property
     def run_id(self) -> str:
@@ -182,6 +184,12 @@ def parse_story(doc: Any, *, where: str = "story") -> StoryFile:
     title = str(_require(doc, "title", where)).strip()
     through_line = str(_require(doc, "through_line", where)).strip()
 
+    kit = str(doc.get("kit") or HOUSE_KIT).strip()
+    if kit not in KNOWN_KITS:
+        raise StoryFileError(
+            f"{where}: unknown kit {kit!r}. Choose from: {', '.join(KNOWN_KITS)}"
+        )
+
     raw_facts = doc.get("facts")
     if not isinstance(raw_facts, list) or not raw_facts:
         raise StoryFileError(f"{where}: needs a `facts:` list with at least one fact")
@@ -208,7 +216,7 @@ def parse_story(doc: Any, *, where: str = "story") -> StoryFile:
     # is the product and it gets checked by the module that owns it, not only by
     # the one that reads files.
     story.validate()
-    return StoryFile(id=story_id, story=story, through_line=through_line)
+    return StoryFile(id=story_id, story=story, through_line=through_line, kit=kit)
 
 
 def load_story(path: str | Path) -> StoryFile:

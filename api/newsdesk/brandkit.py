@@ -27,11 +27,23 @@ from typing import Any
 
 import yaml
 
+from newsdesk.blockprompt import HOUSE_KIT
 from newsdesk.config import BUCKETS, backend
 
 # Everything under one prefix so the kit is separable from the candidate
-# renders and voice takes that share the bucket.
+# renders and voice takes that share the bucket. The house kit keeps this bare
+# prefix so nothing already published has to move. B2 keys are flat, so
+# "kit/negative.txt" and "kit/diorama/negative.txt" are different keys with no
+# collision and no migration.
 KIT_PREFIX = "kit/"
+
+
+def kit_prefix(kit_id: str | None) -> str:
+    """The B2 prefix for one keyed kit. `None` and `"house"` are the same kit."""
+    if not kit_id or kit_id == HOUSE_KIT:
+        return KIT_PREFIX
+    return f"{KIT_PREFIX}{kit_id}/"
+
 
 # Absent any one of these, the kit is not a kit. Ordered as an editor would
 # think about them: what is forbidden, what the house looks like, why, the
@@ -73,9 +85,9 @@ class BrandKit:
     style_key_url: str | None = None
 
 
-def _fetch(store: Any, name: str) -> bytes:
+def _fetch(store: Any, name: str, *, prefix: str = KIT_PREFIX) -> bytes:
     """One kit object, or a raise that names the exact key that is missing."""
-    key = f"{KIT_PREFIX}{name}"
+    key = f"{prefix}{name}"
     try:
         data = store.get(key)
     except Exception as exc:  # noqa: BLE001 — every failure here is the same failure
@@ -92,11 +104,12 @@ def _fetch(store: Any, name: str) -> bytes:
     return data
 
 
-def load(*, store: Any | None = None) -> BrandKit:
-    """Fetch and parse the published kit. Raises unless every part is present."""
+def load(*, store: Any | None = None, kit_id: str = HOUSE_KIT) -> BrandKit:
+    """Fetch and parse one keyed kit. Raises unless every part is present."""
     store = store if store is not None else backend(BUCKETS["brand_kit"])
+    prefix = kit_prefix(kit_id)
 
-    raw = {name: _fetch(store, name).decode("utf-8") for name in REQUIRED_TEXT}
+    raw = {name: _fetch(store, name, prefix=prefix).decode("utf-8") for name in REQUIRED_TEXT}
 
     try:
         through_lines = yaml.safe_load(raw["through-lines.yaml"]) or {}
@@ -107,7 +120,7 @@ def load(*, store: Any | None = None) -> BrandKit:
     # The style key is documentation, so its absence is survivable — but it is
     # reported as None rather than as a working URL to something that isn't there.
     style_key_url: str | None = None
-    key = f"{KIT_PREFIX}{STYLE_KEY}"
+    key = f"{prefix}{STYLE_KEY}"
     try:
         if store.exists(key):
             style_key_url = store.get_durable_url(key)

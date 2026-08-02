@@ -1,11 +1,50 @@
-# Handoff — Newsdesk, end of Day 4 (2026-07-28)
+# Handoff — Newsdesk, Day 6 · SUBMISSION DAY (2026-08-02)
 
 **Repo:** `/Users/tarikmoody/Documents/Projects/newsdesk` · public at
 [github.com/tmoody1973/newsdesk](https://github.com/tmoody1973/newsdesk), `main`
 **Linear:** [Newsdesk — Backblaze Generative Media Hackathon](https://linear.app/moodyco/project/newsdesk-backblaze-generative-media-hackathon-5f68ce40d2cc) · team `MOO`
-**Deadline:** submit **Aug 2**, hard cut **Aug 3, 5:00 PM EDT** — four days left
-**Tests:** `cd api && uv run pytest tests/ -q` → **318 passed**, zero network, $0
-**Spend:** ~$10 of ~$25 · ~$15 left, roughly twelve more stories
+**Deadline:** submit **TODAY, Aug 2**, hard cut **Aug 3, 5:00 PM EDT**
+**Tests:** `cd api && uv run pytest tests/ -q` → **328 passed**, zero network, $0
+**Spend:** ~$13.75 of ~$25 · **~$11 left**, roughly eight more stories
+
+## ▶ LIVE — check these first
+
+| | |
+|---|---|
+| **Site** | **https://newsdesk-rosy.vercel.app** — public, no sign-in |
+| **Worker** | **https://newsdesk-worker.fly.dev** — `/health` should read `ok: true` |
+
+The other two Vercel aliases (`*-tmoody1973s-projects.vercel.app`) 302 to SSO.
+**`newsdesk-rosy` is the one to give a judge.**
+
+**Four videos are published.** All four carry the approver string
+`"Claude (agent) — UNREVIEWED, pending Tarik Moody"` in their embedded manifests,
+deliberately: an agent must not sign a human's name to a provenance record. Tarik
+re-stamps on Editor Review and it re-cuts at $0 — it does write a new approval
+timestamp over the original, which is a known wart.
+
+| run | s | LUFS | cost | note |
+|---|---|---|---|---|
+| `cs1-narration` | 72.6 | −16.0 | — | the legacy CS-1 video, placeholder approver |
+| `what-a-billion-dollars-of-vinyl-says-abo` | 69.80 | −16.0 | $1.2116 | first browser-start-to-finish |
+| `who-pays-when-the-signal-goes-quiet` | 71.47 | −16.0 | $1.2251 | first cut on the **deployed** worker |
+| `the-65-000-pipes-under-milwaukee` | 68.77 | −16.1 | $1.3125 | **Day 6.** Real Milwaukee reporting, sources fetched same day |
+
+Three through-lines used: `tower-signal`, `record`, `fuse`. Unused: `dollar-cut`,
+`scale`, `balloon`.
+
+## ⚙️ WORKER SECRET STATE — check before debugging anything
+
+`fly secrets list --app newsdesk-worker`. As of Day 6 the script role is set to:
+
+| secret | value | why |
+|---|---|---|
+| `NEWSDESK_SCRIPT_PROVIDER` | `gmicloud` | reverted after the outage cleared; keeps text on Genblaze |
+| `NEWSDESK_SCRIPT_MODEL` | `anthropic/claude-haiku-4.5` | the one that maps claims first-pass |
+| `ANTHROPIC_API_KEY` | set | powers the escape hatch below; **currently dormant** |
+| `NEWSDESK_SCRIPT_TIMEOUT` | **unset** | was 600 for a DeepSeek experiment; not needed on haiku |
+
+Plus the seven originals (GMI, ElevenLabs, LMNT, B2 ×3, access code).
 
 ---
 
@@ -66,37 +105,116 @@ approvals, stamped on Editor Review, published.
 
 The demo now exists as a thing that happened, not a thing that should work.
 
+### Proven on Day 6 — real reporting, sourced the same day
+
+`the-65-000-pipes-under-milwaukee` is the first story that is **not a fixture**.
+Milwaukee's lead service lines: six facts, every one carrying a number, verified
+by fetching two articles — The Daily Reporter (6 May 2026) and Milwaukee NNS
+(15 Mar 2026) — rather than recalled. Story file at
+`stories/the-65-000-pipes-under-milwaukee.yaml`, `fuse` through-line.
+
+**Two findings worth more than the video:**
+
+1. **Script Review caught a real journalism error before a dollar was spent.**
+   The first script put *"replaced roughly 3,300 in 2025"* beside *"passed 10,000
+   replacements that year"* — two numbers for one year, reading as a
+   contradiction. Both were true, both were sourced, so **Wall 1 could not catch
+   it**: the ambiguity was in the FACT, not the script. F5 was rewritten to say
+   "since the program began, including roughly 3,300 in 2025", and the old
+   wording is kept in the file's header. That is the review screen doing exactly
+   what it exists for.
+2. **The model derived the arithmetic nobody entered.** 65,000 remaining at 5,000
+   a year does not reach 2037. That conclusion was deliberately withheld from the
+   facts; block 5 found it, tagged it to F1 and F2, and the validator made it
+   trace. The caption reads **"THE MATH DOESN'T CLOSE."** over a cutout crowd.
+
+Also: **a re-run needs a NEW title.** `stage_script` skips when every block
+already has narration, so re-posting the same run id hands back the same flawed
+script. And `test_shipped_story_ids_are_unique_and_match_their_filenames` will
+fail the build if the story file's name and its `id` disagree — two stories
+sharing an id share a B2 prefix and a RunState key.
+
 ---
 
-## Run state in B2, right now
+---
 
-| run | status | note |
-|---|---|---|
-| `cs1-narration` | published | the legacy CS-1 video. Approver is a placeholder. |
-| `cs2` | drafting | **fresh script, 6/6 traced.** Old clips in B2 no longer match these lines. |
-| `cs1` | drafting | 0 blocks — script did not converge. See RISK below. |
-| `vinyl-outsold-cds-three-to-one` | drafting | the browser-typed story, script only |
+## 🔥 DAY 6 — the GMI outage, and what it taught
 
-**Both published videos carry the approver string
-`"Claude (agent) — UNREVIEWED, pending Tarik Moody"`** in their embedded
-manifests. That is deliberate — an agent must not sign a human's name to a
-provenance record. Tarik re-stamps them on Editor Review; it re-cuts at $0.
+**For ~40 minutes on Aug 2, the live demo's script stage was dead.** Not our bug.
+
+```
+GMICloud chat failed (400): "InvokeModel: operation error Bedrock Run…"
+— blocked rather than assumed safe
+```
+
+**GMI's entire Anthropic-on-Bedrock path was failing.** Both
+`anthropic/claude-haiku-4.5` and `anthropic/claude-sonnet-4.5` returned the same
+400. The claim checker could not run, so the gate refused every block — correctly
+— and **nine consecutive script attempts cost $0**. That is the fourth
+fail-closed of this project and the fourth time it was right.
+
+**What it was NOT:** `deepseek-ai/DeepSeek-V3-0324` reached the model fine and
+returned ordinary POL-5 word-count complaints. That is how the diagnosis was
+made — a different backend, a different error.
+
+**What fixed it: GMI recovered on its own.** The Anthropic escape hatch (below)
+was built, tested, deployed — and **never fired**. The ledger proves it: the
+successful run records `prov= gmicloud`. Do not let anyone claim otherwise.
+
+### The escape hatch, dormant but ready
+
+`NEWSDESK_SCRIPT_PROVIDER=anthropic` routes the script call to the Anthropic API
+directly, bypassing GMI. `script.py::_anthropic_chat`, `urllib` not the SDK — no
+new dependency, no lockfile churn, nothing new in any import graph.
+
+**The rules allow it.** Entrants must use Backblaze B2 **and Genblaze**; no
+provider or model is mandated, only *disclosed*. Genblaze still carries all four
+media legs — stills, video, voice, and the fallback chains this app walks
+itself — so routing one text call direct costs the Genblaze story nothing. The
+provider name flows into `judged()`, so the receipt names whichever actually ran.
+
+**It is off by default and should stay off while GMI works** — three `chat()`
+roles on Genblaze is the better "Use of Genblaze" story.
+
+### Two things that cost time and will again
+
+1. **`fly secrets set` alone does not ship code.** Setting
+   `NEWSDESK_SCRIPT_PROVIDER=anthropic` on an image built before the hatch
+   existed does exactly nothing. **`fly deploy` too.** Nearly reported a fix
+   that hadn't shipped.
+2. **Never change secrets while a run is rendering.** A restart mid-`blocks`
+   spends the money and saves nothing — state is written *after* each stage.
+
+### This Mac cannot reach GMI at all
+
+`403, Cloudflare error 1010` on every model, including DeepSeek. The Spectrum
+Security Shield block first recorded 2026-07-27. **Only the Fly worker can talk
+to GMI**, so all provider diagnosis has to run through it, and a local probe
+proves nothing. `curl` to `newsdesk-worker.fly.dev` also needs
+`--resolve newsdesk-worker.fly.dev:443:66.241.125.20` — stale NXDOMAIN in this
+machine's resolver. Chrome is fine.
+
+### Browser automation
+
+**The Claude-in-Chrome extension is disconnected** (dropped over a multi-day
+gap). **Playwright MCP works** and drove the whole Day 6 run against production.
+It writes scratch into the repo root; `.playwright-mcp/` and `cs6-*.png` are now
+gitignored. To *record* a demo you need the extension back, or drive it by hand.
 
 ---
 
 ## ⚠️ RISK — read before planning
 
-**Script generation is now materially harder and can fail outright.**
+**Script generation is materially hard and can fail outright.**
 
-Day 4 added a rule: every block except the kicker must trace to a fact. It is
-the right rule (see below), but it stacks on top of an already tight set —
-23–27 words, 2–3 sentences, whole-assertion mapping, every fact used.
+Day 4 added a rule: every block except the kicker must trace to a fact. Right
+rule, but it stacks on 23–27 words, 2–3 sentences, whole-assertion mapping, and
+every fact used.
 
-- CS-2 converges.
-- **CS-1 did not converge on its last attempt** — one block at 29 words after
-  six repair rounds.
+Day 6 evidence: **both stories converged, and both used 5 of the 6 allowed
+repair passes.** One attempt of headroom. Do not lower `MAX_ATTEMPTS`.
 
-If this bites before the deadline, **the lever is `MAX_ATTEMPTS` (currently 6) or
+If it bites, **the lever is `MAX_ATTEMPTS` (currently 6, not env-overridable) or
 the POL-5 word window — not the tracing rule.** The tracing rule is the product's
 whole argument. Widening the window is a calibration; dropping the rule is a cut.
 
@@ -187,19 +305,88 @@ Docker Desktop on an ARM Mac ran past ten minutes and had to be abandoned.
   *normal* outcome here, so this breaks the loop the product is built around.
 - **Per-block approvals are not persisted** — re-opening Editor Review resets all
   six to pending. Already on the "if time allows" list; confirmed in production.
+- **`text-graphite`, `border-ink`, `bg-pasteboard`, `text-approval-blue` and
+  `text-stamp-red` emit no CSS.** They are defined nowhere and used across the
+  Desk, Policy, Receipt and Red team pages, which look right only because
+  `_ds/modernist.css` carries the palette underneath. `/brand-kit` deliberately
+  does not follow that pattern — it uses the design system's own custom
+  properties. Defining the missing names would change four pages that currently
+  render correctly, so it was left alone.
+- **`outputFileTracingIncludes` is per route.** A new page reading
+  `policy/policy.yaml` needs its own entry in `next.config.mjs` or it works
+  locally and 500s in production.
+- **The validator traces quantities, not qualities.** Day 6, block 2 of the
+  Milwaukee story asserted *"Now we know they poison the water they deliver"*
+  tagged to a fact that is only counts and a deadline. It rode along untraced
+  because there was no number in it.
+- **Synthesised arithmetic can pass on a partial trace.** Day 5, a block claiming
+  *"the pace must nearly double"* was tagged to one fact when the arithmetic
+  needs two.
 - **`POST /runs` with `assembly` demands an `approver`** even when the run is
   already approved in B2, and re-stamping writes a new timestamp over the
   original approval time.
 
-### 3. README, demo video, submit
+### ~~3. README~~ · **DONE, Day 6**
 
-The demo now has something real to record: a story typed into a browser becoming
-a receipted video.
+Rewritten. Live URL first, two public receipts, the 401/422 probes a reader can
+reproduce, the real per-run costs, and what has **not** been run (CS-3 is
+unit-covered only). `/brand-kit` also built — the left rail linked to a 404 on
+every page.
 
-### 4. If time allows
+### 4. **DEMO VIDEO — the top item, today**
 
-CS-1 convergence · per-block approvals persisted · "Reject with note" · the
-lineage drawer · URL ingest (designed in `docs/PLAN.md` §B4, unbuilt).
+There is real material now: four published films, four receipts, a red-team page,
+and the refusal beat. `docs/CS-6-live-workflow-test.md` is the step-by-step
+protocol against the live site, with the $0 sections marked.
+
+**Suggested spine** (from `newsdesk-case-studies.md`): a receipt tease → one full
+flow with the rejection beat → CS-4 refusals rapid-fire → live `genblaze verify`
+on a published MP4 → close.
+
+**Blocked on:** the Chrome extension being reconnected, or Tarik driving it.
+
+### 5. Submit
+
+Disclose every provider and model — that is an explicit rule requirement, and
+after Day 6 the list must include Anthropic-direct as an available fallback even
+though it is currently dormant.
+
+### 6. Open experiments, both cheap, neither run
+
+- **Sonnet 5 for the script role.** `script.py` measured haiku-4.5 as mapping
+  every claim first-pass, and its only failures were length. But Day 6's actual
+  defects were *writing* failures — a contradiction welded into one sentence, a
+  qualitative assertion riding untraced — which is where a stronger model earns
+  its keep. Script stage is cents; ~$0.02 → ~$0.08 to protect $1.20 of pictures.
+  **Probe the slug first** — `script.py` warns GMI's catalogue is
+  contract-specific, and `deepseek-ai/DeepSeek-V3` was documented as absent from
+  this account entirely.
+- **Does `seedance-2.0` still error?** Recorded 2026-07-28 as "flaky-50%, not
+  dead" after an earlier note called it dead. Worth one probe; it is a better
+  video model than `seedance-1-0-pro-fast-251015` if it holds.
+
+### 7. If time allows
+
+CS-3 (never run end to end) · per-block approvals persisted · "Reject with note"
+· the lineage drawer · **URL ingest** (designed in `docs/PLAN.md` §B4, unbuilt —
+Tarik's own idea and the plan calls it the highest-leverage one on the board).
+
+### 8. Paused mid-design: multi-outlet brand kits
+
+A `superpowers:brainstorming` session was **interrupted after design sections
+1–3**, awaiting "does this look right?". Five decisions are locked:
+
+1. Spec the whole feature, ship a slice
+2. **Exclusions are add-only** — a kit may append prohibitions, never remove
+   them; `blockprompt.negative_is_intact()` already accepts `base + ","`
+3. Authoring is **interview → AI drafts → human publishes**, same shape as Wall 1
+4. **Layered**: one object library per outlet, several looks on top
+5. **Bake at publish** — flatten layers into an immutable versioned kit in B2
+
+The one non-obvious safety point already worked out: **the prompt is built from
+the kit; POL-2's check is made against the platform base**, read from a location
+the outlet cannot write. Otherwise a kit is compared against itself and always
+passes. Nothing is written to disk yet.
 
 ---
 

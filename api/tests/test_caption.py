@@ -5,6 +5,8 @@ reaches a provider, so the suite stays at $0 with no network.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 from fixtures import cs1_story
 
@@ -12,8 +14,12 @@ from newsdesk.caption import (
     HOOK_LIMIT,
     Caption,
     caption_problems,
+    generate_captions,
     sources_for,
 )
+from newsdesk.claims import ScriptBlock
+from newsdesk.decisions import Ledger
+from newsdesk.state import RunState
 
 
 def _caption(**over) -> Caption:
@@ -88,3 +94,124 @@ def test_text_property_builds_from_prose():
     """Caption.text must start with prose to ensure they stay in sync."""
     c = _caption()
     assert c.text.startswith(c.prose)
+
+
+def _run() -> RunState:
+    return RunState(run_id="cap-test", story="Who pays when public radio goes dark?")
+
+
+def _payload(story, *, hook=None, source=None) -> str:
+    """Four captions the model would return: two per platform.
+
+    The hook is the claim's own `spoken` phrase plus a period, not an
+    independent slice of the fact: `cs1_story`'s fact 0 is exactly 100
+    characters, so `fact.text[:100]` (a wider slice than the 40-char claim)
+    is the whole fact and leaves the tail ("$1.1B ... FY2026-27") on screen
+    with nothing tracing it — `_problems` correctly rejects that as an
+    unmapped number, which is real coverage working, not a flaky test. And
+    without terminal punctuation, `validate_block` reads hook+body as one
+    unbroken sentence and demands a claim for the body too. A period is what
+    keeps this fixture the "clean caption" it is meant to be.
+    """
+    fact = story.facts[0]
+    real_source = source or fact.sources[0].value
+    spoken = fact.text[:40]
+    out = []
+    for platform in ("linkedin", "youtube"):
+        for variant in (1, 2):
+            tags = ["#PublicMedia", "#Budget", "#Policy"]
+            if platform == "youtube":
+                tags.append("#Shorts")
+            out.append({
+                "platform": platform,
+                "variant": variant,
+                "hook": hook or f"{spoken}.",
+                "body": "The cut lands on stations that carry the least advertising.",
+                "cta": "What surprised you most? Let's discuss below.",
+                "hashtags": tags,
+                "sources": [real_source],
+                "claims": [{"spoken": spoken, "fact_id": fact.id,
+                            "evidence": fact.text}],
+            })
+    return json.dumps({"captions": out})
+
+
+def _fake_chat(payload: str):
+    def _chat(model, **kwargs):
+        return type("R", (), {"text": payload})()
+    return _chat
+
+
+def test_four_captions_are_returned_two_per_platform():
+    story = cs1_story()
+    _, _, caps = generate_captions(
+        _run(), Ledger(), story, (), through_line="tower-signal",
+        chat_fn=_fake_chat(_payload(story)),
+    )
+    assert len(caps) == 4
+    assert {c.platform for c in caps} == {"linkedin", "youtube"}
+    assert sorted(c.variant for c in caps if c.platform == "youtube") == [1, 2]
+
+
+def test_a_clean_caption_records_a_pass_decision():
+    story = cs1_story()
+    _, ledger, _ = generate_captions(
+        _run(), Ledger(), story, (), through_line="tower-signal",
+        chat_fn=_fake_chat(_payload(story)),
+    )
+    assert [d.verdict for d in ledger.decisions] == ["pass"]
+    assert ledger.decisions[0].role == "caption"
+
+
+def test_a_source_not_in_the_story_is_refused():
+    """A model must never write a citation. This is that rule, enforced."""
+    story = cs1_story()
+    payload = _payload(story, source="https://invented.example/article")
+    _, ledger, caps = generate_captions(
+        _run(), Ledger(), story, (), through_line="tower-signal",
+        chat_fn=_fake_chat(payload),
+    )
+    assert caps == ()
+    assert ledger.decisions[-1].verdict == "reject"
+    assert "source" in ledger.decisions[-1].reason.lower()
+
+
+def test_an_untraceable_claim_is_refused_not_warned():
+    """Same rule as script.py: no caption beats a caption with a warning on it."""
+    story = cs1_story()
+    payload = json.loads(_payload(story))
+    for c in payload["captions"]:
+        c["claims"] = [{"spoken": "nine hundred trillion dollars",
+                        "fact_id": story.facts[0].id, "evidence": "nothing"}]
+    _, ledger, caps = generate_captions(
+        _run(), Ledger(), story, (), through_line="tower-signal",
+        chat_fn=_fake_chat(json.dumps(payload)),
+    )
+    assert caps == ()
+    assert ledger.decisions[-1].verdict == "reject"
+
+
+def test_an_unreachable_model_records_a_reject_rather_than_passing():
+    def _boom(model, **kwargs):
+        raise RuntimeError("provider down")
+
+    story = cs1_story()
+    _, ledger, caps = generate_captions(
+        _run(), Ledger(), story, (), through_line="tower-signal", chat_fn=_boom,
+    )
+    assert caps == ()
+    assert ledger.decisions[-1].verdict == "reject"
+
+
+def test_the_prompt_names_the_through_line_object():
+    """The guide asks the caption to reference the object that rides through
+    all six scenes. The kit knows what it is, so it is handed over, not guessed."""
+    seen = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs)
+        return type("R", (), {"text": _payload(cs1_story())})()
+
+    generate_captions(_run(), Ledger(), cs1_story(), (),
+                      through_line="tower-signal", chat_fn=_spy)
+    assert "tower-signal" in seen["prompt"]

@@ -13,11 +13,16 @@ be the one to write them.
 
 from __future__ import annotations
 
+import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from typing import Any, Callable
 
-from newsdesk.claims import Claim
+from newsdesk.claims import Claim, ScriptBlock, validate_block
+from newsdesk.decisions import Ledger, judged
 from newsdesk.facts import Story
+from newsdesk.script import MODEL, PROVIDER, TIMEOUT_S, chat
+from newsdesk.state import RunState
 
 PLATFORMS = ("linkedin", "youtube")
 
@@ -114,3 +119,144 @@ def caption_problems(c: Caption) -> tuple[str, ...]:
         problems.append("emoji; the guide keeps them at zero for this aesthetic")
 
     return tuple(problems)
+
+
+# --- generation, checked and refused like a script block ---------------------
+
+MAX_ATTEMPTS = 3
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+class CaptionError(ValueError):
+    """The model did not return usable captions."""
+
+
+def build_prompt(story: Story, *, through_line: str, problems: str = "") -> str:
+    facts = "\n".join(f"{f.id}: {f.text}" for f in story.facts)
+    repair = f"\n\nThe previous attempt was rejected:\n{problems}\n" if problems else ""
+    return f"""Write social captions for a finished 60-second explainer.
+
+STORY: {story.title}
+
+FACTS — every claim you make must map to one of these by id:
+{facts}
+
+THROUGH-LINE OBJECT: {through_line}. The video carries this object through all
+six scenes. You may reference it once as a metaphor.
+
+Write FOUR captions: two for linkedin, two for youtube.
+
+RULES
+- The hook leads with the single most surprising real number, and must fit
+  {HOOK_LIMIT['linkedin']} characters for linkedin, {HOOK_LIMIT['youtube']} for youtube.
+- Short punchy sentences. Documentary tone, warm but not promotional.
+- Tease the turn without giving it away.
+- {MIN_HASHTAGS}-{MAX_HASHTAGS} hashtags, niche and specific, as category labels.
+  youtube captions must include "#Shorts".
+- No emoji. No all-caps. No exclamation runs.
+- Do NOT write source URLs. Sources are attached by the system.
+- Every claim you make goes in "claims" with the fact id it comes from and the
+  supporting text copied verbatim from that fact.{repair}
+
+Return JSON only:
+{{"captions": [{{"platform": "linkedin", "variant": 1, "hook": "...",
+  "body": "...", "cta": "...", "hashtags": ["#A"],
+  "claims": [{{"spoken": "...", "fact_id": "F1", "evidence": "..."}}]}}]}}"""
+
+
+def parse_captions(text: str) -> tuple[Caption, ...]:
+    fenced = _FENCE_RE.search(text or "")
+    raw = fenced.group(1) if fenced else (text or "")
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError:
+        raise CaptionError(
+            f"the model did not return JSON. First 200 characters: {raw[:200]!r}"
+        ) from None
+    entries = doc.get("captions") or []
+    if len(entries) != 4:
+        raise CaptionError(f"expected 4 captions, got {len(entries)}")
+    out: list[Caption] = []
+    for e in entries:
+        out.append(Caption(
+            # `or` not a dict default: a model sending "" would otherwise pass
+            # the default straight through. See HANDOFF dead assumption 5.
+            platform=(e.get("platform") or "").strip().lower(),
+            variant=int(e.get("variant") or 0),
+            hook=(e.get("hook") or "").strip(),
+            body=(e.get("body") or "").strip(),
+            cta=(e.get("cta") or "").strip(),
+            hashtags=tuple(t.strip() for t in (e.get("hashtags") or []) if t.strip()),
+            sources=tuple(s.strip() for s in (e.get("sources") or []) if s.strip()),
+            claims=tuple(
+                Claim(spoken=(c.get("spoken") or "").strip(),
+                      fact_id=(c.get("fact_id") or "").strip(),
+                      evidence=(c.get("evidence") or "").strip())
+                for c in (e.get("claims") or [])
+            ),
+        ))
+    return tuple(out)
+
+
+def _problems(story: Story, caps: tuple[Caption, ...]) -> tuple[str, ...]:
+    """Deterministic checks, then the same tracing rule the script runs."""
+    allowed = set(sources_for(story))
+    found: list[str] = []
+    for c in caps:
+        found.extend(f"{c.platform}/{c.variant}: {p}" for p in caption_problems(c))
+        for s in c.sources:
+            if s not in allowed:
+                found.append(
+                    f"{c.platform}/{c.variant}: source {s!r} is not in the story. "
+                    "Sources are copied from the facts, never written."
+                )
+        for problem in validate_block(
+            story, ScriptBlock(n=c.variant, narration=c.prose, claims=c.claims)
+        ):
+            found.append(f"{c.platform}/{c.variant}: {problem.message}")
+    return tuple(found)
+
+
+def generate_captions(
+    state: RunState,
+    ledger: Ledger,
+    story: Story,
+    blocks: tuple[Any, ...] = (),
+    *,
+    through_line: str,
+    chat_fn: Callable[..., Any] | None = None,
+    model: str | None = None,
+) -> tuple[RunState, Ledger, tuple[Caption, ...]]:
+    """Four captions, or none. Never four captions with a warning attached."""
+    chat_fn = chat_fn or chat
+    model = model or MODEL
+    attached = sources_for(story)
+    accepted: tuple[Caption, ...] = ()
+    problems = ""
+
+    def _call() -> tuple[str, str, str]:
+        nonlocal accepted, problems
+        raw = ""
+        for _ in range(MAX_ATTEMPTS):
+            ask = build_prompt(story, through_line=through_line, problems=problems)
+            response = chat_fn(model, prompt=ask, temperature=0.4,
+                              max_tokens=2000, timeout=TIMEOUT_S)
+            raw = getattr(response, "text", "") or ""
+            caps = parse_captions(raw)
+            found = _problems(story, caps)
+            if not found:
+                # Sources are attached here, never taken from the model. A
+                # model that sent them anyway is caught by `_problems` above
+                # and the whole run is refused — silently overwriting an
+                # invented source would hide a model doing the one thing it
+                # was told never to do.
+                accepted = tuple(replace(c, sources=attached) for c in caps)
+                return "pass", f"{len(accepted)} captions, every claim traced", raw
+            problems = "\n".join(found)
+        return "reject", problems, raw
+
+    state, ledger, _ = judged(
+        state, ledger, role="caption", model=model, provider=PROVIDER, call=_call
+    )
+    return state, ledger, accepted

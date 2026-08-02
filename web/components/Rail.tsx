@@ -59,12 +59,11 @@ export function Rail() {
         gap: 6,
       }}
     >
-      <Link
-        href="/"
-        className="anton"
-        style={{ fontSize: 20, color: "var(--color-accent)", marginBottom: 18, textDecoration: "none" }}
-      >
-        N
+      {/* The brand mark, replacing the Anton "N" that stood in for it. The rail
+          renders it at 28px, which is inside the band where the two-bar mark
+          holds and the three-bar one starts to close up. */}
+      <Link href="/" aria-label="Newsdesk — the desk" style={{ marginBottom: 18, lineHeight: 0 }}>
+        <img src="/brand/newsdesk-mark-small-light.svg" alt="" width={28} height={28} />
       </Link>
       {ITEMS.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "Newsdesk — governed generative video for newsrooms",
   description:
     "Verified facts in, a broadcast-style explainer out, with an editorial policy gate in front of it and a verifiable provenance receipt embedded in the file.",
+  // The tab icon is the two-bar mark, not the three-bar one. Measured: at 16px
+  // the full mark's inter-bar gaps fall to 0.8px and it reads as a smudge.
+  icons: { icon: "/brand/favicon.svg", apple: "/brand/newsdesk-mark-light.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

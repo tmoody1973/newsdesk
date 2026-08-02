@@ -10,6 +10,20 @@
 @theme {
   --font-display: var(--font-anton), sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* The named palette the components already reach for. These were being used
+     — text-graphite, border-ink, text-approval-blue, text-stamp-red, and
+     var(--color-ink) / var(--color-stamp-red) inline — but never defined, so
+     Tailwind emitted no rule and the vars resolved to nothing. Roughly sixty
+     references were silently inert. Defining them here is what makes them real;
+     the values track the retuned Modernist tokens above, so there is one
+     palette, not two. */
+  --color-ink: #353334;            /* the logo's ink; = --color-text */
+  --color-paper: #f9f6ee;          /* the logo's ground; = --color-bg */
+  --color-graphite: #7c7a74;       /* = --color-neutral-600 */
+  --color-stamp-red: #f2322f;      /* = --color-accent */
+  --color-approval-blue: #2b5da8;  /* the mockup's published/approval blue */
+  --color-canary: #f2c744;         /* selection only — the rail cell and the wizard step */
 }
 
 .mono { font-family: var(--font-plex-mono), ui-monospace, monospace; }

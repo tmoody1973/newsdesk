@@ -1,0 +1,124 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Sections" [ref=e3]:
+      - link "N" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: 1 Facts & Sources
+        - generic [ref=e26]: 2 Art Direction
+        - generic [ref=e27]: 3 Script Review
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - heading "Every claim starts here." [level=2] [ref=e31]
+          - generic [ref=e32]:
+            - generic [ref=e33]: What is this story about?
+            - textbox "What is this story about?" [ref=e34]:
+              - /placeholder: Who pays when public radio goes dark?
+              - text: Milwaukee has 65,000 lead pipes to pull
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: F1
+              - textbox "One verified statement, as you would say it out loud." [ref=e38]: More than 65,000 lead service lines remain in Milwaukee, and a federal rule requires all of them to be replaced by 2037
+              - button "Remove F1" [ref=e61] [cursor=pointer]: Remove
+            - generic [ref=e39]:
+              - generic [ref=e57]:
+                - generic [ref=e58]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e59]: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+                - button "Remove source" [ref=e60] [cursor=pointer]: ×
+              - generic [ref=e40]:
+                - button "+ link" [ref=e42] [cursor=pointer]
+                - button "+ citation" [ref=e43] [cursor=pointer]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]: F2
+              - textbox "One verified statement, as you would say it out loud." [ref=e65]: Milwaukee replaced roughly 3,300 lead service lines in 2025 and plans to replace 5,000 in 2026, an increase of about 50 percent
+              - button "Remove F2" [ref=e66] [cursor=pointer]: Remove
+            - generic [ref=e67]:
+              - generic [ref=e132]:
+                - generic [ref=e133]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e134]
+                - button "Remove source" [ref=e135] [cursor=pointer]: ×
+              - generic [ref=e68]:
+                - button "+ link" [ref=e70] [cursor=pointer]
+                - button "+ citation" [ref=e71] [cursor=pointer]
+              - paragraph [ref=e127]: Every fact needs a source before it can appear on screen.
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: F3
+              - textbox "One verified statement, as you would say it out loud." [ref=e78]: Replacing a single lead service line costs an average of $10,000
+              - button "Remove F3" [ref=e79] [cursor=pointer]: Remove
+            - generic [ref=e80]:
+              - generic [ref=e136]:
+                - generic [ref=e137]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e138]
+                - button "Remove source" [ref=e139] [cursor=pointer]: ×
+              - generic [ref=e81]:
+                - button "+ link" [ref=e83] [cursor=pointer]
+                - button "+ citation" [ref=e84] [cursor=pointer]
+              - paragraph [ref=e128]: Every fact needs a source before it can appear on screen.
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]: F4
+              - textbox "One verified statement, as you would say it out loud." [ref=e91]: Milwaukee received more than $50 million to fund lead service line replacements in 2026
+              - button "Remove F4" [ref=e92] [cursor=pointer]: Remove
+            - generic [ref=e93]:
+              - generic [ref=e140]:
+                - generic [ref=e141]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e142]
+                - button "Remove source" [ref=e143] [cursor=pointer]: ×
+              - generic [ref=e94]:
+                - button "+ link" [ref=e96] [cursor=pointer]
+                - button "+ citation" [ref=e97] [cursor=pointer]
+              - paragraph [ref=e129]: Every fact needs a source before it can appear on screen.
+          - generic [ref=e101]:
+            - generic [ref=e102]:
+              - generic [ref=e103]: F5
+              - textbox "One verified statement, as you would say it out loud." [ref=e104]: The city passed 10,000 lead service line replacements in 2025, a milestone the Department of Public Works marked publicly
+              - button "Remove F5" [ref=e105] [cursor=pointer]: Remove
+            - generic [ref=e106]:
+              - generic [ref=e144]:
+                - generic [ref=e145]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e146]
+                - button "Remove source" [ref=e147] [cursor=pointer]: ×
+              - generic [ref=e107]:
+                - button "+ link" [active] [ref=e109] [cursor=pointer]
+                - button "+ citation" [ref=e110] [cursor=pointer]
+              - paragraph [ref=e130]: Every fact needs a source before it can appear on screen.
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: F6
+              - textbox "One verified statement, as you would say it out loud." [ref=e117]: Since the beginning of 2024 there has been no cost to owners of one-to-four-unit residential properties included in the replacement program, while an owner who requests a replacement outside it pays $4,000
+              - button "Remove F6" [ref=e118] [cursor=pointer]: Remove
+            - generic [ref=e119]:
+              - generic [ref=e120]:
+                - generic [ref=e121]: UNSOURCED
+                - button "+ link" [ref=e122] [cursor=pointer]
+                - button "+ citation" [ref=e123] [cursor=pointer]
+              - paragraph [ref=e131]: Every fact needs a source before it can appear on screen.
+          - generic [ref=e44]:
+            - button "Add fact" [ref=e45] [cursor=pointer]
+            - button "Check sources" [disabled] [ref=e46]
+        - generic [ref=e47]:
+          - generic [ref=e48]: Sources ledger
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: F1
+              - generic [ref=e52]: dailyreporter.com
+            - generic [ref=e72]: F2
+            - generic [ref=e85]: F3
+            - generic [ref=e98]: F4
+            - generic [ref=e111]: F5
+            - generic [ref=e124]:
+              - generic [ref=e125]: F6
+              - generic [ref=e126]: — UNSOURCED
+          - generic [ref=e54]: 1 of 6 sourced
+  - alert [ref=e55]

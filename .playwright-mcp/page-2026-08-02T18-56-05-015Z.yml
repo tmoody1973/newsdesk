@@ -1,0 +1,106 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - navigation "Sections" [ref=f1e3]:
+      - link "N" [ref=f1e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=f1e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=f1e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=f1e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=f1e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=f1e23]:
+      - generic [ref=f1e24]:
+        - generic [ref=f1e25]: 1 Facts & Sources
+        - generic [ref=f1e26]: 2 Art Direction
+        - generic [ref=f1e27]: 3 Script Review
+      - paragraph [ref=f1e220]: Writing the script — checking every claim against your facts…
+      - generic [ref=f1e28]:
+        - generic [ref=f1e152]:
+          - generic [ref=f1e153]:
+            - heading "Through-line object · pick one" [level=6] [ref=f1e154]
+            - generic [ref=f1e155]:
+              - button [pressed] [ref=f1e156] [cursor=pointer]:
+                - paragraph [ref=f1e160]: Fuse
+              - button [ref=f1e161] [cursor=pointer]:
+                - paragraph [ref=f1e164]: Balloon
+              - button [ref=f1e165] [cursor=pointer]:
+                - paragraph [ref=f1e168]: Tower signal
+              - button [ref=f1e169] [cursor=pointer]:
+                - paragraph [ref=f1e173]: Dollar, cut
+              - button [ref=f1e174] [cursor=pointer]:
+                - paragraph [ref=f1e178]: Record
+              - button [ref=f1e179] [cursor=pointer]:
+                - paragraph [ref=f1e182]: Scale
+          - generic [ref=f1e183]:
+            - heading "Motif per block · defaults from the through-line" [level=6] [ref=f1e184]
+            - generic [ref=f1e185]:
+              - generic [ref=f1e186]:
+                - generic [ref=f1e187]: B1
+                - combobox "Motif for block 1" [ref=f1e188] [cursor=pointer]:
+                  - option "Prop with text" [selected]
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f1e189]:
+                - generic [ref=f1e190]: B2
+                - combobox "Motif for block 2" [ref=f1e191] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map" [selected]
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f1e192]:
+                - generic [ref=f1e193]: B3
+                - combobox "Motif for block 3" [ref=f1e194] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart" [selected]
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f1e195]:
+                - generic [ref=f1e196]: B4
+                - combobox "Motif for block 4" [ref=f1e197] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger" [selected]
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f1e198]:
+                - generic [ref=f1e199]: B5
+                - combobox "Motif for block 5" [ref=f1e200] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd" [selected]
+                  - option "Archival frame"
+              - generic [ref=f1e201]:
+                - generic [ref=f1e202]: B6
+                - combobox "Motif for block 6" [ref=f1e203] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame" [selected]
+          - generic [ref=f1e208] [cursor=pointer]:
+            - paragraph [ref=f1e209]: Add a photo from your reporting.
+            - paragraph [ref=f1e210]: It appears as a cutout and is labeled authentic in the receipt.
+        - generic [ref=f1e212]:
+          - generic [ref=f1e213]:
+            - button "Back" [ref=f1e214] [cursor=pointer]
+            - paragraph [ref=f1e215]: Requests outside this menu are checked against policy. Real people's likenesses and photoreal news scenes will be blocked.
+          - generic [ref=f1e216]:
+            - textbox "Access code" [ref=f1e217]:
+              - /placeholder: access code
+              - text: newsdesk-ba77b4f2
+            - button "Write script" [disabled] [ref=f1e218]
+  - alert [ref=f1e55]

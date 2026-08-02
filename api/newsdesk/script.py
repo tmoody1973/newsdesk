@@ -22,7 +22,7 @@ import time
 from dataclasses import replace
 from typing import Any, Callable
 
-from genblaze_gmicloud.chat import chat
+from genblaze_gmicloud.chat import chat as _gmi_chat
 
 from newsdesk.claims import Claim, ScriptBlock, validate_script
 from newsdesk.decisions import Ledger, judged
@@ -48,7 +48,72 @@ BLOCK_COUNT = 6
 #                                  in every run, and only ever missed on length —
 #                                  which the repair loop fixes. This one.
 MODEL = os.getenv("NEWSDESK_SCRIPT_MODEL", "anthropic/claude-haiku-4.5")
-PROVIDER = "gmicloud"
+
+# The escape hatch, added 2026-08-02 during a live GMI outage.
+#
+# GMI's whole Anthropic-on-Bedrock path returned `400 InvokeModel: operation
+# error Bedrock` for both claude-haiku-4.5 and claude-sonnet-4.5, so the claim
+# checker could not run and every block was refused — correctly, but the script
+# stage was dead. genblaze v0.7.0's release note names this class of failure
+# exactly: "GMICloud: Enhanced preflight to distinguish cataloged from usable
+# models." Catalogued is not usable.
+#
+# The hackathon requires Backblaze B2 and Genblaze; it mandates no provider or
+# model, only that every one is disclosed. Genblaze still carries all four media
+# legs — stills, video, voice, and the fallback chains this app walks itself —
+# so routing ONE text call direct costs the Genblaze story nothing and buys back
+# a working product. The provider name flows into `judged()` either way, so the
+# receipt names what actually ran.
+#
+# `urllib` rather than the `anthropic` SDK on purpose: no new dependency, no
+# lockfile churn, and nothing new in any import graph the day of a deadline.
+PROVIDER = os.getenv("NEWSDESK_SCRIPT_PROVIDER", "gmicloud")
+ANTHROPIC_MODEL = os.getenv("NEWSDESK_ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+
+
+class _Reply:
+    """The one attribute the call sites read off a chat response."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+def _anthropic_chat(model: str, *, prompt: str, temperature: float = 0.2,
+                    max_tokens: int = 2000, timeout: float = 60.0,
+                    **_: Any) -> _Reply:
+    """`genblaze_gmicloud.chat`'s signature, answered by Anthropic directly."""
+    import json as _json
+    import urllib.request as _rq
+
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError(
+            "NEWSDESK_SCRIPT_PROVIDER=anthropic but ANTHROPIC_API_KEY is unset"
+        )
+    body = _json.dumps({
+        "model": model,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode()
+    req = _rq.Request(
+        "https://api.anthropic.com/v1/messages", data=body,
+        headers={"x-api-key": key, "anthropic-version": "2023-06-01",
+                 "content-type": "application/json"},
+    )
+    with _rq.urlopen(req, timeout=timeout) as resp:
+        payload = _json.load(resp)
+    return _Reply("".join(
+        part.get("text", "") for part in payload.get("content", [])
+        if part.get("type") == "text"
+    ))
+
+
+def chat(model: str, **kwargs: Any) -> Any:
+    """Whichever provider `NEWSDESK_SCRIPT_PROVIDER` names."""
+    if PROVIDER == "anthropic":
+        return _anthropic_chat(ANTHROPIC_MODEL, **kwargs)
+    return _gmi_chat(model, **kwargs)
 
 # chat() defaults to 60s, which a six-block generation overruns on a large model.
 # A timeout is recorded as a *reject* by judged(), so too short a value does not

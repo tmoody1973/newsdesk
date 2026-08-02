@@ -1,0 +1,104 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Sections" [ref=e3]:
+      - link "N" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: 1 Facts & Sources
+        - generic [ref=e26]: 2 Art Direction
+        - generic [ref=e27]: 3 Script Review
+      - generic [ref=e28]:
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - heading "Through-line object · pick one" [level=6] [ref=e154]
+            - generic [ref=e155]:
+              - button [ref=e156] [cursor=pointer]:
+                - paragraph [ref=e160]: Fuse
+              - button [ref=e161] [cursor=pointer]:
+                - paragraph [ref=e164]: Balloon
+              - button [pressed] [ref=e165] [cursor=pointer]:
+                - paragraph [ref=e168]: Tower signal
+              - button [ref=e169] [cursor=pointer]:
+                - paragraph [ref=e173]: Dollar, cut
+              - button [ref=e174] [cursor=pointer]:
+                - paragraph [ref=e178]: Record
+              - button [ref=e179] [cursor=pointer]:
+                - paragraph [ref=e182]: Scale
+          - generic [ref=e183]:
+            - heading "Motif per block · defaults from the through-line" [level=6] [ref=e184]
+            - generic [ref=e185]:
+              - generic [ref=e186]:
+                - generic [ref=e187]: B1
+                - combobox "Motif for block 1" [ref=e188] [cursor=pointer]:
+                  - option "Prop with text" [selected]
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=e189]:
+                - generic [ref=e190]: B2
+                - combobox "Motif for block 2" [ref=e191] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map" [selected]
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=e192]:
+                - generic [ref=e193]: B3
+                - combobox "Motif for block 3" [ref=e194] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart" [selected]
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=e195]:
+                - generic [ref=e196]: B4
+                - combobox "Motif for block 4" [ref=e197] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger" [selected]
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=e198]:
+                - generic [ref=e199]: B5
+                - combobox "Motif for block 5" [ref=e200] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd" [selected]
+                  - option "Archival frame"
+              - generic [ref=e201]:
+                - generic [ref=e202]: B6
+                - combobox "Motif for block 6" [ref=e203] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame" [selected]
+          - generic [ref=e208] [cursor=pointer]:
+            - paragraph [ref=e209]: Add a photo from your reporting.
+            - paragraph [ref=e210]: It appears as a cutout and is labeled authentic in the receipt.
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - button "Back" [ref=e214] [cursor=pointer]
+            - paragraph [ref=e215]: Requests outside this menu are checked against policy. Real people's likenesses and photoreal news scenes will be blocked.
+          - generic [ref=e216]:
+            - textbox "Access code" [ref=e217]:
+              - /placeholder: access code
+            - button "Write script" [ref=e218] [cursor=pointer]
+  - alert [ref=e55]

@@ -1,0 +1,62 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation "Sections" [ref=e3]:
+      - link "N" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: 1 Facts & Sources
+        - generic [ref=e26]: 2 Art Direction
+        - generic [ref=e27]: 3 Script Review
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - heading "Every claim starts here." [level=2] [ref=e31]
+          - generic [ref=e32]:
+            - generic [ref=e33]: What is this story about?
+            - textbox "What is this story about?" [ref=e34]:
+              - /placeholder: Who pays when public radio goes dark?
+              - text: Milwaukee has 65,000 lead pipes to pull
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: F1
+              - textbox "One verified statement, as you would say it out loud." [ref=e38]: More than 65,000 lead service lines remain in Milwaukee, and a federal rule requires all of them to be replaced by 2037
+              - button "Remove F1" [ref=e61] [cursor=pointer]: Remove
+            - generic [ref=e39]:
+              - generic [ref=e57]:
+                - generic [ref=e58]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=e59]: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+                - button "Remove source" [ref=e60] [cursor=pointer]: ×
+              - generic [ref=e40]:
+                - button "+ link" [ref=e42] [cursor=pointer]
+                - button "+ citation" [ref=e43] [cursor=pointer]
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - generic [ref=e64]: F2
+              - textbox "One verified statement, as you would say it out loud." [ref=e65]
+              - button "Remove F2" [ref=e66] [cursor=pointer]: Remove
+            - generic [ref=e68]:
+              - generic [ref=e69]: UNSOURCED
+              - button "+ link" [ref=e70] [cursor=pointer]
+              - button "+ citation" [ref=e71] [cursor=pointer]
+          - generic [ref=e44]:
+            - button "Add fact" [active] [ref=e45] [cursor=pointer]
+            - button "Check sources" [disabled] [ref=e46]
+        - generic [ref=e47]:
+          - generic [ref=e48]: Sources ledger
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: F1
+              - generic [ref=e52]: dailyreporter.com
+            - generic [ref=e72]:
+              - generic [ref=e73]: F2
+              - generic [ref=e74]: — UNSOURCED
+          - generic [ref=e54]: 1 of 2 sourced
+  - alert [ref=e55]

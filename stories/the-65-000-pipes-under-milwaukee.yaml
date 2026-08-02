@@ -1,0 +1,69 @@
+# Milwaukee's lead service lines — the CS-6 live workflow test story.
+#
+# Facts verified against their sources on 2026-08-02 by fetching both articles,
+# not recalled. Per the rule at the top of newsdesk-case-studies.md: re-verify
+# every number against its listed source at build time — never script from
+# memory.
+#
+# A REPORTING NOTE THAT BELONGS IN THE RECORD. The two sources disagree on the
+# 2026 target. Milwaukee NNS (15 March 2026) reported 3,800 lines for the year;
+# The Daily Reporter (6 May 2026) reported 5,000. The later figure is used, and
+# the earlier one is written down here rather than quietly dropped — a revised
+# target is a fact about the story, and a reader who finds the March number
+# should be able to see that we knew about it.
+#
+# Art direction: `fuse` — "A deadline, a countdown, an inevitability." The
+# federal deadline is 2037 and the arithmetic is the story, so the through-line
+# object should be the thing that is running out.
+#
+# Gate-clean by construction: no real person is named in any fact, and nothing
+# here asks for a photoreal scene. If this trips POL-1 or POL-3, the gate is
+# miscalibrated.
+
+id: the-65-000-pipes-under-milwaukee
+title: The 65,000 pipes under Milwaukee
+through_line: fuse
+
+facts:
+  - text: >-
+      More than 65,000 lead service lines remain in Milwaukee, and a federal
+      rule requires all of them to be replaced by 2037
+    sources:
+      - url: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+
+  - text: >-
+      Milwaukee replaced roughly 3,300 lead service lines in 2025 and plans to
+      replace 5,000 in 2026, an increase of about 50 percent
+    sources:
+      - url: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+
+  - text: >-
+      Replacing a single lead service line costs an average of $10,000
+    sources:
+      - url: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+
+  - text: >-
+      Milwaukee received more than $50 million to fund lead service line
+      replacements in 2026
+    sources:
+      - url: https://dailyreporter.com/2026/05/06/milwaukee-replace-65000-lead-pipes-by-2037/
+
+  # REWRITTEN after reading the first script at Script Review. The original
+  # said "passed 10,000 replacements in 2025", and the generator put that
+  # beside F2's "roughly 3,300 in 2025" in one block — two numbers for the same
+  # year, reading as a contradiction to anyone listening. Both were true and
+  # both were sourced, so Wall 1 could not catch it: the ambiguity was in the
+  # FACT, not the script. 10,000 is the cumulative milestone, 3,300 is the
+  # year's work, and the fact now says which is which.
+  - text: >-
+      Milwaukee has replaced more than 10,000 lead service lines since the
+      program began, including roughly 3,300 in 2025
+    sources:
+      - url: https://milwaukeenns.org/2026/03/15/milwaukee-water-works-to-replace-3800-lead-service-lines-this-year-on-north-and-south-side-is-your-neighborhood-next/
+
+  - text: >-
+      Since the beginning of 2024 there has been no cost to owners of
+      one-to-four-unit residential properties included in the replacement
+      program, while an owner who requests a replacement outside it pays $4,000
+    sources:
+      - url: https://milwaukeenns.org/2026/03/15/milwaukee-water-works-to-replace-3800-lead-service-lines-this-year-on-north-and-south-side-is-your-neighborhood-next/

@@ -1,0 +1,43 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - navigation "Sections" [ref=f1e3]:
+      - link "N" [ref=f1e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=f1e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=f1e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=f1e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=f1e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=f1e23]:
+      - generic [ref=f1e24]:
+        - generic [ref=f1e25]: 1 Facts & Sources
+        - generic [ref=f1e26]: 2 Art Direction
+        - generic [ref=f1e27]: 3 Script Review
+      - generic [ref=f1e29]:
+        - generic [ref=f1e30]:
+          - heading "Every claim starts here." [level=2] [ref=f1e31]
+          - generic [ref=f1e32]:
+            - generic [ref=f1e33]: What is this story about?
+            - textbox "What is this story about?" [ref=f1e34]:
+              - /placeholder: Who pays when public radio goes dark?
+          - generic [ref=f1e35]:
+            - generic [ref=f1e36]:
+              - generic [ref=f1e37]: F1
+              - textbox "One verified statement, as you would say it out loud." [ref=f1e38]
+            - generic [ref=f1e40]:
+              - generic [ref=f1e41]: UNSOURCED
+              - button "+ link" [ref=f1e42] [cursor=pointer]
+              - button "+ citation" [ref=f1e43] [cursor=pointer]
+          - generic [ref=f1e44]:
+            - button "Add fact" [ref=f1e45] [cursor=pointer]
+            - button "Check sources" [disabled] [ref=f1e46]
+        - generic [ref=f1e47]:
+          - generic [ref=f1e48]: Sources ledger
+          - generic [ref=f1e50]:
+            - generic [ref=f1e51]: F1
+            - generic [ref=f1e52]: — UNSOURCED
+          - generic [ref=f1e54]: 0 of 1 sourced
+  - alert [ref=f1e55]

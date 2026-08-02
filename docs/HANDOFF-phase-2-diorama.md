@@ -7,6 +7,41 @@
 Phase 2 is the current priority. The demo video is not yet recorded;
 `docs/CS-6-live-workflow-test.md` holds its protocol when it comes up.
 
+## ▶ START HERE — exact state at handoff
+
+**Branch `phase-2-diorama`** exists, cut from `main` at `d7b8243`.
+
+**Task 8 was dispatched and is mid-write. The working tree is DIRTY:**
+
+```
+ M api/newsdesk/blockprompt.py
+ M api/newsdesk/brandkit.py
+ M api/newsdesk/storyfile.py
+?? api/tests/test_kits.py
+```
+
+No commit yet, no `task-8-report.md` yet. The subagent that wrote these is not
+reachable from a new session.
+
+**Your first decision, in order of preference:**
+
+1. **Inspect the diff and judge it.** `git diff` plus `cd api && uv run pytest
+   tests/ -q`. If it is coherent and green, finish it yourself: run
+   `tests/test_structure.py`, commit it as Task 8, and carry on to the task
+   review. This is usually the cheapest path — most of the work is done.
+2. **If it is incoherent or red**, `git checkout -- . && rm -f api/tests/test_kits.py`
+   and re-dispatch Task 8 from its brief at
+   `.superpowers/sdd/2026-08-02-pre-demo-features/task-8-brief.md`.
+
+Do not re-dispatch on top of the dirty tree — two implementers writing the same
+files is how you get a mess neither of them understands.
+
+**BASE for Task 8's review package is `d7b8243`.**
+
+The workspace and ledger are at
+`.superpowers/sdd/2026-08-02-pre-demo-features/` — the ledger is 200+ lines and
+carries every Phase 1 ruling. Briefs for Tasks 3–8 are already generated there.
+
 ---
 
 ## Read these before writing anything

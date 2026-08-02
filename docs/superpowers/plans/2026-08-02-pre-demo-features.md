@@ -1280,8 +1280,12 @@ Append to `api/newsdesk/endcard.py`:
 DELIVERY_W = 1080
 DELIVERY_H = 1920
 
-# The house ground. Kits override it; see brand-kit/<kit>/style-tokens.txt.
-DEFAULT_GROUND = "#F2EDE4"
+# The logo kit's paper and ink, not invented here. 816434d retuned the whole app
+# onto the supplied mark: paper #f9f6ee, ink #353334, red #f2322f. A card mixing
+# its own cream with the app's would read as a mistake rather than a choice —
+# which is the exact reason that commit moved the app's red four degrees of hue.
+DEFAULT_GROUND = "#f9f6ee"
+DEFAULT_INK = "0x353334"
 
 
 def render_card(
@@ -1311,7 +1315,7 @@ def render_card(
     if url:
         draw = (
             f"[{last}]drawtext=text='{url}'"
-            f":fontcolor=0x1A1A1A:fontsize={int(height * 0.026)}"
+            f":fontcolor={DEFAULT_INK}:fontsize={int(height * 0.026)}"
             f":x=(w-text_w)/2:y=h/2+{int(height * 0.10)}"
         )
         if font:

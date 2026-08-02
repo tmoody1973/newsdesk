@@ -141,11 +141,18 @@ def test_emoji_are_a_problem():
 
 
 def test_sources_come_from_the_story_verbatim():
-    """A model must never write a citation. These are copied, not composed."""
-    got = sources_for(cs1_story())
-    assert got
-    assert all(s.startswith("http") or ":" in s for s in got)
-    assert len(got) == len(set(got)), "sources are deduped, order preserved"
+    """A model must never write a citation. These are copied, not composed.
+
+    Asserted against the fixture's own values rather than a shape test — a
+    check that only asks "does it look like a URL" would pass on an invented
+    one, which is the single thing this function exists to prevent.
+    """
+    story = cs1_story()
+    expected = tuple(
+        dict.fromkeys(s.value for f in story.facts for s in f.sources)
+    )
+    assert sources_for(story) == expected
+    assert len(expected) == len(set(expected)), "deduped, order preserved"
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -441,6 +448,7 @@ Append to `api/newsdesk/caption.py`:
 
 ```python
 import json
+from dataclasses import replace
 from typing import Any, Callable
 
 from newsdesk.claims import ScriptBlock, validate_block
@@ -574,15 +582,13 @@ def generate_captions(
             model_sources = tuple(
                 s for c in caps for s in getattr(c, "sources", ()) or ()
             )
+            # `replace`, per the immutability constraint — never __dict__ splat.
             caps = tuple(
-                Caption(**{**c.__dict__, "sources": model_sources or attached})
-                for c in caps
+                replace(c, sources=model_sources or attached) for c in caps
             )
             found = _problems(story, caps)
             if not found:
-                accepted = tuple(
-                    Caption(**{**c.__dict__, "sources": attached}) for c in caps
-                )
+                accepted = tuple(replace(c, sources=attached) for c in caps)
                 return "pass", f"{len(accepted)} captions, every claim traced", raw
             problems = "\n".join(found)
         return "reject", problems, ""
@@ -647,9 +653,8 @@ def test_caption_is_the_last_stage():
     assert STAGES.index("caption") > STAGES.index("assembly")
 
 
-def test_caption_stage_stores_captions_on_the_run(monkeypatch):
+def test_caption_stage_stores_captions_on_the_run(cs2, monkeypatch):
     from newsdesk.caption import Caption
-    from newsdesk.pipeline import Pipeline
 
     def _fake(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
         return state, ledger, (Caption(platform="linkedin", variant=1, hook="h",
@@ -657,27 +662,28 @@ def test_caption_stage_stores_captions_on_the_run(monkeypatch):
                                        hashtags=("#A", "#B", "#C")),)
 
     monkeypatch.setattr("newsdesk.pipeline.generate_captions", _fake)
-    pipe = Pipeline.begin(_story_file(), resume=False)
+    pipe = _fresh(cs2)
     result = pipe.stage_caption()
     assert result.ok
     assert pipe.state.final["captions"][0]["platform"] == "linkedin"
 
 
-def test_caption_stage_is_ok_but_empty_when_nothing_traced(monkeypatch):
+def test_caption_stage_is_ok_but_empty_when_nothing_traced(cs2, monkeypatch):
     """A refusal is a normal outcome, not a stage failure — the ledger carries why."""
-    from newsdesk.pipeline import Pipeline
-
     def _none(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
         return state, ledger, ()
 
     monkeypatch.setattr("newsdesk.pipeline.generate_captions", _none)
-    pipe = Pipeline.begin(_story_file(), resume=False)
+    pipe = _fresh(cs2)
     result = pipe.stage_caption()
     assert result.ok and result.detail == "no caption traced"
     assert pipe.state.final.get("captions") == []
 ```
 
-Note: `_story_file()` already exists in `tests/test_pipeline.py`. Reuse it; do not redefine.
+**Use the existing helpers.** `tests/test_pipeline.py` already has a `cs2`
+fixture (`load_story(STORIES / "cs2.yaml")`) and `_fresh(story_file)`, which
+calls **`Pipeline.start(story_file, resume=False)`**. There is no
+`Pipeline.begin` and no `_story_file()` — do not invent either.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -1409,82 +1415,191 @@ refuses instead of producing a blank card with a logo-shaped hole in it."
 
 ---
 
-### Task 7: Wire the end card into assembly
+### Task 7: The `endcard` stage
+
+**There is no `stage_assembly`.** The cut lives in
+`api/scripts/run_cs1_assemble.py`, imported by `cli.py`, and that call site says
+why: *"a working, verified path that has produced a manifest surviving
+`genblaze verify` byte for byte, and a second implementation of it would be a
+second thing to keep true."* **Do not edit that file.** The end card is its own
+stage, running after the cut, reading what the cut published.
 
 **Files:**
-- Modify: `api/newsdesk/pipeline.py` (`stage_assembly`)
+- Modify: `api/newsdesk/pipeline.py` (`STAGES` at :57; new `stage_endcard`)
+- Modify: `api/newsdesk/cli.py` (dispatch)
 - Test: `api/tests/test_pipeline.py`
 
 **Interfaces:**
-- Consumes: `EndCard`, `render_card`, `append_card` from Tasks 5–6
-- Produces: `RunState.final["end_card"]` carrying `EndCard.manifest_entry()`
+- Consumes: `EndCard`, `render_card`, `append_card`, `DURATION_S` from Tasks 5–6
+- Produces: `Pipeline.stage_endcard() -> StageResult` · `STAGES == ("script","gate","blocks","narration","assembly","endcard","caption")` · `RunState.final["end_card"]`
 
 - [ ] **Step 1: Write the failing test**
 
 ```python
 # append to api/tests/test_pipeline.py
-def test_assembly_records_the_end_card_as_supplied_not_generated(monkeypatch):
-    """The one frame no model made is the frame the receipt is loudest about."""
-    from newsdesk.endcard import EndCard
-    from newsdesk.pipeline import Pipeline
+def test_endcard_runs_after_assembly_and_before_caption():
+    from newsdesk.pipeline import STAGES
+    assert STAGES.index("assembly") < STAGES.index("endcard") < STAGES.index("caption")
 
-    pipe = Pipeline.begin(_story_file(), resume=False)
-    card = EndCard(image_uri="b2://runs/x/endcard.png",
-                   url="radiomilwaukee.org", supplied_by="Tarik Moody")
-    pipe.state = pipe.state.__class__(**{
-        **pipe.state.__dict__,
-        "final": {"end_card": card.manifest_entry()},
+
+def test_a_run_with_no_end_card_requested_skips_the_stage(cs2):
+    """Skipped is not a detail — it is the difference between a resumed run and
+    a re-rolled one. Most runs carry no logo and must not pay for a re-encode."""
+    pipe = _fresh(cs2)
+    result = pipe.stage_endcard()
+    assert result.ok and result.skipped
+    assert "end_card" not in (pipe.state.final or {})
+
+
+def test_the_end_card_is_recorded_as_supplied_not_generated(cs2, monkeypatch, tmp_path):
+    """The one frame no model made is the frame the receipt is loudest about."""
+    published = tmp_path / "final.mp4"
+    published.write_bytes(b"stub")
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"stub")
+
+    monkeypatch.setattr("newsdesk.pipeline.render_card",
+                        lambda image, out, **kw: out.write_bytes(b"card") or out)
+    monkeypatch.setattr("newsdesk.pipeline.append_card",
+                        lambda video, card, out, **kw: out.write_bytes(b"joined") or out)
+    monkeypatch.setattr("newsdesk.pipeline._publish_branded", lambda p, run_id: "b2://x/final.mp4")
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(published),
+        "end_card_request": {"local_path": str(logo), "uri": "b2://x/endcard.png",
+                             "url": "radiomilwaukee.org"},
     })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert result.ok and not result.skipped
     entry = pipe.state.final["end_card"]
     assert entry["generated"] is False
     assert entry["supplied_by"] == "Tarik Moody"
     assert entry["url"] == "radiomilwaukee.org"
+
+
+def test_the_end_card_stage_refuses_an_unapproved_run(cs2, tmp_path):
+    """Wall 3. Re-publishing a video is publishing; it needs a named human."""
+    from newsdesk.pipeline import PipelineError
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(tmp_path / "f.mp4"),
+        "end_card_request": {"local_path": "x.png", "uri": "b2://x", "url": None},
+    })
+    with pytest.raises(PipelineError, match="approv"):
+        pipe.stage_endcard()
 ```
+
+Add `from dataclasses import replace` to the test file's imports if absent.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd api && uv run pytest tests/test_pipeline.py -q -k end_card`
-Expected: FAIL — `ImportError` on `newsdesk.endcard` if Task 5 is not merged; otherwise PASS trivially, at which point extend it to drive `stage_assembly` (see Step 3).
+Run: `cd api && uv run pytest tests/test_pipeline.py -q -k endcard`
+Expected: FAIL — `AttributeError: 'Pipeline' object has no attribute 'stage_endcard'`
 
 - [ ] **Step 3: Write the implementation**
 
-In `stage_assembly`, after `master()` produces the mastered file and before the upload:
+In `api/newsdesk/pipeline.py`:
 
 ```python
-        card_spec = (self.state.final or {}).get("end_card_request")
-        if card_spec:
-            from newsdesk.endcard import EndCard, append_card, render_card
+# at :57
+STAGES = ("script", "gate", "blocks", "narration", "assembly", "endcard", "caption")
 
-            image = Path(card_spec["local_path"])
-            card_mp4 = mastered.with_name("endcard.mp4")
-            render_card(image, card_mp4, url=card_spec.get("url"), ffmpeg=ffmpeg)
-            branded = mastered.with_name("final-branded.mp4")
-            append_card(mastered, card_mp4, branded, ffmpeg=ffmpeg)
-            mastered = branded
-            card = EndCard(
-                image_uri=card_spec["uri"],
-                url=card_spec.get("url"),
-                supplied_by=approval.approver,
+# with the other imports
+from newsdesk.endcard import EndCard, append_card, render_card
+
+
+def _publish_branded(path: Path, run_id: str) -> str:
+    """Upload the branded cut beside the original and return its URI.
+
+    Separate function so the test can replace it without a B2 credential; the
+    stage itself must never learn how storage works.
+    """
+    from newsdesk.config import BUCKETS, backend
+
+    store = backend(BUCKETS["runs"])
+    key = f"{run_id}/final-branded.mp4"
+    store.put(key, path.read_bytes())
+    return f"b2://{BUCKETS['runs']}/{key}"
+
+
+# as a new method on Pipeline, after stage_gate
+    def stage_endcard(self) -> StageResult:
+        """Append the publisher's mark to a published cut.
+
+        Its own stage rather than an edit to scripts/run_cs1_assemble.py: that
+        file is the verified path whose manifest survives `genblaze verify`
+        byte for byte, and its own call site says a second implementation would
+        be a second thing to keep true. This reads what it produced instead.
+        """
+        spec = (self.state.final or {}).get("end_card_request")
+        if not spec:
+            return StageResult(name="endcard", ok=True, skipped=True,
+                               detail="no end card requested")
+        if not self.state.is_approved:
+            raise PipelineError(
+                "the end card re-publishes the video, and publishing needs a "
+                "named human — approve the run first"
             )
-            self.state = replace(self.state, final={
-                **(self.state.final or {}), "end_card": card.manifest_entry(),
-            })
+
+        source = Path(self.state.final["uri"])
+        card_mp4 = source.with_name("endcard.mp4")
+        render_card(Path(spec["local_path"]), card_mp4, url=spec.get("url"),
+                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+        branded = source.with_name("final-branded.mp4")
+        append_card(source, card_mp4, branded,
+                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+
+        card = EndCard(image_uri=spec["uri"], url=spec.get("url"),
+                       supplied_by=self.state.approval.approver)
+        self.state = replace(self.state, final={
+            **(self.state.final or {}),
+            "uri": _publish_branded(branded, self.state.run_id),
+            "end_card": card.manifest_entry(),
+        })
+        self.state.save()
+        return StageResult(name="endcard", ok=True,
+                           detail=f"card appended, supplied by {card.supplied_by}")
 ```
 
-- [ ] **Step 4: Run the whole suite**
+Import `resolve_ffmpeg` from `newsdesk.assembly` at the top of `pipeline.py`.
+
+In `api/newsdesk/cli.py`, beside the `caption` branch:
+
+```python
+        if stage == "endcard":
+            return pipe.stage_endcard()
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `cd api && uv run pytest tests/test_pipeline.py -q -k endcard`
+Expected: PASS, 4 tests
+
+- [ ] **Step 5: Run the whole suite**
 
 Run: `cd api && uv run pytest tests/ -q`
-Expected: PASS, 380
+Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add api/newsdesk/pipeline.py api/tests/test_pipeline.py
-git commit -m "feat(pipeline): append the end card and record who supplied it
+git add api/newsdesk/pipeline.py api/newsdesk/cli.py api/tests/test_pipeline.py
+git commit -m "feat(pipeline): the end card is its own stage, not an edit to the cut
 
-supplied_by comes from the approval, not from a form field. The human who
-stamped the run is the human who owns the mark on it, and reading it from the
-approval means the two can never disagree."
+scripts/run_cs1_assemble.py is the verified path whose manifest survives
+genblaze verify byte for byte, and its call site says plainly that a second
+implementation would be a second thing to keep true. So the card reads what the
+cut published rather than reaching inside it, and a run with no logo skips the
+stage instead of paying for a re-encode.
+
+supplied_by comes from the approval, not a form field. The human who stamped the
+run owns the mark on it, and reading it from the approval means the two cannot
+disagree. An unapproved run is refused outright — appending a card re-publishes
+the video, and publishing needs a named human."
 ```
 
 ### Task 7b (follow-up, not blocking)

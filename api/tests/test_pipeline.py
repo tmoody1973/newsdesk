@@ -60,7 +60,9 @@ def test_the_facts_reach_the_state_with_their_sources(cs2):
 def test_stage_order_is_fixed():
     """Renaming or reordering these changes a user-facing flag AND an audit
     record, since stage names appear in the run's event log."""
-    assert STAGES == ("script", "gate", "blocks", "narration", "assembly", "caption")
+    assert STAGES == (
+        "script", "gate", "blocks", "narration", "assembly", "endcard", "caption",
+    )
 
 
 # --- the script stage --------------------------------------------------------
@@ -291,3 +293,62 @@ def _kit():
         (STORIES.parent / "brand-kit" / "through-lines.yaml").read_text(encoding="utf-8")
     )
     return type("Kit", (), {"through_lines": doc})()
+
+
+# --- the end card stage -------------------------------------------------------
+
+
+def test_endcard_runs_after_assembly_and_before_caption():
+    from newsdesk.pipeline import STAGES
+    assert STAGES.index("assembly") < STAGES.index("endcard") < STAGES.index("caption")
+
+
+def test_a_run_with_no_end_card_requested_skips_the_stage(cs2):
+    """Skipped is not a detail — it is the difference between a resumed run and
+    a re-rolled one. Most runs carry no logo and must not pay for a re-encode."""
+    pipe = _fresh(cs2)
+    result = pipe.stage_endcard()
+    assert result.ok and result.skipped
+    assert "end_card" not in (pipe.state.final or {})
+
+
+def test_the_end_card_is_recorded_as_supplied_not_generated(cs2, monkeypatch, tmp_path):
+    """The one frame no model made is the frame the receipt is loudest about."""
+    published = tmp_path / "final.mp4"
+    published.write_bytes(b"stub")
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"stub")
+
+    monkeypatch.setattr("newsdesk.pipeline.render_card",
+                        lambda image, out, **kw: out.write_bytes(b"card") or out)
+    monkeypatch.setattr("newsdesk.pipeline.append_card",
+                        lambda video, card, out, **kw: out.write_bytes(b"joined") or out)
+    monkeypatch.setattr("newsdesk.pipeline._publish_branded", lambda p, run_id: "b2://x/final.mp4")
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(published),
+        "end_card_request": {"local_path": str(logo), "uri": "b2://x/endcard.png",
+                             "url": "radiomilwaukee.org"},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert result.ok and not result.skipped
+    entry = pipe.state.final["end_card"]
+    assert entry["generated"] is False
+    assert entry["supplied_by"] == "Tarik Moody"
+    assert entry["url"] == "radiomilwaukee.org"
+
+
+def test_the_end_card_stage_refuses_an_unapproved_run(cs2, tmp_path):
+    """Wall 3. Re-publishing a video is publishing; it needs a named human."""
+    from newsdesk.pipeline import PipelineError
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(tmp_path / "f.mp4"),
+        "end_card_request": {"local_path": "x.png", "uri": "b2://x", "url": None},
+    })
+    with pytest.raises(PipelineError, match="approv"):
+        pipe.stage_endcard()

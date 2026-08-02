@@ -37,12 +37,15 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from newsdesk.assembly import resolve_ffmpeg
 from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
 from newsdesk.caption import generate_captions
 from newsdesk.decisions import Ledger
+from newsdesk.endcard import EndCard, append_card, render_card
 from newsdesk.narration import narrate, store_take, take_window, voice_specs
 from newsdesk.policy.gate import check
 from newsdesk.scene import ThroughLine, build_block_prompt
@@ -55,7 +58,7 @@ BLOCKS = 6
 # Stage names, in the only order they can run. Each is the name a caller passes
 # to `--only` / `--from`, and the name that appears in the run's event log, so
 # renaming one changes a user-visible interface and an audit record at once.
-STAGES = ("script", "gate", "blocks", "narration", "assembly", "caption")
+STAGES = ("script", "gate", "blocks", "narration", "assembly", "endcard", "caption")
 
 
 class PipelineError(RuntimeError):
@@ -182,6 +185,52 @@ class Pipeline:
         self.state = self.state.log("gate", f"{BLOCKS} blocks x {rules} rules passed")
         return self._record(StageResult(
             "gate", True, detail=f"{BLOCKS} blocks x {rules} rules, $0 spent",
+        ))
+
+    def stage_endcard(self) -> StageResult:
+        """Append the publisher's mark to a published cut.
+
+        Its own stage rather than an edit to scripts/run_cs1_assemble.py: that
+        file is the verified path whose manifest survives `genblaze verify`
+        byte for byte, and its own call site says a second implementation would
+        be a second thing to keep true. This reads what it produced instead.
+        """
+        spec = (self.state.final or {}).get("end_card_request")
+        if not spec:
+            return self._record(StageResult(
+                name="endcard", ok=True, skipped=True,
+                detail="no end card requested",
+            ))
+        if not self.state.is_approved:
+            raise PipelineError(
+                "the end card re-publishes the video, and publishing needs a "
+                "named human — approve the run first"
+            )
+
+        source = Path(self.state.final["uri"])
+        card_mp4 = source.with_name("endcard.mp4")
+        render_card(Path(spec["local_path"]), card_mp4, url=spec.get("url"),
+                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+        branded = source.with_name("final-branded.mp4")
+        append_card(source, card_mp4, branded,
+                    ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+
+        card = EndCard(image_uri=spec["uri"], url=spec.get("url"),
+                       supplied_by=self.state.approval.approver)
+        self.state = replace(self.state, final={
+            **(self.state.final or {}),
+            "uri": _publish_branded(branded, self.state.run_id),
+            "end_card": card.manifest_entry(),
+        })
+        # NO self.state.save() here. RunState.save() calls backend(...).put() —
+        # it reaches B2 over the network, and api/.env carries live credentials,
+        # so a stage that saves makes every test touching it hit the network and
+        # breaks the suite's $0 / no-network guarantee. No stage method saves;
+        # persistence is Pipeline.save(), called by the CLI. Found in Task 3,
+        # where the same line was written into the brief and caught before merge.
+        return self._record(StageResult(
+            name="endcard", ok=True,
+            detail=f"card appended, supplied by {card.supplied_by}",
         ))
 
     def stage_caption(self, *, chat_fn: Callable[..., Any] | None = None) -> StageResult:
@@ -383,6 +432,20 @@ class Pipeline:
 
     def save(self) -> str:
         return self.state.save()
+
+
+def _publish_branded(path: Path, run_id: str) -> str:
+    """Upload the branded cut beside the original and return its URI.
+
+    Separate function so the test can replace it without a B2 credential; the
+    stage itself must never learn how storage works.
+    """
+    from newsdesk.config import BUCKETS, backend
+
+    store = backend(BUCKETS["runs"])
+    key = f"{run_id}/final-branded.mp4"
+    store.put(key, path.read_bytes())
+    return f"b2://{BUCKETS['runs']}/{key}"
 
 
 def _attach_blocks(state: RunState, blocks: Sequence[Any]) -> RunState:

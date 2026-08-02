@@ -36,11 +36,12 @@ Design notes:
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Sequence
 
 from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
+from newsdesk.caption import generate_captions
 from newsdesk.decisions import Ledger
 from newsdesk.narration import narrate, store_take, take_window, voice_specs
 from newsdesk.policy.gate import check
@@ -54,7 +55,7 @@ BLOCKS = 6
 # Stage names, in the only order they can run. Each is the name a caller passes
 # to `--only` / `--from`, and the name that appears in the run's event log, so
 # renaming one changes a user-visible interface and an audit record at once.
-STAGES = ("script", "gate", "blocks", "narration", "assembly")
+STAGES = ("script", "gate", "blocks", "narration", "assembly", "caption")
 
 
 class PipelineError(RuntimeError):
@@ -181,6 +182,35 @@ class Pipeline:
         self.state = self.state.log("gate", f"{BLOCKS} blocks x {rules} rules passed")
         return self._record(StageResult(
             "gate", True, detail=f"{BLOCKS} blocks x {rules} rules, $0 spent",
+        ))
+
+    def stage_caption(self, *, chat_fn: Callable[..., Any] | None = None) -> StageResult:
+        """Social captions for a finished run. Text only — about a cent.
+
+        Runs after assembly because the request was for captions once the video
+        exists. It reads the script, not the video, so it is safe to re-run with
+        `--only caption` without touching a single rendered frame.
+        """
+        self.state, self.ledger, caps = generate_captions(
+            self.state,
+            self.ledger,
+            self.story_file.story,
+            tuple(self.state.blocks),
+            through_line=self.state.art_direction.get("through_line", ""),
+            chat_fn=chat_fn,
+        )
+        payload = [
+            {"platform": c.platform, "variant": c.variant, "hook": c.hook,
+             "body": c.body, "cta": c.cta, "hashtags": list(c.hashtags),
+             "sources": list(c.sources), "text": c.text}
+            for c in caps
+        ]
+        self.state = replace(
+            self.state, final={**(self.state.final or {}), "captions": payload}
+        )
+        return self._record(StageResult(
+            "caption", True,
+            detail=f"{len(caps)} captions" if caps else "no caption traced",
         ))
 
     async def stage_blocks(
@@ -357,8 +387,6 @@ class Pipeline:
 
 def _attach_blocks(state: RunState, blocks: Sequence[Any]) -> RunState:
     """Put the written lines on the state so a resume can skip the script stage."""
-    from dataclasses import replace
-
     return replace(
         state,
         blocks=tuple(

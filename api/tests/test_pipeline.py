@@ -60,7 +60,7 @@ def test_the_facts_reach_the_state_with_their_sources(cs2):
 def test_stage_order_is_fixed():
     """Renaming or reordering these changes a user-facing flag AND an audit
     record, since stage names appear in the run's event log."""
-    assert STAGES == ("script", "gate", "blocks", "narration", "assembly")
+    assert STAGES == ("script", "gate", "blocks", "narration", "assembly", "caption")
 
 
 # --- the script stage --------------------------------------------------------
@@ -246,6 +246,40 @@ def test_one_dead_block_fails_the_stage_and_names_it(cs2, monkeypatch):
     assert not result.ok
     assert "4" in result.detail
     assert result.cost_usd > 0, "a failed run still spent what it spent"
+
+
+def test_caption_is_the_last_stage():
+    """After the video is done, per the request. --only caption re-runs for cents."""
+    from newsdesk.pipeline import STAGES
+    assert STAGES[-1] == "caption"
+    assert STAGES.index("caption") > STAGES.index("assembly")
+
+
+def test_caption_stage_stores_captions_on_the_run(cs2, monkeypatch):
+    from newsdesk.caption import Caption
+
+    def _fake(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, (Caption(platform="linkedin", variant=1, hook="h",
+                                       body="b", cta="c",
+                                       hashtags=("#A", "#B", "#C")),)
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _fake)
+    pipe = _fresh(cs2)
+    result = pipe.stage_caption()
+    assert result.ok
+    assert pipe.state.final["captions"][0]["platform"] == "linkedin"
+
+
+def test_caption_stage_is_ok_but_empty_when_nothing_traced(cs2, monkeypatch):
+    """A refusal is a normal outcome, not a stage failure — the ledger carries why."""
+    def _none(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, ()
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _none)
+    pipe = _fresh(cs2)
+    result = pipe.stage_caption()
+    assert result.ok and result.detail == "no caption traced"
+    assert pipe.state.final.get("captions") == []
 
 
 def _kit():

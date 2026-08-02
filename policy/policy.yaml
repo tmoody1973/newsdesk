@@ -41,24 +41,44 @@ rules:
       caller can edit it, the prohibitions are advisory.
     layers: [deterministic]
     check: >
-      NEGATIVE must be present and byte-identical to brand-kit/negative.txt.
+      NEGATIVE must be present and begin, byte-for-byte, with the platform floor
+      (brand-kit/floor.txt). A kit may only append to that floor, never edit or
+      remove from it.
     note: >
       Enforceable at render time on video only. Gemini image generation has no
       negative-prompt mechanism — Google's docs state unlisted parameters are
       silently ignored — so on the image step this rule proves intent, not
       outcome. POL-4 and POL-6 are what actually catch image violations.
     changelog: >
-      v2 (2026-07-28) extended the constant with "repeated text, doubled text,
-      two lines of identical text". The exclusion list previously named text in
-      general but not its most common rendered form — models that do produce
-      lettering tend to produce it twice, stacked or mirrored, and a term for the
-      general case does not reliably suppress the specific one. Terms taken from
-      the Vox-Style Explainer Prompt Pack (Zubair Trabzada, AI Workshop), whose
-      negative prompt carries them for exactly this reason.
-      The change history lives here because it cannot live in the file: the whole
-      of brand-kit/negative.txt is the constant, byte-for-byte, so a comment line
-      would become part of what is sent to the provider. Only-ever-extended, per
-      the rule above; nothing was removed.
+      v3 (2026-08-02) split the single constant into brand-kit/floor.txt (the
+      harms POL-1 and POL-3 exist for — photorealism, live-action footage, 3D
+      render, lip-sync, talking characters, watermark, logo — which no kit may
+      ever narrow) and a per-kit brand-kit/negative.txt of additions above that
+      floor. The house kit's negative.txt now carries only the text-exclusion
+      terms it used to share with the floor; in effect the house kit is
+      unchanged, because negative_line("house") still composes to the same set
+      of prohibitions. What changed is that the check above no longer reads
+      "byte-identical to brand-kit/negative.txt" — that wording compared a kit
+      against itself and would have let a second kit rewrite its own negative.txt
+      to drop the floor's terms. The check now reads "begins with the floor",
+      which no kit can pass by editing its own file.
+      This split exists because the diorama kit's letterpress-label signature
+      needs to permit exactly one kind of on-prop text (POL-4's narrow,
+      fact-mapped case) while every other harm this line exists to forbid stays
+      absolute. Add-only above a single shared constant could not express that;
+      a fixed floor plus a narrowable per-kit remainder can.
+      v2 (2026-07-28) extended the (then-single) constant with "repeated text,
+      doubled text, two lines of identical text". The exclusion list previously
+      named text in general but not its most common rendered form — models that
+      do produce lettering tend to produce it twice, stacked or mirrored, and a
+      term for the general case does not reliably suppress the specific one.
+      Terms taken from the Vox-Style Explainer Prompt Pack (Zubair Trabzada, AI
+      Workshop), whose negative prompt carries them for exactly this reason.
+      The change history lives here because it cannot live in the file: the
+      whole of brand-kit/floor.txt and brand-kit/negative.txt is sent to the
+      provider byte-for-byte, so a comment line would become part of the
+      prohibition. Both wordings stay in this record; corrections are kept, not
+      overwritten.
 
   - id: POL-3
     name: No fabricated news scenes
@@ -124,6 +144,24 @@ rules:
       does not eliminate it. POL-6 is the enforcement.
       The element budget bounds the damage where text is permitted. It does
       nothing about text that arrives uninvited, which stays POL-6's job.
+    changelog: >
+      v3 (2026-08-02) — this rule's text is now enforced by two layers that
+      moved independently. The vision/element-budget checks above are
+      unchanged. What moved is the NEGATIVE-line half: "readable text, letters,
+      words, numbers, captions, subtitles" used to live inside the single
+      constant POL-2 fixed absolutely, so no kit could ever request the on-prop
+      lettering this rule's own "entered fact ID" exception describes. It now
+      lives in brand-kit/negative.txt, the narrowable per-kit remainder above
+      POL-2's floor — narrowable meaning a kit may drop terms from its own
+      copy, never that it may touch the floor. The house kit's copy is
+      unchanged in effect: negative_line("house") still carries every term
+      above, so this rule's threshold, element budget, and known limitation all
+      hold exactly as before for the house kit. A kit built to permit its one
+      fact-mapped on-prop label — the diorama kit's letterpress signature — is
+      the reason the split exists; nothing about what counts as a violation
+      changed to make room for it. Previous wording had no changelog because
+      the rule had not changed since v2; this entry starts the record here
+      rather than backfill a history that was not written contemporaneously.
 
   - id: POL-5
     name: Narration fits its block

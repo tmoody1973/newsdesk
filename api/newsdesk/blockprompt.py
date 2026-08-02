@@ -87,6 +87,12 @@ def kit_dir() -> Path:
     return Path(override) if override else DEFAULT_BRAND_KIT
 
 
+def kit_dir_for(kit_id: str | None = None) -> Path:
+    """The directory holding one kit's files. The house kit is the bare root."""
+    base = kit_dir()
+    return base if not kit_id or kit_id == HOUSE_KIT else base / kit_id
+
+
 @lru_cache(maxsize=8)
 def _read(name: str, directory: str) -> str:
     """Cached kit read, keyed on the directory as well as the file.
@@ -98,9 +104,20 @@ def _read(name: str, directory: str) -> str:
     return (Path(directory) / name).read_text(encoding="utf-8").strip()
 
 
-def negative_line() -> str:
-    """The fixed exclusion line. A policy constant, not a suggestion (POL-2)."""
-    return _read("negative.txt", str(kit_dir()))
+def platform_floor() -> str:
+    """The harms POL-1 and POL-3 exist for. No kit may narrow this, ever.
+
+    Read from the kit ROOT, never from a kit subdirectory — that is what makes
+    it a floor. An outlet that could write its own floor is compared against
+    itself and passes trivially.
+    """
+    return _read("floor.txt", str(kit_dir()))
+
+
+def negative_line(kit_id: str = HOUSE_KIT) -> str:
+    """floor + this kit's additions. Add-only above the floor."""
+    additions = _read("negative.txt", str(kit_dir_for(kit_id)))
+    return f"{platform_floor()}, {additions}" if additions else platform_floor()
 
 
 def style_tokens() -> str:
@@ -187,14 +204,15 @@ class BlockPrompt:
 
     @property
     def negative_is_intact(self) -> bool:
-        """POL-2: byte-identical to the brand kit constant.
+        """POL-2: the emitted NEGATIVE must carry the platform floor intact.
 
         Startswith rather than equality so an AgentLoop-tightened prompt still
-        passes — tightening may only *add* exclusions, never remove them.
+        passes — tightening may only *add* exclusions, never remove them. The
+        floor, not a kit's full negative_line(), is the source of truth: a kit
+        is compared against the one thing it cannot narrow, not against itself.
         """
-        return self.negative == negative_line() or self.negative.startswith(
-            negative_line() + ","
-        )
+        floor = platform_floor()
+        return self.negative == floor or self.negative.startswith(floor + ",")
 
 
 def parse(text: str) -> BlockPrompt:

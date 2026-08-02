@@ -27,15 +27,35 @@
 | 2 — Caption generation + claim tracing | complete, reviewed clean |
 | 3 — `caption` pipeline stage | complete, reviewed clean |
 | 4 — Through-line suggestion | complete, reviewed clean — **but see the gap** |
-| 5 — End-card validation (`0e842ae`) | **committed, NOT reviewed — resume here** |
-| 6 — Render + concat the card | not started |
+| 5 — End-card validation (`0e842ae`) | reviewed ✅ Approved, **one Important finding rerouted into Task 6** — see below |
+| 6 — Render + concat the card | **in flight — resume here** |
 | 7 — `endcard` stage | not started |
 
-**First action:** review Task 5, then continue.
+**Task 5 does not fully close until Task 6 is reviewed.** Its review returned one
+Important finding: `validate_bytes` shipped with zero test coverage. The
+reviewer ruled — correctly — that the missing *caller* is fairly deferred to
+whoever wires the upload path, but the missing *test* is not, since
+`validate_bytes` is callable today with no dependency on anything downstream.
+
+That fix was **not** sent back to Task 5's implementer. Task 6 was already
+editing `api/newsdesk/endcard.py` and `api/tests/test_endcard.py`, and two
+implementers writing the same files collide. So three `validate_bytes` tests
+(empty, oversized, valid) were folded into Task 6 with instructions to attribute
+them to Task 5's review. **This is a recorded deviation from the process, in the
+ledger.** When you review Task 6, confirm those three tests exist *and are
+falsifiable* — delete the size check in `validate_bytes` and case 2 must fail.
+Only then is Task 5 closed.
+
+**First action:** check whether Task 6 committed. If the working tree is dirty
+with no commit and no report, the implementer stalled mid-write — inspect the
+diff, decide whether the work is sound, and either nudge it to finish or reset
+and re-dispatch.
 
 ```bash
+git log --oneline 7520d99..HEAD          # Task 6's commit, if any
+git status --short                        # dirty means mid-write
 SK=~/.claude/plugins/cache/claude-plugins-official/superpowers/6.2.0/skills/subagent-driven-development
-"$SK/scripts/review-package" docs/superpowers/plans/2026-08-02-pre-demo-features.md 94dddc8 HEAD
+"$SK/scripts/review-package" docs/superpowers/plans/2026-08-02-pre-demo-features.md 7520d99 HEAD
 ```
 
 Briefs for Tasks 3–7 are already generated in the workspace directory.

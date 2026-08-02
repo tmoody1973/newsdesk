@@ -20,6 +20,7 @@ from newsdesk.script import (
     chat,
     generate_script,
     parse_blocks,
+    wants_thinking_disabled,
 )
 from newsdesk.state import RunState
 
@@ -602,3 +603,69 @@ def test_a_claude_4_call_keeps_the_temperature_it_was_given(monkeypatch):
     monkeypatch.setattr("newsdesk.script._gmi_chat", _spy)
     chat("anthropic/claude-haiku-4.5", prompt="hi", temperature=0.4, max_tokens=16)
     assert seen["temperature"] == 0.4
+
+
+# --- thinking, and the 200 OK that carries nothing ---------------------------
+#
+# The Claude 5 family reasons past its whole output budget on a prompt this
+# size — GMI reported thinking_tokens == output_tokens == 4000 and a content
+# block of length zero. An empty 200 is worse than a 400: it reaches
+# parse_blocks as "the model did not return JSON" and judged() files it as a
+# reject, so a broken request wears the costume of the claim checker working.
+
+
+def test_a_claude_5_call_asks_for_thinking_to_be_disabled(monkeypatch):
+    seen: dict = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs)
+        return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr("newsdesk.script._gmi_chat", _spy)
+    chat("anthropic/claude-sonnet-5", prompt="hi", temperature=0.2, max_tokens=2000)
+    assert seen["thinking"] == {"type": "disabled"}
+    assert "temperature" not in seen        # both quirks, one call
+
+
+def test_no_thinking_flag_is_sent_to_a_model_that_never_asked_for_one(monkeypatch):
+    """A parameter another model does not understand is a 400 waiting to happen."""
+    seen: dict = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs)
+        return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr("newsdesk.script._gmi_chat", _spy)
+    chat("anthropic/claude-haiku-4.5", prompt="hi", temperature=0.4, max_tokens=2000)
+    assert "thinking" not in seen
+    assert seen["temperature"] == 0.4
+
+
+def test_the_anthropic_escape_hatch_sends_no_thinking_flag(monkeypatch):
+    """Direct Messages API leaves thinking off unless asked. Do not ask."""
+    seen: dict = {}
+
+    def _spy(model, **kwargs):
+        seen.update(kwargs, model=model)
+        return type("R", (), {"text": "ok"})()
+
+    monkeypatch.setattr("newsdesk.script._anthropic_chat", _spy)
+    monkeypatch.setattr("newsdesk.script.PROVIDER", "anthropic")
+    monkeypatch.setattr("newsdesk.script.ANTHROPIC_MODEL", "claude-sonnet-5-20260514")
+    chat("anthropic/claude-sonnet-5", prompt="hi", temperature=0.2, max_tokens=2000)
+    assert "thinking" not in seen
+    assert "temperature" not in seen        # still dropped: it is a Claude 5
+
+
+def test_the_two_quirks_travel_together(monkeypatch):
+    """Every model that loses temperature gains the thinking flag, and vice versa.
+
+    They were found in the same hour on the same family. Pinning them as one
+    set is what stops a future model getting half the treatment.
+    """
+    for model in ["anthropic/claude-sonnet-5", "anthropic/claude-opus-5",
+                  "anthropic/claude-fable-5"]:
+        assert not accepts_temperature(model) and wants_thinking_disabled(model)
+    for model in ["anthropic/claude-haiku-4.5", "anthropic/claude-sonnet-4.6",
+                  "deepseek-ai/DeepSeek-V3-0324"]:
+        assert accepts_temperature(model) and not wants_thinking_disabled(model)

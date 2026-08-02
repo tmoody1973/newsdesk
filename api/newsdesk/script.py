@@ -134,13 +134,55 @@ def accepts_temperature(model: str) -> bool:
     return not _NO_TEMPERATURE_RE.search(model)
 
 
+# The second half of the same discovery, and the more dangerous half.
+#
+# The Claude 5 family reasons before it answers, and on a prompt this size it
+# reasons past the entire output budget. GMI's own accounting is unambiguous —
+# `/v1/messages` with max_tokens=4000 returned:
+#
+#     stop_reason            max_tokens
+#     output_tokens          4000
+#     output_tokens_details  {"thinking_tokens": 4000}
+#
+# 4000 of 4000 tokens spent thinking, none writing, one content block of type
+# `thinking` and length zero. Raising the ceiling does not help: 2000 and 8000
+# both came back empty, the second billing four times as much to do it. This is
+# not GMI dropping the reasoning — the answer was never reached.
+#
+# Which produced the worst failure shape this codebase has: a 200 OK carrying an
+# empty string. Not a 400, not a timeout, nothing that reads as broken. It
+# arrives at `parse_blocks` as "the model did not return JSON", is recorded by
+# judged() as a *reject*, and the run refuses six blocks while looking exactly
+# like the claim checker doing its job. It cost a live run on the deployed
+# worker to find, and $0 to survive, because the gate held.
+#
+# `thinking: {"type": "disabled"}` is the documented Anthropic-shaped parameter —
+# GMI's own docs show the `enabled` form with `budget_tokens` — and it is the fix:
+# stop_reason `stop`, clean JSON, first try. Sent only to the models that need
+# it, because a parameter no other model understands is a 400 waiting to happen.
+#
+# Worth stating plainly: this buys Sonnet 5's writing, not its reasoning. If the
+# script role ever wants the reasoning, the answer is a budget large enough for
+# both halves, not this flag.
+_THINKING_DISABLED = {"type": "disabled"}
+
+
+def wants_thinking_disabled(model: str) -> bool:
+    """True for models that reason past their whole output budget by default."""
+    return bool(_NO_TEMPERATURE_RE.search(model))
+
+
 def chat(model: str, **kwargs: Any) -> Any:
     """Whichever provider `NEWSDESK_SCRIPT_PROVIDER` names."""
     target = ANTHROPIC_MODEL if PROVIDER == "anthropic" else model
     if not accepts_temperature(target):
         kwargs = {k: v for k, v in kwargs.items() if k != "temperature"}
     if PROVIDER == "anthropic":
+        # The direct Messages API leaves thinking off unless asked, so the flag
+        # is neither needed nor sent — `_anthropic_chat` builds its own body.
         return _anthropic_chat(ANTHROPIC_MODEL, **kwargs)
+    if wants_thinking_disabled(target):
+        kwargs = {**kwargs, "thinking": _THINKING_DISABLED}
     return _gmi_chat(model, **kwargs)
 
 # chat() defaults to 60s, which a six-block generation overruns on a large model.

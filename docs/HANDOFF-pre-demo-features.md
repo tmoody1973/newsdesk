@@ -112,6 +112,53 @@ Feature 2 is therefore a library function, not a usable feature. Closing it need
 - `.superpowers/` is gitignored (added this session).
 - **Assembly is not a pipeline stage.** It lives in `api/scripts/run_cs1_assemble.py`, imported by `cli.py`, and its call site says a second implementation would be *"a second thing to keep true"*. **Do not edit it.** Task 7 was redesigned as its own `endcard` stage for exactly this reason, on Tarik's ruling.
 
+## ⛔ THE CUT — the end card is not shippable, and this is why
+
+**Decided by Tarik 2026-08-02 ~17:45 CDT, after the whole-branch review.**
+
+**The word is CUT.** The criterion dropped is **"a branded video carrying the
+publisher's logo and website."** Features 1 (captions) and 2 (through-line
+suggestion) stand; feature 4 does not ship.
+
+This is not prudence and it is not a deferral. It is a capability the product
+was asked for and will not have on submission.
+
+**Two reasons, both verified against the source, not reasoned about:**
+
+1. **It cannot work in production.** `stage_endcard` does
+   `Path(self.state.final["uri"])`. But `run_cs1_assemble.py:367-380` writes
+   `store.get_durable_url(key)`, and `get_durable_url` returns a **credential-free
+   `https://` URL**, never a path. Every test fed the stage
+   `str(tmp_path / "final.mp4")`. The code was written for the fixture.
+2. **If it did work, it would make the receipt lie.** The genblaze manifest is a
+   UUID box appended at EOF (`genblaze_core/media/mp4.py`, `GENBLAZE_UUID`,
+   `_build_uuid_box`). `append_card` re-encodes through concat, which destroys
+   it — but the stage leaves `final["manifest_sha256"]` and
+   `final["verify"] = "genblaze verify --fetch"` untouched. **A run with an end
+   card ships a receipt instructing a judge to verify a video that will fail
+   verification.** On the product whose entire argument is the receipt. Also
+   `_publish_branded` writes to the `runs` bucket, which is not in
+   `PUBLIC_BUCKETS`, while `web/lib/b2.ts:90` reads `assets` — so the player
+   would serve the unbranded cut regardless.
+
+**Merging it is safe.** Nothing anywhere writes `end_card_request`, so
+`stage_endcard` always takes its skip path. `STAGES` grew; no existing behaviour
+changed; 397 tests pass. The code stays on the branch as the starting point for
+whoever finishes it.
+
+**What finishing it requires**, in order: give the stage a real local source
+(either record the mastered path on `final` at assembly time, or download
+`final["uri"]` into a work dir); re-embed the genblaze manifest over the
+concatenated file, or delete `manifest_sha256`/`verify` and state plainly that a
+branded cut is not verifiable — silently keeping them is the one unacceptable
+option; publish to `assets` rather than `runs`; and keep `final["uri"]`'s format
+(`https://`) consistent with what assembly writes.
+
+**Also unshipped, same shape, recorded honestly:** `suggest_through_line`,
+`validate_bytes` and `validate_url` have **no callers**. `end_card_request` is
+written by nothing outside tests. Three of the four features are correct
+libraries with no door. Feature 1 (captions) is the one that is wired end to end.
+
 ## Deliberate cut, already named to Tarik
 
 The spec says the music bed's 2.5s fade should resolve **on** the end card. Task 6 concatenates the card after mastering instead, leaving `build_filtergraph()` untouched — that file produced the `0.0 LUFS` defect and the ffmpeg-5.1 `framelog` failure. **Criterion dropped: "music lands on the logo."** The bed fades under the last narration and the card holds in silence. Task 7b records the follow-up.

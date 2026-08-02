@@ -23,3 +23,6 @@ MEMORY/
 # Playwright MCP scratch (snapshots, console logs, screenshots)
 .playwright-mcp/
 cs6-*.png
+
+# Subagent-driven-development scratch (ledger, briefs, review packages)
+.superpowers/

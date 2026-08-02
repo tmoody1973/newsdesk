@@ -36,12 +36,16 @@ Design notes:
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from newsdesk.assembly import resolve_ffmpeg
 from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
+from newsdesk.caption import generate_captions
 from newsdesk.decisions import Ledger
+from newsdesk.endcard import EndCard, EndCardError, append_card, render_card
 from newsdesk.narration import narrate, store_take, take_window, voice_specs
 from newsdesk.policy.gate import check
 from newsdesk.scene import ThroughLine, build_block_prompt
@@ -54,7 +58,7 @@ BLOCKS = 6
 # Stage names, in the only order they can run. Each is the name a caller passes
 # to `--only` / `--from`, and the name that appears in the run's event log, so
 # renaming one changes a user-visible interface and an audit record at once.
-STAGES = ("script", "gate", "blocks", "narration", "assembly")
+STAGES = ("script", "gate", "blocks", "narration", "assembly", "endcard", "caption")
 
 
 class PipelineError(RuntimeError):
@@ -181,6 +185,126 @@ class Pipeline:
         self.state = self.state.log("gate", f"{BLOCKS} blocks x {rules} rules passed")
         return self._record(StageResult(
             "gate", True, detail=f"{BLOCKS} blocks x {rules} rules, $0 spent",
+        ))
+
+    def stage_endcard(self) -> StageResult:
+        """Append the publisher's mark to a published cut.
+
+        Its own stage rather than an edit to scripts/run_cs1_assemble.py: that
+        file is the verified path whose manifest survives `genblaze verify`
+        byte for byte, and its own call site says a second implementation would
+        be a second thing to keep true. This reads what it produced instead.
+        """
+        final = self.state.final or {}
+        # A card already on `final` means an earlier run of this stage already
+        # applied it and `final["uri"]` now points at the *branded* b2:// URI —
+        # not a local path. Re-running would hand that URI to `Path(...)` and
+        # die inside `append_card`'s ffmpeg concat instead of skipping cleanly,
+        # which is exactly the resumability this module promises (module
+        # docstring, :15). Checked first, before the "was one requested" branch
+        # below, since a leftover `end_card_request` is expected to still be
+        # sitting on `final` once applied.
+        if final.get("end_card"):
+            return self._record(StageResult(
+                name="endcard", ok=True, skipped=True,
+                detail="end card already applied",
+            ))
+        spec = final.get("end_card_request")
+        if not spec:
+            return self._record(StageResult(
+                name="endcard", ok=True, skipped=True,
+                detail="no end card requested",
+            ))
+        if not self.state.is_approved:
+            raise PipelineError(
+                "the end card re-publishes the video, and publishing needs a "
+                "named human — approve the run first"
+            )
+
+        source = Path(self.state.final["uri"])
+        card_mp4 = source.with_name("endcard.mp4")
+        branded = source.with_name("final-branded.mp4")
+        try:
+            render_card(Path(spec["local_path"]), card_mp4, url=spec.get("url"),
+                        ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+            append_card(source, card_mp4, branded,
+                        ffmpeg=resolve_ffmpeg(needs_subtitles=False))
+        except EndCardError as exc:
+            # EndCardError is a plain ValueError, not a PipelineError — cli.py
+            # only catches PipelineError around the stage loop, so left alone
+            # this crashes with a raw traceback. A corrupt logo is the path a
+            # journalist hits by uploading a bad image, not an operator error,
+            # so it goes through the same ok=False channel stage_blocks uses
+            # for a failed encode: cli.py prints "FAIL"/"stopped at endcard"
+            # cleanly AND still calls pipe.save(), so the approval already on
+            # this run survives a retry with a fixed image.
+            return self._record(StageResult(
+                name="endcard", ok=False, detail=str(exc),
+            ))
+
+        card = EndCard(image_uri=spec["uri"], url=spec.get("url"),
+                       supplied_by=self.state.approval.approver)
+        self.state = replace(self.state, final={
+            **(self.state.final or {}),
+            "uri": _publish_branded(branded, self.state.run_id),
+            "end_card": card.manifest_entry(),
+        })
+        # NO self.state.save() here. RunState.save() calls backend(...).put() —
+        # it reaches B2 over the network, and api/.env carries live credentials,
+        # so a stage that saves makes every test touching it hit the network and
+        # breaks the suite's $0 / no-network guarantee. No stage method saves;
+        # persistence is Pipeline.save(), called by the CLI. Found in Task 3,
+        # where the same line was written into the brief and caught before merge.
+        return self._record(StageResult(
+            name="endcard", ok=True,
+            detail=f"card appended, supplied by {card.supplied_by}",
+        ))
+
+    def stage_caption(self, *, chat_fn: Callable[..., Any] | None = None) -> StageResult:
+        """Social captions for a finished run. Text only — about a cent.
+
+        Runs after assembly because the request was for captions once the video
+        exists. It reads the script, not the video, so it is safe to re-run with
+        `--only caption` without touching a single rendered frame — unlike
+        `stage_script`, this stage does NOT skip when captions already exist,
+        because re-running is exactly how an operator retries a batch that
+        failed for a fixable reason (a provider outage, an over-strict check).
+        What it must never do is let that retry ERASE a batch that already
+        traced. `caps` is only () on a refusal — provider down, or
+        MAX_ATTEMPTS of repair exhausted — and writing `[]` over captions a
+        previous run traced successfully would silently discard good, paid-for
+        output. So the write is guarded: only a non-empty result replaces
+        `final["captions"]`. See `stage_script`, :138, for the same principle
+        applied to blocks instead of writes.
+        """
+        self.state, self.ledger, caps = generate_captions(
+            self.state,
+            self.ledger,
+            self.story_file.story,
+            tuple(self.state.blocks),
+            through_line=self.state.art_direction.get("through_line", ""),
+            chat_fn=chat_fn,
+        )
+        if caps:
+            payload = [
+                {"platform": c.platform, "variant": c.variant, "hook": c.hook,
+                 "body": c.body, "cta": c.cta, "hashtags": list(c.hashtags),
+                 "sources": list(c.sources), "text": c.text,
+                 # The claim trail, not just the prose it produced — the
+                 # receipt's whole point is that every caption traces to an
+                 # entered fact, and it cannot show that from prose alone.
+                 "claims": [
+                     {"spoken": cl.spoken, "fact_id": cl.fact_id, "evidence": cl.evidence}
+                     for cl in c.claims
+                 ]}
+                for c in caps
+            ]
+            self.state = replace(
+                self.state, final={**(self.state.final or {}), "captions": payload}
+            )
+        return self._record(StageResult(
+            "caption", True,
+            detail=f"{len(caps)} captions" if caps else "no caption traced",
         ))
 
     async def stage_blocks(
@@ -355,10 +479,22 @@ class Pipeline:
         return self.state.save()
 
 
+def _publish_branded(path: Path, run_id: str) -> str:
+    """Upload the branded cut beside the original and return its URI.
+
+    Separate function so the test can replace it without a B2 credential; the
+    stage itself must never learn how storage works.
+    """
+    from newsdesk.config import BUCKETS, backend
+
+    store = backend(BUCKETS["runs"])
+    key = f"{run_id}/final-branded.mp4"
+    store.put(key, path.read_bytes())
+    return f"b2://{BUCKETS['runs']}/{key}"
+
+
 def _attach_blocks(state: RunState, blocks: Sequence[Any]) -> RunState:
     """Put the written lines on the state so a resume can skip the script stage."""
-    from dataclasses import replace
-
     return replace(
         state,
         blocks=tuple(

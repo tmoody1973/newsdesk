@@ -60,7 +60,9 @@ def test_the_facts_reach_the_state_with_their_sources(cs2):
 def test_stage_order_is_fixed():
     """Renaming or reordering these changes a user-facing flag AND an audit
     record, since stage names appear in the run's event log."""
-    assert STAGES == ("script", "gate", "blocks", "narration", "assembly")
+    assert STAGES == (
+        "script", "gate", "blocks", "narration", "assembly", "endcard", "caption",
+    )
 
 
 # --- the script stage --------------------------------------------------------
@@ -248,6 +250,73 @@ def test_one_dead_block_fails_the_stage_and_names_it(cs2, monkeypatch):
     assert result.cost_usd > 0, "a failed run still spent what it spent"
 
 
+def test_caption_is_the_last_stage():
+    """After the video is done, per the request. --only caption re-runs for cents."""
+    from newsdesk.pipeline import STAGES
+    assert STAGES[-1] == "caption"
+    assert STAGES.index("caption") > STAGES.index("assembly")
+
+
+def test_caption_stage_stores_captions_on_the_run(cs2, monkeypatch):
+    from newsdesk.caption import Caption
+    from newsdesk.claims import Claim
+
+    def _fake(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, (Caption(
+            platform="linkedin", variant=1, hook="h", body="b", cta="c",
+            hashtags=("#A", "#B", "#C"),
+            claims=(Claim(spoken="h", fact_id="F1", evidence="e"),),
+        ),)
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _fake)
+    pipe = _fresh(cs2)
+    result = pipe.stage_caption()
+    assert result.ok
+    assert pipe.state.final["captions"][0]["platform"] == "linkedin"
+    # I4: the claim trail has to reach the receipt, not just the prose it
+    # produced — the whole feature's headline claim is that every caption
+    # traces to an entered fact.
+    assert pipe.state.final["captions"][0]["claims"] == [
+        {"spoken": "h", "fact_id": "F1", "evidence": "e"}
+    ]
+
+
+def test_caption_stage_is_ok_but_empty_when_nothing_traced(cs2, monkeypatch):
+    """A refusal is a normal outcome, not a stage failure — the ledger carries why."""
+    def _none(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, ()
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _none)
+    pipe = _fresh(cs2)
+    result = pipe.stage_caption()
+    assert result.ok and result.detail == "no caption traced"
+    # I1: no prior captions existed, so there is nothing to preserve — but a
+    # refusal must not manufacture a `captions: []` entry either.
+    assert "captions" not in (pipe.state.final or {})
+
+
+def test_a_failed_caption_retry_leaves_existing_captions_intact(cs2, monkeypatch):
+    """I1: `caps` is empty on a provider outage or exhausted repair attempts.
+    Overwriting `final['captions']` with that empty result would erase a
+    batch a previous run already traced successfully — and captions are
+    deliberately safe to re-run (unlike the script stage), so this refusal
+    has to be a no-op, not data loss."""
+    def _none(state, ledger, story, blocks, *, through_line, chat_fn=None, model=None):
+        return state, ledger, ()
+
+    monkeypatch.setattr("newsdesk.pipeline.generate_captions", _none)
+    pipe = _fresh(cs2)
+    existing = [{"platform": "linkedin", "variant": 1, "hook": "h", "body": "b",
+                 "cta": "c", "hashtags": ["#A", "#B", "#C"], "sources": [],
+                 "text": "h\n\nb\n\nc", "claims": []}]
+    pipe.state = replace(pipe.state, final={"captions": existing})
+
+    result = pipe.stage_caption()
+
+    assert result.ok and result.detail == "no caption traced"
+    assert pipe.state.final["captions"] == existing
+
+
 def _kit():
     """The published brand kit, as the pipeline reads it — from the file that
     IS the kit under version control, so these tests never touch B2."""
@@ -257,3 +326,118 @@ def _kit():
         (STORIES.parent / "brand-kit" / "through-lines.yaml").read_text(encoding="utf-8")
     )
     return type("Kit", (), {"through_lines": doc})()
+
+
+# --- the end card stage -------------------------------------------------------
+
+
+def test_endcard_runs_after_assembly_and_before_caption():
+    from newsdesk.pipeline import STAGES
+    assert STAGES.index("assembly") < STAGES.index("endcard") < STAGES.index("caption")
+
+
+def test_a_run_with_no_end_card_requested_skips_the_stage(cs2):
+    """Skipped is not a detail — it is the difference between a resumed run and
+    a re-rolled one. Most runs carry no logo and must not pay for a re-encode."""
+    pipe = _fresh(cs2)
+    result = pipe.stage_endcard()
+    assert result.ok and result.skipped
+    assert "end_card" not in (pipe.state.final or {})
+
+
+def test_the_end_card_is_recorded_as_supplied_not_generated(cs2, monkeypatch, tmp_path):
+    """The one frame no model made is the frame the receipt is loudest about."""
+    published = tmp_path / "final.mp4"
+    published.write_bytes(b"stub")
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"stub")
+
+    monkeypatch.setattr("newsdesk.pipeline.render_card",
+                        lambda image, out, **kw: out.write_bytes(b"card") or out)
+    monkeypatch.setattr("newsdesk.pipeline.append_card",
+                        lambda video, card, out, **kw: out.write_bytes(b"joined") or out)
+    monkeypatch.setattr("newsdesk.pipeline._publish_branded", lambda p, run_id: "b2://x/final.mp4")
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(published),
+        "end_card_request": {"local_path": str(logo), "uri": "b2://x/endcard.png",
+                             "url": "radiomilwaukee.org"},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert result.ok and not result.skipped
+    entry = pipe.state.final["end_card"]
+    assert entry["generated"] is False
+    assert entry["supplied_by"] == "Tarik Moody"
+    assert entry["url"] == "radiomilwaukee.org"
+
+
+def test_the_endcard_stage_skips_when_a_card_is_already_applied(cs2, monkeypatch):
+    """A second pass over `--from endcard` (or any resume reaching this stage
+    again) must not re-encode: `final["uri"]` is already the branded b2://
+    URI, and treating it as a local path a second time is the exact bug this
+    guards against. render_card/append_card must not even be called."""
+    def _boom(*a, **kw):
+        raise AssertionError("stage re-rendered a card that was already applied")
+
+    monkeypatch.setattr("newsdesk.pipeline.render_card", _boom)
+    monkeypatch.setattr("newsdesk.pipeline.append_card", _boom)
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": "b2://newsdesk-runs/cs2/final-branded.mp4",
+        "end_card_request": {"local_path": "x.png", "uri": "b2://x", "url": None},
+        "end_card": {"image": "b2://x", "url": None, "supplied_by": "Tarik Moody",
+                     "generated": False},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert result.ok and result.skipped
+
+
+def test_a_render_failure_surfaces_through_the_pipelines_own_failure_channel(
+    cs2, monkeypatch, tmp_path,
+):
+    """A corrupt logo must fail as `StageResult(ok=False)`, the channel every
+    other stage failure uses — not leak `EndCardError` (a plain ValueError)
+    past cli.py's `except PipelineError` as a raw traceback in front of a
+    judge."""
+    from newsdesk.endcard import EndCardError
+
+    published = tmp_path / "final.mp4"
+    published.write_bytes(b"stub")
+
+    monkeypatch.setattr(
+        "newsdesk.pipeline.render_card",
+        lambda image, out, **kw: (_ for _ in ()).throw(
+            EndCardError("logo.png is not an image ffmpeg can read")
+        ),
+    )
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(published),
+        "end_card_request": {"local_path": "logo.png", "uri": "b2://x/logo.png",
+                             "url": None},
+    })
+    pipe.state = pipe.state.approve("Tarik Moody")
+
+    result = pipe.stage_endcard()
+    assert not result.ok
+    assert "not an image" in result.detail
+
+
+def test_the_end_card_stage_refuses_an_unapproved_run(cs2, tmp_path):
+    """Wall 3. Re-publishing a video is publishing; it needs a named human."""
+    from newsdesk.pipeline import PipelineError
+
+    pipe = _fresh(cs2)
+    pipe.state = replace(pipe.state, final={
+        "uri": str(tmp_path / "f.mp4"),
+        "end_card_request": {"local_path": "x.png", "uri": "b2://x", "url": None},
+    })
+    with pytest.raises(PipelineError, match="approv"):
+        pipe.stage_endcard()

@@ -36,6 +36,8 @@ _CREDENTIALS = {
     "blocks": ["GMI_API_KEY", "B2_KEY_ID", "B2_APP_KEY"],
     "narration": ["ELEVENLABS_API_KEY", "LMNT_API_KEY", "B2_KEY_ID", "B2_APP_KEY"],
     "assembly": ["B2_KEY_ID", "B2_APP_KEY"],
+    "endcard": ["B2_KEY_ID", "B2_APP_KEY"],
+    "caption": ["GMI_API_KEY"],
 }
 
 
@@ -206,6 +208,10 @@ def _run_stage(pipe: Pipeline, stage: str, *, stills_only: bool):
             detail="MP4 cut, manifest embedded, verify it with `genblaze verify --fetch`"
             if code == 0 else "assembly refused or failed — see above",
         ))
+    if stage == "endcard":
+        return pipe.stage_endcard()
+    if stage == "caption":
+        return pipe.stage_caption()
     raise PipelineError(f"unknown stage {stage}")
 
 

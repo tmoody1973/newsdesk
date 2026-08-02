@@ -172,7 +172,11 @@ def _run_stage(pipe: Pipeline, stage: str, *, stills_only: bool):
         return asyncio.run(
             pipe.stage_narration(
                 speak=speaker({"elevenlabs": elevenlabs, "lmnt": lmnt}),
-                kit_voice=load_kit().voice,
+                # The narrator is part of the kit: the diorama's is a war
+                # reporter, the house's a measured documentary voice. Loading
+                # the house kit here voiced every story in the house narrator
+                # however its style-tokens.txt read.
+                kit_voice=load_kit(kit_id=pipe.story_file.kit).voice,
             )
         )
     if stage == "assembly":

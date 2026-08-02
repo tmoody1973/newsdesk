@@ -241,3 +241,24 @@ def test_the_published_negative_line_carries_the_duplication_terms():
     for term in ("repeated text", "doubled text", "two lines of identical text"):
         assert term in line
     assert build_block_prompt(all_through_lines()[0], 1).negative_is_intact
+
+
+def test_a_kit_brings_its_own_ground_and_accent():
+    """The ground and the corner accents are house constants — warm cream card,
+    navy and coral. Left unconditional they contradict the diorama's own STYLE
+    line inside the same prompt: sepia newsprint above, cream collage below.
+    They come from the kit's art-direction file, defaulting to the house."""
+    from newsdesk.scene import ANCHOR, GROUND, ThroughLine, build_scene
+
+    entry = {"id": "keg-fuse", "label": "A powder keg", "framing": "a squat paper keg",
+             "escalation": "the fuse shortens"}
+    doc = {"scene": {"ground": "An aged sepia newsprint diorama interior",
+                     "anchor": "One burnt-orange paper element is the only colour in frame"}}
+
+    scene = build_scene(ThroughLine.from_kit(entry, doc=doc), 1)
+    assert "aged sepia newsprint diorama interior" in scene
+    assert "One burnt-orange paper element is the only colour in frame" in scene
+    assert GROUND not in scene and ANCHOR not in scene
+
+    house = build_scene(ThroughLine.from_kit(entry), 1)
+    assert GROUND in house and ANCHOR in house

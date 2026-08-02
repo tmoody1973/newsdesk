@@ -317,9 +317,13 @@ def test_a_failed_caption_retry_leaves_existing_captions_intact(cs2, monkeypatch
     assert pipe.state.final["captions"] == existing
 
 
-def _kit():
+def _kit(**_kw):
     """The published brand kit, as the pipeline reads it — from the file that
-    IS the kit under version control, so these tests never touch B2."""
+    IS the kit under version control, so these tests never touch B2.
+
+    Takes `**_kw` because the real `brandkit.load` is keyword-only and is called
+    with `kit_id=`. A fake with a narrower signature than the thing it replaces
+    is a test that passes for the wrong reason right up until it doesn't."""
     import yaml
 
     doc = yaml.safe_load(
@@ -441,3 +445,119 @@ def test_the_end_card_stage_refuses_an_unapproved_run(cs2, tmp_path):
     })
     with pytest.raises(PipelineError, match="approv"):
         pipe.stage_endcard()
+
+
+# --- the kit, threaded from the story file -----------------------------------
+#
+# Task 8 keyed the kits and Task 10 made the script stage emit a prop label;
+# neither reached the run path. `brandkit.load()` was called with no kit_id and
+# every prompt was built from the house files, so a story saying `kit: diorama`
+# rendered as the house kit and its own style-tokens.txt was never read.
+
+
+def _reply(label: str | None = None, n: int = 6) -> str:
+    """A model reply in the shape `script.parse_blocks` actually parses.
+
+    Built through the PRODUCING module rather than by constructing ScriptBlock
+    directly: `label` arrives from a JSON key the generator emits, and a fixture
+    that skips that step proves only that the two halves agree with each other.
+    """
+    import json
+
+    return json.dumps({"blocks": [
+        {
+            "n": i,
+            "role": "evidence",
+            "narration": f"Line {i} states a third of its budget in plain words.",
+            "claims": [{"spoken": "a third", "fact_id": "F1", "evidence": "a third"}],
+            **({"label": label} if label else {}),
+        }
+        for i in range(1, n + 1)
+    ]})
+
+
+def test_a_prop_label_survives_attach_persist_restore(cs2):
+    """The first resume after scripting used to lose it silently.
+
+    `state.Block` had no `label` field, so `_attach_blocks` dropped what the
+    script stage had just validated and `_blocks_from_state` rebuilt every block
+    with `label=None`. The word on the prop was gone by the time the blocks
+    stage read the state back — with no error, because a missing label is a
+    legal state.
+    """
+    from newsdesk.pipeline import _attach_blocks, _blocks_from_state
+    from newsdesk.script import parse_blocks
+
+    blocks = parse_blocks(_reply(label="WATERTOWN"))
+    assert blocks[0].label == "WATERTOWN", "the fixture must carry what the parser emits"
+
+    state = _attach_blocks(_fresh(cs2).state, blocks)
+    assert state.blocks[0].label == "WATERTOWN"
+
+    # Through JSON, because that is the actual round trip: the state is written
+    # to B2 between stages, not held in memory.
+    restored = RunState.from_json(state.to_json())
+    assert [b.label for b in _blocks_from_state(restored)] == ["WATERTOWN"] * 6
+
+
+def test_a_house_block_still_round_trips_with_no_label(cs2):
+    """House stories emit no label at all and must stay byte-identical."""
+    from newsdesk.pipeline import _attach_blocks, _blocks_from_state
+    from newsdesk.script import parse_blocks
+
+    state = _attach_blocks(_fresh(cs2).state, parse_blocks(_reply()))
+    restored = RunState.from_json(state.to_json())
+    assert all(b.label is None for b in _blocks_from_state(restored))
+
+
+def test_the_script_stage_asks_for_the_storys_own_kit(cs2, monkeypatch):
+    """`build_prompt` only asks for a prop label when the kit carries props. A
+    diorama story whose script stage says "house" never gets a label at all."""
+    import newsdesk.pipeline as p
+
+    seen = {}
+
+    def _capture(state, ledger, story, **kw):
+        seen.update(kw)
+        return state, ledger, ()
+
+    monkeypatch.setattr(p, "generate_script", _capture)
+    _fresh(replace(cs2, kit="diorama")).stage_script()
+    assert seen.get("kit") == "diorama"
+
+
+def test_the_published_kit_is_fetched_under_the_storys_kit_id(cs2, monkeypatch):
+    """`brandkit.load()` with no kit_id reads kit/ — the house prefix — so a
+    diorama run resolved its through-line against the house menu."""
+    import newsdesk.pipeline as p
+
+    seen = {}
+
+    def _capture(**kw):
+        seen.update(kw)
+        return _kit()
+
+    monkeypatch.setattr(p, "load_kit", _capture)
+    with pytest.raises(PipelineError):
+        # cs2's through-line is not in the fake menu's kit; the load is what
+        # this test is about, and it happens first.
+        _fresh(replace(cs2, kit="diorama", through_line="no-such-object")).through_line()
+    assert seen.get("kit_id") == "diorama"
+
+
+def test_every_block_prompt_is_built_in_the_storys_kit(cs2, monkeypatch):
+    """The gate and the blocks stage must both build in the story's kit, or the
+    gate passes on one prompt and a different one is paid for."""
+    import newsdesk.pipeline as p
+
+    monkeypatch.setattr(p, "load_kit", lambda **kw: _kit())
+    seen: list[str] = []
+    real = p.build_block_prompt
+
+    def _capture(through_line, n, blocks, **kw):
+        seen.append(kw.get("kit"))
+        return real(through_line, n, blocks)
+
+    monkeypatch.setattr(p, "build_block_prompt", _capture)
+    _fresh(replace(cs2, kit="diorama")).stage_gate()
+    assert seen and set(seen) == {"diorama"}

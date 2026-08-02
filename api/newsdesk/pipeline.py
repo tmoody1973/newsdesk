@@ -143,8 +143,12 @@ class Pipeline:
             ))
 
         kwargs = {"chat_fn": chat_fn} if chat_fn else {}
+        # The kit decides whether the generator is asked for a prop label at
+        # all. Left at the default, a diorama story is scripted as a house one
+        # and comes back with nothing to print on its props.
         state, ledger, blocks = generate_script(
-            self.state, self.ledger, self.story_file.story, **kwargs
+            self.state, self.ledger, self.story_file.story,
+            kit=self.story_file.kit, **kwargs
         )
         self.state, self.ledger = state, ledger
 
@@ -170,7 +174,7 @@ class Pipeline:
         through_line = self.through_line()
         blocked: list[str] = []
         for n in range(1, BLOCKS + 1):
-            prompt = build_block_prompt(through_line, n, BLOCKS)
+            prompt = build_block_prompt(through_line, n, BLOCKS, kit=self.story_file.kit)
             verdict = check(prompt)
             if not verdict.passed:
                 blocked.append(f"block {n}: {verdict.explain()}")
@@ -181,7 +185,9 @@ class Pipeline:
                 "gate", False, detail="\n".join(blocked),
             ))
 
-        rules = len(check(build_block_prompt(through_line, 1, BLOCKS)).findings)
+        rules = len(check(
+            build_block_prompt(through_line, 1, BLOCKS, kit=self.story_file.kit)
+        ).findings)
         self.state = self.state.log("gate", f"{BLOCKS} blocks x {rules} rules passed")
         return self._record(StageResult(
             "gate", True, detail=f"{BLOCKS} blocks x {rules} rules, $0 spent",
@@ -320,7 +326,10 @@ class Pipeline:
         refuses to reach this stage without it. One wall, one owner.
         """
         through_line = self.through_line()
-        prompts = [build_block_prompt(through_line, n, BLOCKS) for n in range(1, BLOCKS + 1)]
+        prompts = [
+            build_block_prompt(through_line, n, BLOCKS, kit=self.story_file.kit)
+            for n in range(1, BLOCKS + 1)
+        ]
         prefix = self.story_file.clip_prefix.rstrip("/")
 
         async def one(prompt: Any) -> tuple[int, bool, float, str, str | None, str | None]:
@@ -454,7 +463,7 @@ class Pipeline:
         list of what it does offer. `brandkit.load()` reads B2 and never falls
         back to the working copy beside the code.
         """
-        kit = load_kit()
+        kit = load_kit(kit_id=self.story_file.kit)
         wanted = self.story_file.through_line
         entry = next(
             (e for e in kit.through_lines["through_lines"] if e["id"] == wanted), None
@@ -465,7 +474,9 @@ class Pipeline:
                 f"the published brand kit offers no through-line '{wanted}'. "
                 f"Available: {offered}"
             )
-        return ThroughLine.from_kit(entry)
+        # The whole document, not only the entry: the ground and the accent are
+        # kit-wide art direction and every menu item in that kit shares them.
+        return ThroughLine.from_kit(entry, doc=kit.through_lines)
 
     def _record(self, result: StageResult) -> StageResult:
         self.results.append(result)
@@ -509,6 +520,7 @@ def _attach_blocks(state: RunState, blocks: Sequence[Any]) -> RunState:
                     {"spoken": c.spoken, "fact_id": c.fact_id, "evidence": c.evidence}
                     for c in b.claims
                 ),
+                label=b.label,
             )
             for b in blocks
         ),
@@ -518,10 +530,10 @@ def _attach_blocks(state: RunState, blocks: Sequence[Any]) -> RunState:
 def _blocks_from_state(state: RunState) -> tuple[Any, ...]:
     """Rehydrate just enough of the script for the later stages.
 
-    Narration and block number are all the downstream stages read. Notably this
-    does NOT re-run the model: re-generating a script produces DIFFERENT lines,
-    which would invalidate takes already cut from the old ones and any human
-    approval attached to that cut.
+    Narration, block number and the prop label are what the downstream stages
+    read. Notably this does NOT re-run the model: re-generating a script
+    produces DIFFERENT lines, which would invalidate takes already cut from the
+    old ones and any human approval attached to that cut.
     """
     from newsdesk.claims import Claim, ScriptBlock
 
@@ -533,6 +545,7 @@ def _blocks_from_state(state: RunState) -> tuple[Any, ...]:
                 Claim(spoken=c["spoken"], fact_id=c["fact_id"], evidence=c["evidence"])
                 for c in b.claims
             ),
+            label=b.label,
         )
         for b in sorted(state.blocks, key=lambda b: b.n)
     )

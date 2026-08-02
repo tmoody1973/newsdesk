@@ -69,3 +69,29 @@ def test_every_kit_negative_starts_with_the_floor():
     """The whole POL-2 argument. Without it a kit is compared against itself."""
     for kit_id in ("house", "diorama"):
         assert negative_line(kit_id).startswith(platform_floor())
+
+
+def test_a_prompt_built_in_a_kit_carries_that_kits_style_and_exclusions(tmp_path, monkeypatch):
+    """Threading the kit id into `negative_line` alone leaves every diorama
+    block rendering in the HOUSE look: `style-tokens.txt` is the kit's whole
+    appearance and it was read from the root unconditionally, so the kit's own
+    file was published, verified, and never sent to a provider."""
+    from newsdesk.blockprompt import BlockPrompt
+
+    (tmp_path / "floor.txt").write_text("photorealism", encoding="utf-8")
+    (tmp_path / "negative.txt").write_text("house additions", encoding="utf-8")
+    (tmp_path / "style-tokens.txt").write_text("the house look", encoding="utf-8")
+    kit = tmp_path / "diorama"
+    kit.mkdir()
+    (kit / "negative.txt").write_text("kit additions", encoding="utf-8")
+    (kit / "style-tokens.txt").write_text("the diorama look", encoding="utf-8")
+    monkeypatch.setenv("NEWSDESK_BRAND_KIT_DIR", str(tmp_path))
+
+    built = BlockPrompt.build(1, scene="s", motion="m", audio="a", kit="diorama")
+    assert "the diorama look" in built.style_reference
+    assert "the house look" not in built.style_reference
+    assert built.negative == "photorealism, kit additions"
+
+    house = BlockPrompt.build(1, scene="s", motion="m", audio="a")
+    assert "the house look" in house.style_reference
+    assert house.negative == "photorealism, house additions"

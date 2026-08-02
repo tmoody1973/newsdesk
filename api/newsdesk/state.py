@@ -82,6 +82,12 @@ class Block:
     # derived at receipt time: a claim map rebuilt later is a reconstruction, and
     # the receipt's whole value is that it is not one.
     claims: tuple[dict[str, Any], ...] = ()
+    # The letterpress word printed on this block's prop, for kits that carry
+    # one. On the state for the same reason `claims` is: it was validated at the
+    # script stage against an entered fact, and the run is resumed from this
+    # document — a label that only exists in memory is gone at the first resume,
+    # silently, because a block without one is a legal block.
+    label: str | None = None
 
 
 @dataclass(frozen=True)

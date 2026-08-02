@@ -60,6 +60,9 @@ NARRATION_PREFIX = "cs1-narration"
 CLIP_PREFIX = "cs1-tower-signal/"
 WORK = Path("out/assemble")
 SLUG = "cs1"
+# Which kit's subtitle style and assembly contract this cut is burned with.
+# CS-1 is a house story, so the default keeps that command byte-identical.
+KIT = "house"
 
 
 def arg(flag: str, default: str | None = None) -> str | None:
@@ -175,8 +178,12 @@ def fetch(store, key: str, dest: Path) -> Path:
 
 def configure(story_file) -> None:
     """Point this module at one story. Call before main()."""
-    global RUN_ID, NARRATION_PREFIX, CLIP_PREFIX, WORK, SLUG
+    global RUN_ID, NARRATION_PREFIX, CLIP_PREFIX, WORK, SLUG, KIT
     RUN_ID = story_file.run_id
+    # The subtitle style is the kit's, not the house's: burning cream-on-ink
+    # house captions over a sepia diorama is the same defect as rendering it in
+    # the house palette, one layer later and after the money is spent.
+    KIT = story_file.kit
     # Takes are NOT under the run id: narration is written to its own prefix so
     # a re-rolled art direction cannot invalidate audio that is already cut, and
     # so the CS-5 sabotage run has somewhere to write that will not overwrite
@@ -221,7 +228,7 @@ def main() -> int:
         return 1
     print("font      Anton resolved")
 
-    kit = load()
+    kit = load(kit_id=KIT)
     contract = assembly_contract(kit.voice)
     takes_s = [b.voice_duration_s for b in sorted(state.blocks, key=lambda b: b.n)]
     blocks = plan_timeline(takes_s, contract)

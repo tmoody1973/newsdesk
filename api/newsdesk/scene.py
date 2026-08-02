@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from newsdesk.blockprompt import BlockPrompt
+from newsdesk.blockprompt import HOUSE_KIT, BlockPrompt
 
 # The ground, verbatim from the house style. Stated first because it is the one
 # element every block shares and the one that drifted when it was left implicit
@@ -166,9 +166,21 @@ class ThroughLine:
     # continuous (a fuse shortening, a balloon filling), which still gets the
     # percentage phrasing below.
     countable: dict | None = None
+    # The kit's ground and corner accent. Defaulted to the house constants so
+    # every existing caller builds a byte-identical scene, and overridable
+    # because they are the two clauses that name a PALETTE: a diorama block
+    # built with the house ground says "aged sepia newsprint" in its STYLE line
+    # and "warm cream paper, navy and coral" three words later in its SCENE.
+    # They live in the kit's own art-direction file rather than here for the
+    # same reason `framing` does — this is craft, and the kit is where craft
+    # lives.
+    ground: str = GROUND
+    anchor: str = ANCHOR
 
     @classmethod
-    def from_kit(cls, entry: dict) -> ThroughLine:
+    def from_kit(cls, entry: dict, doc: dict | None = None) -> ThroughLine:
+        """One menu entry, plus the kit-wide `scene:` block it came from."""
+        scene = (doc or {}).get("scene") or {}
         return cls(
             id=entry["id"],
             label=entry["label"],
@@ -178,6 +190,8 @@ class ThroughLine:
             surface=_flatten(entry.get("surface", "")),
             silhouette=_flatten(entry.get("silhouette", "")),
             countable=entry.get("countable"),
+            ground=_flatten(scene.get("ground", "")) or GROUND,
+            anchor=_flatten(scene.get("anchor", "")) or ANCHOR,
         )
 
 
@@ -195,7 +209,7 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
     produced legible numerals on a radio dial three times out of four.
     """
     framing = through_line.framing[:1].upper() + through_line.framing[1:]
-    parts = [f"{GROUND}. {framing}"]
+    parts = [f"{through_line.ground}. {framing}"]
 
     if through_line.surface:
         # Positive description of what IS on the surface, spliced into the same
@@ -233,7 +247,7 @@ def build_scene(through_line: ThroughLine, block_n: int, blocks: int = 6) -> str
         f"{_IMPACTS[i]}. The shot does not stop — {_EXITS[i]}."
     )
 
-    parts.append(f"{ANCHOR}.")
+    parts.append(f"{through_line.anchor}.")
     return " ".join(parts)
 
 
@@ -313,11 +327,20 @@ def _stage(escalation: str, block_n: int, blocks: int) -> str:
     )
 
 
-def build_block_prompt(through_line: ThroughLine, block_n: int, blocks: int = 6) -> BlockPrompt:
-    """The five-field document that reaches the gate, then the provider."""
+def build_block_prompt(
+    through_line: ThroughLine, block_n: int, blocks: int = 6, *, kit: str = HOUSE_KIT
+) -> BlockPrompt:
+    """The five-field document that reaches the gate, then the provider.
+
+    `kit` picks the STYLE REFERENCE and the NEGATIVE line. It defaults to the
+    house kit so nothing that never heard of kits changes, and the pipeline
+    passes the story file's own kit so the gate checks the prompt that is
+    actually paid for.
+    """
     return BlockPrompt.build(
         block_n,
         scene=build_scene(through_line, block_n, blocks),
         motion=build_motion(block_n, blocks),
         audio=build_audio(block_n, blocks),
+        kit=kit,
     )

@@ -120,9 +120,15 @@ def negative_line(kit_id: str = HOUSE_KIT) -> str:
     return f"{platform_floor()}, {additions}" if additions else platform_floor()
 
 
-def style_tokens() -> str:
-    """The house style descriptor, verbatim from the craft layer."""
-    return _read("style-tokens.txt", str(kit_dir()))
+def style_tokens(kit_id: str = HOUSE_KIT) -> str:
+    """One kit's style descriptor, verbatim from the craft layer.
+
+    Kit-keyed for the same reason `negative_line` is: this file IS the kit's
+    appearance. Read from the root unconditionally, a diorama run publishes a
+    sepia-newsprint style line, verifies it, and then sends the house collage
+    tokens to the provider anyway.
+    """
+    return _read("style-tokens.txt", str(kit_dir_for(kit_id)))
 
 
 @dataclass(frozen=True)
@@ -146,11 +152,14 @@ class BlockPrompt:
         audio: str,
         style_reference: str | None = None,
         negative: str | None = None,
+        kit: str = HOUSE_KIT,
     ) -> BlockPrompt:
         """Construct with the brand kit supplying the two fixed fields.
 
         Callers describe the block; they do not get to author the style
-        reference or the exclusion line.
+        reference or the exclusion line. They may only say WHICH kit — and the
+        story file is what says that, so `kit` is threaded from `StoryFile.kit`
+        rather than chosen here.
         """
         return cls(
             block=block,
@@ -159,11 +168,11 @@ class BlockPrompt:
             # worse — and a prompt that still says "match the attached key"
             # points a model at nothing and invites it to invent the referent.
             style_reference=style_reference
-            or f"Render in this house style EXACTLY — {style_tokens()}",
+            or f"Render in this house style EXACTLY — {style_tokens(kit)}",
             scene=scene.strip(),
             motion=motion.strip(),
             audio=audio.strip(),
-            negative=negative or negative_line(),
+            negative=negative or negative_line(kit),
         )
 
     def render(self) -> str:

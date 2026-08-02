@@ -9,38 +9,35 @@ Phase 2 is the current priority. The demo video is not yet recorded;
 
 ## ▶ START HERE — exact state at handoff
 
-**Branch `phase-2-diorama`** exists, cut from `main` at `d7b8243`.
+**Branch `phase-2-diorama`**, cut from `main` at `d7b8243`. **Tree is clean.**
 
-**Task 8 was dispatched and is mid-write. The working tree is DIRTY:**
+**Task 8 (keyed kit resolution) is COMMITTED but NOT REVIEWED** — `79f3981`,
+*"feat(brandkit): kits are keyed, and nothing migrates"*.
 
+Verified by the controller on the committed tree, not taken from its report:
+
+- **407 tests passing** (401 before Task 8)
+- **`tests/test_structure.py` 12/12** — Wall 2 intact
+- `grep` confirms `blockprompt.py` does **not** import `brandkit.py`. `HOUSE_KIT`
+  and `KNOWN_KITS` live in `blockprompt.py` and the other two import from there.
+  That is the trap avoided; do not let a later task reverse it.
+
+**Your first action: review Task 8, then continue to Task 9.**
+
+```bash
+SK=~/.claude/plugins/cache/claude-plugins-official/superpowers/6.2.0/skills/subagent-driven-development
+"$SK/scripts/review-package" docs/superpowers/plans/2026-08-02-pre-demo-features.md d7b8243 HEAD
+"$SK/scripts/task-brief"     docs/superpowers/plans/2026-08-02-pre-demo-features.md 9
 ```
- M api/newsdesk/blockprompt.py
- M api/newsdesk/brandkit.py
- M api/newsdesk/storyfile.py
-?? api/tests/test_kits.py
-```
 
-No commit yet, no `task-8-report.md` yet. The subagent that wrote these is not
-reachable from a new session.
-
-**Your first decision, in order of preference:**
-
-1. **Inspect the diff and judge it.** `git diff` plus `cd api && uv run pytest
-   tests/ -q`. If it is coherent and green, finish it yourself: run
-   `tests/test_structure.py`, commit it as Task 8, and carry on to the task
-   review. This is usually the cheapest path — most of the work is done.
-2. **If it is incoherent or red**, `git checkout -- . && rm -f api/tests/test_kits.py`
-   and re-dispatch Task 8 from its brief at
-   `.superpowers/sdd/2026-08-02-pre-demo-features/task-8-brief.md`.
-
-Do not re-dispatch on top of the dirty tree — two implementers writing the same
-files is how you get a mess neither of them understands.
-
-**BASE for Task 8's review package is `d7b8243`.**
+**Carry this into Task 9 or 11 — Task 8's implementer flagged it:** `cli.py:166`
+and `pipeline.py:45` both call `brandkit.load()` with **no `kit_id`**, so the run
+path stays house-only until something threads `kit_id` through from the story
+file. Keyed resolution exists; nothing uses the key yet.
 
 The workspace and ledger are at
-`.superpowers/sdd/2026-08-02-pre-demo-features/` — the ledger is 200+ lines and
-carries every Phase 1 ruling. Briefs for Tasks 3–8 are already generated there.
+`.superpowers/sdd/2026-08-02-pre-demo-features/` — the ledger carries every
+Phase 1 ruling. Briefs for Tasks 3–8 are already generated there.
 
 ---
 

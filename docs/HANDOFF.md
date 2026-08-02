@@ -251,7 +251,14 @@ cd web && npm run dev                        # needs NEXT_PUBLIC_WORKER_URL=http
 | **Site** | **https://newsdesk-rosy.vercel.app** — public, 200 |
 | **Worker** | **https://newsdesk-worker.fly.dev** — 2 machines in `ord`, checks passing |
 
-`vercel --prod` from the **repo root**. `fly deploy` from `api/`. Both projects
+`vercel --prod` from the **repo root**. **`fly deploy` from the repo root too** —
+this said `api/` and that is wrong; it fails with *"the config for your app is
+missing an app name"*, because `fly.toml` lives at the root deliberately. Its
+own header explains why and is the authority: flyctl takes the directory holding
+`fly.toml` as the Docker build context, and the context has to be the root
+because `policy/policy.yaml` is there and Docker cannot COPY above its context.
+**Building from `api/` once produced a worker whose gate refused all six blocks
+of a live run**, and `--config api/fly.toml` does not fix it. Both projects
 are already linked and their secrets are set — 7 on Fly, 4 on Vercel.
 
 **Three things about this deploy that will bite whoever touches it next:**

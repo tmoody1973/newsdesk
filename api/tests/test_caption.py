@@ -82,3 +82,9 @@ def test_sources_come_from_the_story_verbatim():
     )
     assert sources_for(story) == expected
     assert len(expected) == len(set(expected)), "deduped, order preserved"
+
+
+def test_text_property_builds_from_prose():
+    """Caption.text must start with prose to ensure they stay in sync."""
+    c = _caption()
+    assert c.text.startswith(c.prose)

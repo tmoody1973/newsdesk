@@ -61,7 +61,7 @@ class Caption:
 
     @property
     def text(self) -> str:
-        parts = [self.hook, self.body, self.cta]
+        parts = [self.prose]
         if self.sources:
             parts.append("Sources:\n" + "\n".join(f"- {s}" for s in self.sources))
         if self.hashtags:

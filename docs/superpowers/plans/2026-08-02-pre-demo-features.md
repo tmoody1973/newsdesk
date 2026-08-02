@@ -36,7 +36,7 @@ Reason: moving the fade means editing the filtergraph, which is the file that pr
 | `api/newsdesk/caption.py` | **create** — Caption model, deterministic checks, source assembly, generation + claim validation |
 | `api/newsdesk/artdirection.py` | **create** — through-line suggestion; returns a menu id or None |
 | `api/newsdesk/endcard.py` | **create** — upload validation (ffprobe), card rendering, concat |
-| `api/newsdesk/pipeline.py` | **modify** — `STAGES` gains `caption`; `stage_caption`; end-card hook in `stage_assembly` |
+| `api/newsdesk/pipeline.py` | **modify** — `STAGES` gains `endcard` and `caption`; new `stage_endcard` and `stage_caption`. **There is no `stage_assembly`** — the cut lives in `api/scripts/run_cs1_assemble.py` and is not to be edited |
 | `api/newsdesk/cli.py` | **modify** — dispatch `caption` |
 | `api/newsdesk/brandkit.py` | **modify** — `kit_prefix(kit_id)`, `load(kit_id=...)` |
 | `api/newsdesk/blockprompt.py` | **modify** — `platform_floor()`, `negative_is_intact()` against the floor |
@@ -701,7 +701,8 @@ STAGES = ("script", "gate", "blocks", "narration", "assembly", "caption")
 # with the other imports
 from newsdesk.caption import generate_captions
 
-# as a new method on Pipeline, after stage_assembly
+# as a new method on Pipeline, after stage_gate. Sync, like stage_script and
+# stage_gate — stage_blocks and stage_narration are async, this does not need to be.
     def stage_caption(self, *, chat_fn: Callable[..., Any] | None = None) -> StageResult:
         """Social captions for a finished run. Text only — about a cent.
 

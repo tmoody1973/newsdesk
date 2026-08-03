@@ -62,7 +62,7 @@ function Architecture() {
         <text x="323" y="141" textAnchor="middle" style={label}>GENBLAZE</text>
         <text x="323" y="156" textAnchor="middle" style={small}>pipeline · manifest · verify</text>
         <line x1="484" y1="146" x2="412" y2="146" {...arrow} />
-        <text x="447" y="139" textAnchor="middle" style={small}>every paid step</text>
+        <text x="447" y="132" textAnchor="middle" style={small}>every paid step</text>
 
         {/* Providers */}
         <rect x="12" y="96" width="150" height="40" {...box} />
@@ -83,17 +83,17 @@ function Architecture() {
         <text x="323" y="237" textAnchor="middle" style={{ ...label, fill: red }}>DECISION LEDGER</text>
         <text x="323" y="252" textAnchor="middle" style={small}>every refusal, and why</text>
         <line x1="530" y1="204" x2="380" y2="214" {...arrow} />
-        <text x="470" y="224" textAnchor="middle" style={small}>pass · reject · revise</text>
+        <text x="452" y="230" textAnchor="middle" style={small}>pass · reject · revise</text>
 
         {/* B2 — the database */}
-        <rect x="130" y="312" width="460" height="96" {...box} />
+        <rect x="90" y="312" width="540" height="96" {...box} />
         <text x="360" y="334" textAnchor="middle" style={label}>BACKBLAZE B2 — FIVE BUCKETS, ONE JOB EACH</text>
         <text x="360" y="356" textAnchor="middle" style={small}>assets (public) · brand-kit (public) · runs · manifests · audit (private, enforced in code)</text>
         <text x="360" y="378" textAnchor="middle" style={small}>no other database exists — every page load reads B2,</text>
         <text x="360" y="392" textAnchor="middle" style={small}>every stage completion writes B2</text>
         <line x1="323" y1="268" x2="323" y2="308" {...arrow} />
         <line x1="578" y1="204" x2="578" y2="308" {...arrow} />
-        <line x1="87" y1="236" x2="180" y2="308" {...arrow} />
+        <line x1="87" y1="236" x2="140" y2="308" {...arrow} />
 
         {/* The receipt */}
         <rect x="200" y="452" width="320" height="60" {...box} />

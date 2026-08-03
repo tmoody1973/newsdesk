@@ -107,8 +107,22 @@ seconds after a deploy took 14 minutes on a cold machine.
      `file://.../demo/end-bumper.html` for ~5s — the stacked Newsdesk mark
      lands, then the tagline. The VO's final words ("This is Newsdesk.")
      land ON the bumper. Cut to black.
-4. **Assemble** (use `/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg` — PATH ffmpeg
-   has no drawtext and may lack filters):
+4. **Assemble — invoke the `hyperframes` skill FIRST.** It is the owning
+   framework for video assembly in this environment (Tarik's explicit
+   expectation). Let it resume/initialize the project and route the workflow
+   (this is a multi-scene companion piece: screen-recorded clips + VO + two
+   HTML compositions). What HyperFrames buys here:
+   - `demo/architecture-animated.html` and `demo/end-bumper.html` are ALREADY
+     HTML — drop them into the composition as native scenes at full quality
+     instead of screen-recording them. Their animation timings are
+     CSS-delay-driven from t=0 of the scene.
+   - Declarative clip trims and speed-ramps from the MARK timestamps, VO
+     segments laid per scene, the S5b span carrying the published MP4's own
+     audio while the VO is silent.
+   - Render at 1920×1080/30fps, ≤3:00.
+   **Fallback only if HyperFrames fights the clock** — raw ffmpeg
+   (use `/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg`; PATH ffmpeg lacks
+   filters):
    - Normalize every clip: `-vf "scale=1920:1080:flags=lanczos,fps=30" -r 30`.
    - Speed-ramps: pick the boring spans by MARK timestamps and
      `-vf "setpts=PTS/8"` them (render wait, retry waits); keep interactions

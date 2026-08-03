@@ -142,3 +142,34 @@ def test_ingest_accepts_a_plausible_https_url():
     assert server._validate_ingest_url("https://example.org/a-story") == (
         "https://example.org/a-story"
     )
+
+
+def _sent(status, payload):
+    """Drive Handler._send without a socket; return (headers, body)."""
+    import io
+
+    h = object.__new__(server.Handler)
+    h.wfile = io.BytesIO()
+    headers: list[tuple[str, str]] = []
+    h.send_response = lambda s: None
+    h.send_header = lambda k, v: headers.append((k, v))
+    h.end_headers = lambda: None
+    server.Handler._send(h, status, payload)
+    return dict(headers), h.wfile.getvalue()
+
+
+def test_a_204_carries_no_body_and_no_content_length():
+    """RFC 9110 §15.3.5. Fly's HTTP/2 edge rejects a 204 with Content-Length
+    as a malformed frame, which killed every browser CORS preflight — the
+    wizard's POSTs died as 'network connection was lost'."""
+    headers, body = _sent(204, {})
+    assert body == b""
+    assert "Content-Length" not in headers
+    assert headers["Access-Control-Allow-Origin"] == "*"
+
+
+def test_a_200_still_carries_its_json_and_cors_headers():
+    headers, body = _sent(200, {"ok": True})
+    assert body == b'{"ok": true}'
+    assert headers["Content-Length"] == str(len(body))
+    assert headers["Access-Control-Allow-Origin"] == "*"

@@ -133,6 +133,15 @@ export function FactsAndSources({
           >
             Check sources
           </button>
+          {/* A disabled button with no reason strands people — it stranded a
+              real user the night this shipped. Name the one thing missing. */}
+          {!ready && (
+            <span className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)" }}>
+              {!draft.title.trim()
+                ? "add a title at the top — “What is this story about?”"
+                : "every fact needs text and at least one source"}
+            </span>
+          )}
         </div>
       </div>
 

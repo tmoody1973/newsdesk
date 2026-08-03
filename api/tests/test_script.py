@@ -707,3 +707,45 @@ def test_the_two_quirks_travel_together(monkeypatch):
     for model in ["anthropic/claude-haiku-4.5", "anthropic/claude-sonnet-4.6",
                   "deepseek-ai/DeepSeek-V3-0324"]:
         assert accepts_temperature(model) and not wants_thinking_disabled(model)
+
+
+# --- refusals carry their remedy ---------------------------------------------
+
+
+def test_an_exhausted_refusal_says_what_to_do():
+    """A refusal that names the rule but not the remedy reads as a wall. Every
+    surfaced refusal ends with the journalist's next move."""
+    bad = json.loads(_payload(cs1_blocks()))
+    bad["blocks"][0]["narration"] = "Too short to pass."
+    bad["blocks"][0]["claims"] = []
+
+    _, ledger, blocks = generate_script(
+        _run(), Ledger(), cs1_story(), chat_fn=_fake_chat(json.dumps(bad))
+    )
+    assert blocks == ()
+    assert "What to do: retry" in ledger.decisions[0].reason
+
+
+def test_a_tracing_refusal_names_the_fact_too_long_to_say():
+    """A fact longer than a narrated line can never be quoted inside one — no
+    retry fixes that, so the refusal must say WHICH fact to trim."""
+    from dataclasses import replace as dc_replace
+
+    from newsdesk.script import _remedy
+
+    story = cs1_story()
+    long_text = " ".join(["word"] * 27)
+    story = dc_replace(
+        story, facts=(dc_replace(story.facts[0], text=long_text),) + story.facts[1:]
+    )
+    remedy = _remedy(story, had_tracing=True)
+    assert "F1 (27 words)" in remedy
+    assert "trim" in remedy
+
+
+def test_a_pacing_only_refusal_does_not_blame_the_facts():
+    from newsdesk.script import _remedy
+
+    remedy = _remedy(cs1_story(), had_tracing=False)
+    assert "retry" in remedy
+    assert "trim" not in remedy

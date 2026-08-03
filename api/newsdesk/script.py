@@ -309,6 +309,43 @@ def _label_rules(kit: str) -> str:
 """
 
 
+# A narrated line holds MIN_WORDS-MAX_WORDS words TOTAL, and a claim's evidence
+# must sit inside the line verbatim. So a fact whose own text eats most of the
+# window leaves no room for the sentence around it — measured live 2026-08-02:
+# a 27-word fact failed seventeen straight runs, and the trimmed 17-word version
+# of the same fact converged in four. The margin below is the smallest framing
+# a line was observed to need around its quoted evidence.
+_FACT_FRAMING_MARGIN = 7
+
+
+def _remedy(story: Story, *, had_tracing: bool) -> str:
+    """The sentence every refusal ends with: what the journalist DOES next.
+
+    A refusal that names the rule but not the remedy reads as a wall. Retrying
+    is always free and usually works; when a fact is structurally too long to
+    quote inside one narrated line, say WHICH fact and what to do to it —
+    nothing else the journalist can click will ever fix that one.
+    """
+    overlong = [
+        f"{f.id} ({len(f.text.split())} words)"
+        for f in story.facts
+        if len(f.text.split()) > MAX_WORDS - _FACT_FRAMING_MARGIN
+    ]
+    remedy = "\nWhat to do: retry — refusals are free and the model redrafts."
+    if had_tracing and overlong:
+        remedy += (
+            f" If it keeps refusing, trim {', '.join(overlong)} to one spoken "
+            f"sentence — a narrated line holds {MIN_WORDS}-{MAX_WORDS} words "
+            f"TOTAL, and a fact that long leaves no room to say it."
+        )
+    elif had_tracing:
+        remedy += (
+            " If the same fact keeps failing, reword it to how you would say "
+            "it aloud."
+        )
+    return remedy
+
+
 def build_prompt(story: Story, *, kit: str = HOUSE_KIT) -> str:
     """The generation prompt. Carries the craft so the caller does not have to.
 
@@ -648,7 +685,14 @@ def generate_script(
             # becomes a formality — so those are terminal.
             terminal = [p for p in problems if p.kind in TERMINAL_KINDS]
             if terminal:
-                return "reject", "\n".join(str(p) for p in terminal), raw
+                return (
+                    "reject",
+                    "\n".join(str(p) for p in terminal)
+                    + "\nWhat to do: retry — refusals are free. This one is "
+                    "about integrity (a quote that matches no entered fact); "
+                    "if it repeats, the fact needs rewording, not the script.",
+                    raw,
+                )
 
             # Everything else gets one ask. An unmapped number is usually a real
             # figure the model forgot to declare; abridged evidence is usually a
@@ -721,7 +765,8 @@ def generate_script(
         return (
             "reject",
             " | ".join(outstanding)
-            + f" (after {MAX_ATTEMPTS} attempts — surfacing rather than retrying further)",
+            + f" (after {MAX_ATTEMPTS} attempts — surfacing rather than retrying further)"
+            + _remedy(story, had_tracing=bool(unmapped)),
             raw,
         )
 
@@ -833,14 +878,26 @@ def map_claims(
 
             terminal = [p for p in problems if p.kind in TERMINAL_KINDS]
             if terminal:
-                return "reject", "\n".join(str(p) for p in terminal), raw
+                return (
+                    "reject",
+                    "\n".join(str(p) for p in terminal)
+                    + "\nWhat to do: retry — refusals are free. If the same "
+                    "fact keeps failing, reword it to how you would say it "
+                    "aloud.",
+                    raw,
+                )
             if not problems:
                 mapped.extend(candidate)
                 note = f" after {attempt - 1} repair pass(es)" if attempt > 1 else ""
                 claims = sum(len(b.claims) for b in candidate)
                 return "pass", f"{claims} claims traced to facts{note}", raw
             if attempt == MAP_ATTEMPTS:
-                return "reject", " | ".join(str(p) for p in problems), raw
+                return (
+                    "reject",
+                    " | ".join(str(p) for p in problems)
+                    + _remedy(story, had_tracing=True),
+                    raw,
+                )
             prompt = _claim_map_prompt(story, blocks, "\n".join(str(p) for p in problems))
         return "reject", "no usable claim map", raw
 

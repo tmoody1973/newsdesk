@@ -20,7 +20,9 @@ Everything a fact-checker would want to read is open, no sign-in:
 
 | | |
 |---|---|
-| **[The Desk](https://newsdesk-rosy.vercel.app/)** | every run, its status, and who approved it |
+| **[The front page](https://newsdesk-rosy.vercel.app/)** | the product in plain English — what it is, the three walls, what a refusal means |
+| **[The Desk](https://newsdesk-rosy.vercel.app/desk)** | every run, its status, and who approved it |
+| **[For the judges](https://newsdesk-rosy.vercel.app/judges)** | the four criteria with checkable evidence, and the architecture drawn in the site's own ink |
 | **[A receipt](https://newsdesk-rosy.vercel.app/runs/who-pays-when-the-signal-goes-quiet/receipt)** | the public nutrition label — every claim and the fact it came from, the models that actually ran, and a `curl` command that verifies the MP4 without trusting this website |
 | **[A second receipt](https://newsdesk-rosy.vercel.app/runs/what-a-billion-dollars-of-vinyl-says-abo/receipt)** | a different story, a different through-line object |
 | **[The policy](https://newsdesk-rosy.vercel.app/policy)** | POL-1…POL-6, rendered from the same `policy.yaml` the gate enforces |
@@ -83,6 +85,52 @@ structural property rather than a promise.
 
 ---
 
+## Architecture
+
+The same shape drawn live at
+[newsdesk-rosy.vercel.app/judges](https://newsdesk-rosy.vercel.app/judges):
+
+```mermaid
+flowchart TB
+    J["JOURNALIST<br/>facts · sources · approval"] --> W["WEB APP<br/>Next.js · Vercel"]
+    W -->|"POST /runs"| K["RENDER WORKER<br/>Python · Fly · own ffmpeg"]
+
+    K --> WALLS["THE THREE WALLS<br/>1 · no fact without a source<br/>2 · policy gate — no network, no credentials, $0 refusals<br/>3 · no publish without a named approver"]
+
+    WALLS -->|"every paid step"| G["GENBLAZE<br/>pipeline · manifest · verify"]
+    G --> GMI["GMI CLOUD<br/>stills · video · text"]
+    G --> EL["ELEVENLABS<br/>narration voice"]
+    G --> LM["LMNT<br/>fallback voice"]
+
+    WALLS -->|"pass · reject · revise"| L["DECISION LEDGER<br/>every refusal, and why"]
+
+    G --> B2["BACKBLAZE B2 — five buckets, one job each<br/>assets · brand-kit (public) · runs · manifests · audit (private, enforced in code)<br/>no other database exists"]
+    L --> B2
+    K --> B2
+
+    B2 -->|"assembly, only after a named approval"| MP4["PUBLISHED MP4<br/>manifest embedded in the file · ledger digest folded in<br/>edit one refusal afterwards → genblaze verify fails"]
+
+    style WALLS stroke:#f2322f,stroke-width:2px
+    style L stroke:#f2322f,stroke-width:2px
+    style MP4 stroke:#f2322f,stroke-width:2px
+```
+
+Three things the diagram is really saying:
+
+- **B2 is the database, not the file cabinet.** The live state of every run is a
+  `state.json` in the runs bucket; every page load reads B2, every stage
+  completion writes it. There is no Postgres anywhere.
+- **The gate cannot spend.** Wall 2 runs with no network and no credentials —
+  enforced by a structure test that walks its import graph — so a refusal is
+  $0 by construction.
+- **Refusals are part of the provenance.** Plain `chat()` calls cannot ride a
+  Genblaze pipeline, and in this product those calls are the governance — so
+  every judgement lands in a decision ledger whose digest is folded into the
+  manifest Genblaze embeds in the MP4. Changing one refusal afterwards breaks
+  `genblaze verify` on the video.
+
+---
+
 ## The editorial policy
 
 `policy/policy.yaml` is the standards desk, in a file, versioned, with its
@@ -91,11 +139,12 @@ reasoning and its changelog attached to each rule.
 | Rule | |
 |---|---|
 | **POL-1** | No real-person likenesses |
-| **POL-2** | The exclusion line is fixed — the prompt's negative clause is byte-compared against the published brand kit |
+| **POL-2** | The exclusion line starts with an immutable platform floor — a kit may append prohibitions and may narrow the text default only under POL-4's conditions, but the floor is byte-compared and never moves |
 | **POL-3** | No fabricated news scenes |
-| **POL-4** | No readable text on screen, beyond a bounded on-prop question |
+| **POL-4** | No readable text on screen except a claims-validated letterpress label — ≤4 words, traced verbatim to an entered fact, budget-capped |
 | **POL-5** | Narration fits its block |
 | **POL-6** | Output is checked, not just the request |
+| **POL-7** | A pasted URL is a story you reported — every proposed fact carries the verbatim quote it came from, or it is not shown |
 
 Rules carry `why_changed` and `changelog` fields. When testing kills an
 assumption, the wrong version stays in the record next to the right one.
@@ -208,8 +257,8 @@ has to get through.
 | Screen | Wall | What it does |
 |---|---|---|
 | **The Desk** | — | every run, its status, its approver |
-| **1 · Facts & Sources** | **Wall 1** | a fact with no source turns coral and blocks the step. An empty source box does not count as a source. |
-| **2 · Art Direction** | — | pick the through-line object. Requests outside the menu are checked against policy. |
+| **1 · Facts & Sources** | **Wall 1** | paste a link to a story you reported and confirm the facts it proposes — each carries the exact quote it came from, and a proposal whose quote is not on the page is dropped, not shown. Or type facts by hand. Either way a fact with no source blocks the step. |
+| **2 · Art Direction** | — | pick the brand kit (house mixed-media, or the paper-diorama documentary world) and the through-line object — each kit legally owns its menu. Requests outside it are checked against policy. |
 | **3 · Script Review** | — | every block shows the facts its claims trace to. A block that traces to nothing cannot be sent. Read-only on purpose: editing a line would silently break the claim map that was validated against it. |
 | **Run Board** | **Wall 2** | polls the worker; the gate's verdict appears before any provider object exists |
 | **Editor Review** | **Wall 3** | six frames, six approvals, then a name typed into a box that becomes part of the file |
@@ -234,7 +283,7 @@ not burn.
 cd api
 cp .env.example .env          # B2, GMI, ElevenLabs, LMNT keys
 uv sync
-uv run pytest tests/ -q       # 328 passed — zero network, $0
+uv run pytest tests/ -q       # 488 passed — zero network, $0
 ```
 
 The whole suite runs offline and costs nothing. Provider calls are injected, and
@@ -286,9 +335,13 @@ page cannot render. The full account is in
 ## Status
 
 **Live, and it makes videos.** A story typed into the browser becomes a receipted
-MP4 without a command line: facts → script → gate → six clips → six takes → six
-approvals → stamp → publish. Three videos are published; one of them was cut
-end to end on the deployed worker.
+MP4 without a command line — and since 2 August, a story can begin as a pasted
+URL: facts proposed with verbatim quotes, confirmed one by one by the
+journalist. Five videos are published, including one authored through the full
+URL-ingest path and one in the paper-diorama kit, both approved by name on the
+deployed stack. Refusals now end with their remedy ("What to do: retry —
+refusals are free… trim F3 (27 words) to one spoken sentence"), because a
+refusal that names the rule but not the next move reads as a wall.
 
 Every stage is verified against real output rather than only against tests —
 frames viewed at full size, audio measured, the MP4 downloaded and probed. That

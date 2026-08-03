@@ -32,6 +32,7 @@ import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+from urllib.parse import urlparse
 
 from newsdesk.config import BUCKETS, backend
 from newsdesk.storyfile import StoryFileError, parse_story
@@ -56,6 +57,57 @@ class RunRejected(Exception):
     def __init__(self, status: int, message: str) -> None:
         super().__init__(message)
         self.status = status
+
+
+class IngestRejected(Exception):
+    """A `/ingest` request that will not be served, with the status to say so."""
+
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def _parse_body(raw: bytes) -> Any:
+    """Parse a request body's raw bytes as JSON. Shared by `/runs` and
+    `/ingest` so both fail the same way on the same malformed input; pulled
+    out as a pure function so the failure is testable without a socket.
+    """
+    return json.loads(raw or b"{}")
+
+
+def _validate_ingest_url(raw: Any) -> str:
+    """Validate a posted `url`, returning it stripped. Everything here is a
+    422 (a refusal), never a 500 — a bad or dangerous URL is an expected
+    input, not a bug.
+
+    Scheme is checked twice, for two different reasons: our own check turns
+    away `file://`/`ftp://`/etc. with a message that names the problem, and
+    `genblaze_core._utils.check_ssrf` — which we call directly after — turns
+    out to be HTTPS-only itself (`resolve_ssrf`: "Only HTTPS URLs are
+    allowed"). A plain `http://` URL trips on check_ssrf's own scheme
+    rejection rather than ours; either way it's a 422 with the reason.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        raise IngestRejected(422, "a url is required")
+    url = raw.strip()
+
+    scheme = urlparse(url).scheme
+    if scheme not in ("http", "https"):
+        raise IngestRejected(
+            422, f"unsupported URL scheme '{scheme}' — paste a link to the story"
+        )
+
+    # Private import — same as genblaze's own providers/_ffmpeg_utils.py,
+    # which reuses this exact function for its own HTTP-input SSRF check
+    # rather than forking one. Not a public genblaze contract.
+    from genblaze_core._utils import check_ssrf
+
+    try:
+        check_ssrf(url)
+    except ValueError as exc:
+        raise IngestRejected(422, str(exc)) from exc
+
+    return url
 
 
 def _claim_slot(run_id: str) -> None:
@@ -157,14 +209,17 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path.rstrip("/") != "/runs":
+        path = self.path.rstrip("/")
+        if path == "/ingest":
+            return self._handle_ingest()
+        if path != "/runs":
             return self._send(404, {"error": "not found"})
         if not self._authorized():
             return self._send(401, {"error": "an access code is required"})
 
         try:
             length = int(self.headers.get("Content-Length") or 0)
-            body = json.loads(self.rfile.read(length) or b"{}")
+            body = _parse_body(self.rfile.read(length))
         except (ValueError, json.JSONDecodeError):
             return self._send(400, {"error": "body must be JSON"})
 
@@ -201,6 +256,46 @@ class Handler(BaseHTTPRequestHandler):
             "run_id": story_file.run_id,
             "stages": stages,
             "poll": f"/runs/{story_file.run_id}",
+        })
+
+    def _handle_ingest(self) -> None:
+        """`POST /ingest` — paste a URL, get proposed facts back.
+
+        Synchronous and cheap (one `chat()` call): no thread, no slot, unlike
+        `/runs`. See `newsdesk/ingest.py` for why this isn't a `judged()` role
+        and what `dropped`/`article_chars` are for.
+        """
+        if not self._authorized():
+            return self._send(401, {"error": "an access code is required"})
+
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            body = _parse_body(self.rfile.read(length))
+        except (ValueError, json.JSONDecodeError):
+            return self._send(400, {"error": "body must be JSON"})
+
+        try:
+            url = _validate_ingest_url(body.get("url") if isinstance(body, dict) else None)
+        except IngestRejected as exc:
+            return self._send(exc.status, {"error": str(exc)})
+
+        from newsdesk.ingest import IngestError, propose_facts
+
+        try:
+            result = propose_facts(url)
+        except IngestError as exc:
+            # ingest.py's own messages already name the fallback ("...paste
+            # the text of the story instead.") — passed through as-is.
+            return self._send(422, {"error": str(exc)})
+        except Exception as exc:  # noqa: BLE001 — a provider failure, not ours
+            return self._send(502, {"error": f"{type(exc).__name__}: {exc}"})
+
+        self._send(200, {
+            "proposals": [
+                {"text": p.text, "quote": p.quote, "url": p.url} for p in result.proposals
+            ],
+            "dropped": result.dropped,
+            "article_chars": result.article_chars,
         })
 
 

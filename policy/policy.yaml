@@ -10,7 +10,7 @@
 # all pass.
 
 version: 2
-updated: 2026-07-28
+updated: 2026-08-03
 
 # Where each rule is actually enforced.
 #   deterministic — pure code, no network. Free, and cannot be talked out of it.
@@ -237,3 +237,22 @@ rules:
     check: >
       Every rendered asset is evaluated for photorealism, live-action
       appearance, and readable text before it can reach the approval gate.
+
+  - id: POL-7
+    name: A pasted URL is a story you reported, not one you're borrowing
+    why: >
+      Ingest-from-URL (PLAN.md §B4) is a shortcut for a reporter starting from
+      a piece they already filed, not a way to pull someone else's journalism
+      into a video with their byline nowhere on it. "Paste a link to a story
+      you reported" is the UI copy for a reason — a provenance tool that
+      quietly ingests someone else's work has a problem it cannot argue its
+      way out of, no matter how well it cites its quotes.
+    layers: [deterministic]
+    check: >
+      Every proposed fact carries the URL the journalist pasted and the
+      verbatim span of that page it came from. If the proposed quote is not a
+      character-for-character substring of the fetched article — checked with
+      claims.normalize, the same discipline claims.py applies to narration —
+      the proposal is dropped before it is ever shown, not flagged, not
+      returned with a warning. `ingest.py`'s Proposal.url is always the
+      pasted URL, copied verbatim; a model never writes a citation.

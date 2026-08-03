@@ -12,6 +12,8 @@ and why.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from newsdesk import server
@@ -97,3 +99,46 @@ def test_health_says_whether_the_access_code_is_set(monkeypatch):
     assert server._health()["access_code_required"] is False
     monkeypatch.setattr(server, "ACCESS_CODE", "secret")
     assert server._health()["access_code_required"] is True
+
+
+# --- /ingest, at the edge (task-1-brief, PLAN.md §B4) ------------------------
+
+
+def test_ingest_body_must_be_json():
+    with pytest.raises(json.JSONDecodeError):
+        server._parse_body(b"not json")
+
+
+def test_ingest_missing_url_is_refused():
+    with pytest.raises(server.IngestRejected) as caught:
+        server._validate_ingest_url(None)
+    assert caught.value.status == 422
+
+
+def test_ingest_blank_url_is_refused():
+    with pytest.raises(server.IngestRejected) as caught:
+        server._validate_ingest_url("   ")
+    assert caught.value.status == 422
+
+
+def test_ingest_refuses_a_non_http_scheme():
+    """`file://` is a request to read the container's own disk, not a story."""
+    with pytest.raises(server.IngestRejected) as caught:
+        server._validate_ingest_url("file:///etc/passwd")
+    assert caught.value.status == 422
+    assert "scheme" in str(caught.value).lower()
+
+
+def test_ingest_refuses_a_private_ip_literal_without_opening_a_socket():
+    """`check_ssrf` refuses this by string/IP inspection alone — no DNS lookup,
+    no connection. If this test needed the network it would hang or flake in
+    CI; it doesn't, because the refusal never gets that far."""
+    with pytest.raises(server.IngestRejected) as caught:
+        server._validate_ingest_url("http://169.254.169.254/")
+    assert caught.value.status == 422
+
+
+def test_ingest_accepts_a_plausible_https_url():
+    assert server._validate_ingest_url("https://example.org/a-story") == (
+        "https://example.org/a-story"
+    )

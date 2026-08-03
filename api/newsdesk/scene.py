@@ -61,7 +61,7 @@ _ENTRIES = (
     "Emerge from the motion-blurred paper dust the previous shot ended in",
     "Emerge from a motion-blurred whip across torn card",
     "Emerge from a motion-blurred fall through paper layers",
-    "Emerge from a motion-blurred flare off cream card",
+    "Emerge from a motion-blurred flare off the ground plane",
     "Emerge from a motion-blurred dive between paper layers",
 )
 _EXITS = (
@@ -75,18 +75,29 @@ _EXITS = (
 
 # 2 · SCALE WHIPLASH. Alternate extreme macro and wide. Never the same framing
 # twice running — six identical compositions is the defect this replaces.
+#
+# These six say "the ground" and never name a colour or a material. The ground
+# IS named, once, in the sentence build_scene() opens with — and it comes from
+# the kit. Naming cream card here put the house palette inside every diorama
+# SCENE, three sentences before that same field ends "one burnt-orange paper
+# element is the only colour anywhere in the frame". Same defect GROUND and
+# ANCHOR had; it needed no per-kit array, only wording that refers back instead
+# of re-deciding.
 _SHOTS = (
     "EXTREME MACRO on one torn edge of the object, so close the paper fibres show",
-    "WIDE, the whole object small in a big empty field of cream card",
+    "WIDE, the whole object small in a big empty field of the ground",
     "LOW ANGLE looking steeply up the object so it towers over the frame",
-    "OVERHEAD FLAT-LAY looking straight down, the object foreshortened on the card",
+    "OVERHEAD FLAT-LAY looking straight down, the object foreshortened against the ground",
     "MACRO DETAIL on the part of the object the change is happening to",
     "CRANE REVEAL rising and pulling back until the whole arrangement is legible at once",
 )
 
 # 3 · ONE IMPACT EVERY ~3 SECONDS, and one speed ramp per block.
 _IMPACTS = (
-    "a hand-drawn marker circle SNAPS closed around it",
+    # A hard black ring, not "a hand-drawn marker circle": the marker is the
+    # house's own annotation device and this world annotates with printers ink
+    # and censor bars. Both styles can draw a black circle closing on an object.
+    "a hard black circle SNAPS closed around it",
     "a torn paper shape SLAMS into frame and stops dead",
     "a stamp PUNCHES down and paper dust bursts",
     "a card layer RIPS away in one stroke",
@@ -106,8 +117,8 @@ _RAMPS = (
 # defaults them from the through-line (Newsdesk Screens.dc.html, 1g). They are
 # what makes a block about THIS story rather than about the object alone.
 _MOTIFS = (
-    "the object alone on the card, nothing else competing",
-    "a flat stylised map beneath it, regions filling with flat colour",
+    "the object alone in the frame, nothing else competing",
+    "a flat stylised map beneath it, regions filling in one at a time",
     "an abstract bar chart of torn card growing beside it, unlabelled",
     "a ruled ledger of paper strips stacking and un-stacking behind it",
     "a crowd of small faceless paper cutouts arranged below it",

@@ -642,3 +642,31 @@ def test_a_run_records_its_kit_where_editor_review_can_find_it():
     pipe = Pipeline.start(parse_story(doc, where="test"))
     assert pipe.state.art_direction["kit"] == "diorama"
     assert pipe.state.art_direction["through_line"] == "note-stack"
+
+
+def test_a_resumed_run_follows_the_story_it_was_sent_not_the_one_abandoned(monkeypatch):
+    """Re-posting a story with a new kit/object must refresh art_direction and
+    drop blocks composed under the old direction — otherwise a diorama re-run
+    keeps the house through-line, breaks at scene lookup, and an approval would
+    assemble the wrong kit's subtitles over the footage."""
+    from newsdesk import state as state_mod
+    from newsdesk.pipeline import Pipeline
+    from newsdesk.state import Block, RunState
+    from newsdesk.storyfile import parse_story
+
+    old = RunState(
+        run_id="switcher", story="A title",
+        art_direction={"through_line": "tower-signal"},
+        blocks=(Block(n=1, narration="old line"),),
+    )
+    monkeypatch.setattr(RunState, "load", classmethod(lambda cls, rid: old))
+
+    doc = {
+        "id": "switcher", "title": "A title", "through_line": "note-stack",
+        "kit": "diorama",
+        "facts": [{"text": "A sourced fact", "sources": ["https://example.org/a"]}],
+    }
+    pipe = Pipeline.start(parse_story(doc, where="test"))
+    assert pipe.state.art_direction == {"through_line": "note-stack", "kit": "diorama"}
+    assert pipe.state.blocks == ()
+    assert any(e.kind == "art" and "direction changed" in e.message for e in pipe.state.events)

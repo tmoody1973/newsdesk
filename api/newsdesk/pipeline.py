@@ -136,6 +136,28 @@ class Pipeline:
                     "kit": story_file.kit,
                 },
             )
+        else:
+            # The journalist may re-post the same story with a different kit or
+            # object — a resumed run must follow the story they SENT, not the
+            # one they abandoned. Blocks composed under the old direction are
+            # cleared rather than kept: mixing two directions in one receipt is
+            # a lie, and the safe direction to be wrong in is "spent again".
+            wanted = {
+                "through_line": story_file.through_line,
+                "kit": story_file.kit,
+            }
+            recorded = {
+                "through_line": state.art_direction.get("through_line"),
+                "kit": state.art_direction.get("kit", "house"),
+            }
+            if recorded != wanted:
+                state = replace(state, art_direction=wanted, blocks=())
+                state = state.log(
+                    "art",
+                    f"direction changed to {wanted['kit']}/{wanted['through_line']} "
+                    f"from {recorded['kit']}/{recorded['through_line']} — "
+                    f"blocks reset, nothing already rendered is reused",
+                )
         return cls(story_file=story_file, state=state)
 
     # --- stages -------------------------------------------------------------

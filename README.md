@@ -28,10 +28,11 @@ Everything a fact-checker would want to read is open, no sign-in:
 | **[The policy](https://newsdesk-rosy.vercel.app/policy)** | POL-1…POL-6, rendered from the same `policy.yaml` the gate enforces |
 | **[Red team](https://newsdesk-rosy.vercel.app/redteam)** | CS-4's probes and what each refusal said |
 
-**Generating a video needs an access code**, which is not in this repository on
-purpose. It is the only thing between a public URL and someone else's provider
-balance, and `/health` reports whether it is set so a deploy that forgot it is
-visible rather than quietly open:
+**Generating a video needs an access code.** For judging week it is published
+below; it will be rotated when judging closes, because it is the only thing
+between a public URL and someone else's provider balance. `/health` reports
+whether it is set, so a deploy that forgot it is visible rather than quietly
+open:
 
 ```bash
 curl https://newsdesk-worker.fly.dev/health
@@ -51,9 +52,9 @@ curl -X POST https://newsdesk-worker.fly.dev/runs -d '{...}'
 
 > ### 🔑 Judges: the access code
 >
-> The code is in the **"Testing instructions" field of the Devpost submission**
-> (and in the submitted demo video, where it is typed on camera). To run the
-> full workflow yourself:
+> The code is: **`newsdesk-ba77b4f2`**
+>
+> To run the full workflow yourself:
 >
 > 1. Open **[/new](https://newsdesk-rosy.vercel.app/new)**, paste a story link,
 >    and put the code in the **Access code** box next to **Pull facts**.

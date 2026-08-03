@@ -1,0 +1,24 @@
+# Built from the /ingest proposals for the NPR story Tarik supplied —
+# the same six facts confirmed in the wizard e2e on 2026-08-02.
+id: karachi-premature
+title: Why one in four babies in this Karachi settlement arrive too soon
+through_line: scale
+facts:
+  - text: About 1 in 4 babies in the Pakistani fishing settlement of Rehri Goth are born prematurely, nearly double the national rate of 14%.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+  - text: The World Health Organization says about half of all premature babies born in poor countries at around 32 weeks are likely to die.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+  - text: Researchers at Agha Khan University found the bacterium Prevotella copri was far scarcer in women who delivered prematurely.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+  - text: Factors contributing to early birth in Rehri Goth include malnutrition, extreme heat, and poor sanitation.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+  - text: The World Health Organization says Cerelac is not formulated to meet an infant's nutritional needs and is not sterile.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+  - text: Dr. Fyezah Jehan notes that improving education, water, and sanitation could solve half the premature birth problems in the community.
+    sources:
+      - https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan

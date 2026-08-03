@@ -234,7 +234,15 @@ _LABEL_SCHEMA_HINT = ', "label": "..."'
 # If a run ever fails with the SAME problem on every attempt, that is the case
 # §6.4 is about and no number fixes it — the ledger records each attempt so the
 # difference is visible rather than inferred.
-MAX_ATTEMPTS = 6
+#
+# 6 -> 8 on 2026-08-02, same shape as 4 -> 6: Task 10/11b widened the rules
+# again (labels validated like claims), and the first number-dense ingested
+# story (six NPR facts heavy with proper nouns — "Prevotella copri", "Agha
+# Khan University") measured nine consecutive runs failing with DIFFERENT
+# problems each attempt, one of them dying on a single block three words
+# over the POL-5 window. That is convergence running out of budget, not
+# repetition. Attempts are text-priced; the wall stays the wall.
+MAX_ATTEMPTS = 8
 
 # The one failure with no path to correctness. A claim citing F9 in a six-fact
 # story is not abridged or forgotten — the fact does not exist, and no rewrite

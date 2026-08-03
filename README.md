@@ -49,6 +49,21 @@ curl -X POST https://newsdesk-worker.fly.dev/runs -d '{...}'
                 Every fact needs at least one."}
 ```
 
+> ### 🔑 Judges: the access code
+>
+> The code is in the **"Testing instructions" field of the Devpost submission**
+> (and in the submitted demo video, where it is typed on camera). To run the
+> full workflow yourself:
+>
+> 1. Open **[/new](https://newsdesk-rosy.vercel.app/new)**, paste a story link,
+>    and put the code in the **Access code** box next to **Pull facts**.
+> 2. The same box appears again before **Write script** and on **Editor
+>    Review** before the approval stamp — same code, all three places.
+>
+> Facts and refusals cost $0. A full run (pictures + narration + assembly)
+> spends about **$1.30** of provider balance, so please prefer one full run
+> over many. Every read-only page above needs no code at all.
+
 **Verify a published video yourself.** The manifest is inside the MP4 and the
 assets it names are public, so this check needs no permission from us:
 

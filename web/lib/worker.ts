@@ -10,7 +10,7 @@ import type { RunState } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_WORKER_URL ?? "http://localhost:8080";
 
-export type Stage = "script" | "gate" | "blocks" | "narration" | "assembly";
+export type Stage = "script" | "gate" | "blocks" | "narration" | "assembly" | "caption";
 
 export class WorkerError extends Error {
   constructor(

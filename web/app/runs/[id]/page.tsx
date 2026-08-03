@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CopyCaption } from "@/components/CopyCaption";
 import { LivePoll } from "@/components/LivePoll";
+
+type CaptionRow = {
+  platform: string;
+  variant: number;
+  text: string;
+  claims?: unknown[];
+  sources?: string[];
+};
 import { Stamp } from "@/components/Stamp";
 import { finalVideo, getRun } from "@/lib/b2";
 
@@ -180,6 +189,33 @@ export default async function RunBoard({ params }: { params: Promise<{ id: strin
           })}
         </div>
       </section>
+
+      {Array.isArray(run.final?.captions) && (run.final.captions as CaptionRow[]).length > 0 && (
+        <section className="mt-12">
+          <h2 className="font-display text-xl uppercase">Social captions</h2>
+          <p className="mt-1 text-sm text-graphite">
+            Ready to paste. Held to the same standard as the narration — every
+            claim in every caption traces to an entered fact, and the trace is in
+            the receipt.
+          </p>
+          <div className="mt-4 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))" }}>
+            {(run.final.captions as CaptionRow[]).map((c, i) => (
+              <div key={i} className="card" style={{ padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <span className="card-kicker">{c.platform} · variant {c.variant}</span>
+                  <CopyCaption text={c.text} />
+                </div>
+                <pre className="mono" style={{ fontSize: 12, lineHeight: 1.55, whiteSpace: "pre-wrap", margin: "10px 0 0", overflowWrap: "anywhere" }}>
+                  {c.text}
+                </pre>
+                <p className="mono" style={{ fontSize: 10.5, color: "var(--color-neutral-600)", margin: "10px 0 0" }}>
+                  {c.claims?.length ?? 0} traced {c.claims?.length === 1 ? "claim" : "claims"} · {c.sources?.length ?? 0} {c.sources?.length === 1 ? "source" : "sources"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-12">
         <h2 className="font-display text-xl uppercase">Run log</h2>

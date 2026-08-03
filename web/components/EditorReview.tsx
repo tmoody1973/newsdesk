@@ -55,7 +55,10 @@ export function EditorReview({ run }: { run: RunState }) {
         // The story is re-posted because the worker parses it on every call —
         // one parser, one standard, no "trusted" path that skips Wall 1.
         story: storyFromRun(run),
-        stages: ["assembly"],
+        // Captions ride the approval: they cost about a cent, they are checked
+        // like narration, and the journalist expects paste-ready copy to exist
+        // the moment the video does.
+        stages: ["assembly", "caption"],
         approver: approver.trim(),
         accessCode,
       });

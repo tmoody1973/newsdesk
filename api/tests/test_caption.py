@@ -130,7 +130,7 @@ def _run() -> RunState:
 
 
 def _payload(story, *, hook=None, source=None) -> str:
-    """Four captions the model would return: two per platform.
+    """Six captions the model would return: two per platform.
 
     The hook is the claim's own `spoken` phrase plus a period, not an
     independent slice of the fact: `cs1_story`'s fact 0 is exactly 100
@@ -146,7 +146,7 @@ def _payload(story, *, hook=None, source=None) -> str:
     real_source = source or fact.sources[0].value
     spoken = fact.text[:40]
     out = []
-    for platform in ("linkedin", "youtube"):
+    for platform in ("instagram", "linkedin", "youtube"):
         for variant in (1, 2):
             tags = ["#PublicMedia", "#Budget", "#Policy"]
             if platform == "youtube":
@@ -171,14 +171,14 @@ def _fake_chat(payload: str):
     return _chat
 
 
-def test_four_captions_are_returned_two_per_platform():
+def test_six_captions_are_returned_two_per_platform():
     story = cs1_story()
     _, _, caps = generate_captions(
         _run(), Ledger(), story, (), through_line="tower-signal",
         chat_fn=_fake_chat(_payload(story)),
     )
-    assert len(caps) == 4
-    assert {c.platform for c in caps} == {"linkedin", "youtube"}
+    assert len(caps) == 2 * len(__import__("newsdesk.caption", fromlist=["PLATFORMS"]).PLATFORMS)
+    assert {c.platform for c in caps} == {"instagram", "linkedin", "youtube"}
     assert sorted(c.variant for c in caps if c.platform == "youtube") == [1, 2]
 
 
@@ -244,3 +244,23 @@ def test_the_prompt_names_the_through_line_object():
     generate_captions(_run(), Ledger(), cs1_story(), (),
                       through_line="tower-signal", chat_fn=_spy)
     assert "tower-signal" in seen["prompt"]
+
+
+def test_an_unclosed_json_fence_still_parses():
+    """A truncation-adjacent reply that OPENS a ```json fence and never closes
+    it defeated the fence regex and refused good captions. The brace-slice
+    rescue parses it; honestly truncated JSON still refuses."""
+    import json as _json
+
+    from newsdesk.caption import parse_captions
+
+    payload = _json.dumps({"captions": [
+        {"platform": p, "variant": v, "hook": "A hook.", "body": "A body.",
+         "cta": "A cta.", "hashtags": ["#a"], "sources": ["https://x.org"],
+         "text": "A hook. A body. A cta. #a",
+         "claims": []}
+        for p, v in (("instagram", 1), ("instagram", 2), ("linkedin", 1),
+                     ("linkedin", 2), ("youtube", 1), ("youtube", 2))
+    ]})
+    caps = parse_captions("```json\n" + payload)
+    assert len(caps) == 6

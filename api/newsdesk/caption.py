@@ -24,12 +24,17 @@ from newsdesk.facts import Story
 from newsdesk.script import MODEL, PROVIDER, TIMEOUT_S, chat
 from newsdesk.state import RunState
 
-PLATFORMS = ("linkedin", "youtube")
+# Instagram was the platform the product owner asked for first, and it was
+# missing from this tuple for the feature's whole first day. The caption count
+# everywhere derives from this tuple — two variants per platform — so adding a
+# platform is one edit here, not a hunt for hardcoded fours.
+PLATFORMS = ("instagram", "linkedin", "youtube")
 
 # Characters visible before the platform truncates. The hook has to land whole
 # inside this or the surprising number is cut off mid-sentence, which is the one
 # thing the guide says must not happen.
-HOOK_LIMIT = {"linkedin": 125, "youtube": 150}
+# Instagram folds the caption behind "more" at ~125 visible characters.
+HOOK_LIMIT = {"instagram": 125, "linkedin": 125, "youtube": 150}
 
 MIN_HASHTAGS = 3
 MAX_HASHTAGS = 5
@@ -138,7 +143,10 @@ def caption_problems(c: Caption) -> tuple[str, ...]:
 
 # --- generation, checked and refused like a script block ---------------------
 
-MAX_ATTEMPTS = 3
+# 3 -> 6 on 2026-08-03: three consecutive full-loop refusals on mapping drift,
+# measured on two real stories — the same convergence-out-of-budget shape the
+# script stage documented at its own 4 -> 6 -> 8 moves. Attempts are text-priced.
+MAX_ATTEMPTS = 6
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
@@ -160,11 +168,11 @@ FACTS — every claim you make must map to one of these by id:
 THROUGH-LINE OBJECT: {through_line}. The video carries this object through all
 six scenes. You may reference it once as a metaphor.
 
-Write FOUR captions: two for linkedin, two for youtube.
+Write SIX captions: two for instagram, two for linkedin, two for youtube.
 
 RULES
 - The hook leads with the single most surprising real number, and must fit
-  {HOOK_LIMIT['linkedin']} characters for linkedin, {HOOK_LIMIT['youtube']} for youtube.
+  {HOOK_LIMIT['instagram']} characters for instagram, {HOOK_LIMIT['linkedin']} for linkedin, {HOOK_LIMIT['youtube']} for youtube.
 - Short punchy sentences. Documentary tone, warm but not promotional.
 - Tease the turn without giving it away.
 - {MIN_HASHTAGS}-{MAX_HASHTAGS} hashtags, niche and specific, as category labels.
@@ -186,12 +194,26 @@ def parse_captions(text: str) -> tuple[Caption, ...]:
     try:
         doc = json.loads(raw)
     except json.JSONDecodeError:
-        raise CaptionError(
-            f"the model did not return JSON. First 200 characters: {raw[:200]!r}"
-        ) from None
+        # A reply that opened a ```json fence and never closed it (usually a
+        # truncated reply) defeats _FENCE_RE, which needs both ends. Same
+        # rescue script.py uses: slice from the first brace to the last —
+        # honest truncation still fails, but a merely unclosed fence parses.
+        start, end = raw.find("{"), raw.rfind("}")
+        if start != -1 and end > start:
+            try:
+                doc = json.loads(raw[start : end + 1])
+            except json.JSONDecodeError:
+                raise CaptionError(
+                    f"the model did not return JSON. First 200 characters: {raw[:200]!r}"
+                ) from None
+        else:
+            raise CaptionError(
+                f"the model did not return JSON. First 200 characters: {raw[:200]!r}"
+            ) from None
     entries = doc.get("captions") or []
-    if len(entries) != 4:
-        raise CaptionError(f"expected 4 captions, got {len(entries)}")
+    expected = 2 * len(PLATFORMS)
+    if len(entries) != expected:
+        raise CaptionError(f"expected {expected} captions, got {len(entries)}")
     out: list[Caption] = []
     for e in entries:
         out.append(Caption(
@@ -243,7 +265,7 @@ def generate_captions(
     chat_fn: Callable[..., Any] | None = None,
     model: str | None = None,
 ) -> tuple[RunState, Ledger, tuple[Caption, ...]]:
-    """Four captions, or none. Never four captions with a warning attached."""
+    """Two captions per platform, or none. Never captions with a warning attached."""
     chat_fn = chat_fn or chat
     model = model or MODEL
     attached = sources_for(story)
@@ -256,7 +278,7 @@ def generate_captions(
         for _ in range(MAX_ATTEMPTS):
             ask = build_prompt(story, through_line=through_line, problems=problems)
             response = chat_fn(model, prompt=ask, temperature=0.4,
-                              max_tokens=2000, timeout=TIMEOUT_S)
+                              max_tokens=6000, timeout=TIMEOUT_S)
             raw = getattr(response, "text", "") or ""
             caps = parse_captions(raw)
             found = _problems(story, caps)

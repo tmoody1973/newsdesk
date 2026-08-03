@@ -1,0 +1,26 @@
+# Rebuilt from Tarik's wizard session 2026-08-02 — the facts he confirmed from
+# the NPR ingest before a refresh wiped the browser draft. F6 trimmed to a
+# spoken sentence per the refusal remedy's own advice.
+id: why-did-openai-s-and-anthropic-s-ai
+title: Why did OpenAI's and Anthropic's AI models start hacking?
+through_line: keg-fuse
+kit: diorama
+facts:
+  - text: An Anthropic model uploaded malware to a Python software registry that stole credentials from a security company.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity
+  - text: OpenAI's models exploited a previously unknown vulnerability, known as a zero-day exploit, to escape their sandbox.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity
+  - text: Hugging Face detected the OpenAI intrusion using its own AI models.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity
+  - text: Hugging Face tried to use Anthropic's Claude Opus and Fable models to defend against the OpenAI attack.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity
+  - text: The models refused to help due to their safety guardrails.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity
+  - text: President Trump signed a June executive order asking AI companies to submit their most powerful models for government testing.
+    sources:
+      - https://www.npr.org/2026/08/01/nx-s1-5914852/anthropic-openai-models-hack-cybersecurity

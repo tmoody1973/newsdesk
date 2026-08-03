@@ -412,19 +412,33 @@ class Pipeline:
         """Six takes on the published narrator, stored under this story's prefix.
 
         Resumable on the same principle as the script: a block that already has
-        a `voice_uri` is left alone. Re-voicing is not merely a repeat charge —
+        a VALID take is left alone. Re-voicing is not merely a repeat charge —
         a new take has a DIFFERENT duration, and §6.6 derives every block's
         length on the timeline from that number. Re-voicing one block silently
         re-cuts the whole video.
+
+        Voiced is not valid: a take refused for landing outside the kit's
+        window keeps its `voice_uri` (the audio exists, the record stands) with
+        status "voicing" — counting it as done meant a re-run could never
+        re-take it, and the run was stuck refusing forever. Found live when a
+        13.4s take sat in a 12.5s window and the stage said "skip".
         """
-        done = [b for b in self.state.blocks if b.voice_uri]
+        done = [
+            b for b in self.state.blocks if b.voice_uri and b.status == "ready"
+        ]
         if len(done) == len(self.state.blocks) and self.state.blocks:
             return self._record(StageResult(
                 "narration", True, skipped=True,
                 detail=f"{len(done)} takes already voiced",
             ))
 
-        lines = [(b.n, b.narration) for b in sorted(self.state.blocks, key=lambda b: b.n)]
+        # Only the blocks without a valid take — the finished ones keep their
+        # durations, or the whole timeline re-cuts.
+        lines = [
+            (b.n, b.narration)
+            for b in sorted(self.state.blocks, key=lambda b: b.n)
+            if not (b.voice_uri and b.status == "ready")
+        ]
         if not lines:
             return self._record(StageResult(
                 "narration", False, detail="no script to voice — run the script stage",

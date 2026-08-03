@@ -670,3 +670,53 @@ def test_a_resumed_run_follows_the_story_it_was_sent_not_the_one_abandoned(monke
     assert pipe.state.art_direction == {"through_line": "note-stack", "kit": "diorama"}
     assert pipe.state.blocks == ()
     assert any(e.kind == "art" and "direction changed" in e.message for e in pipe.state.events)
+
+
+def test_a_refused_take_is_retaken_and_valid_takes_are_left_alone(monkeypatch):
+    """Voiced is not valid: a take outside the kit's window keeps its audio and
+    its record, but a re-run must re-take IT — and only it, because re-voicing
+    a finished block changes its duration and silently re-cuts the timeline."""
+    import asyncio
+
+    from newsdesk import pipeline as pl
+    from newsdesk.state import Block, RunState
+    from newsdesk.storyfile import parse_story
+
+    blocks = tuple(
+        Block(
+            n=i, narration=f"line {i}", status="ready" if i != 5 else "voicing",
+            voice_uri=f"https://x/{i}.mp3", voice_duration_s=10.0 if i != 5 else 13.4,
+            clip_uri=f"https://x/{i}.mp4",
+        )
+        for i in range(1, 7)
+    )
+    state = RunState(run_id="retake", story="t",
+                     art_direction={"through_line": "tower-signal", "kit": "house"},
+                     blocks=blocks)
+
+    asked: list[int] = []
+
+    async def fake_narrate(lines, *, specs, window, speak=None):
+        asked.extend(n for n, _ in lines)
+        class T:  # the take shape store_take passes through
+            def __init__(self, n):
+                self.n, self.ok, self.status = n, True, "ready"
+                self.uri, self.duration_s = f"https://x/new{n}.mp3", 10.1
+                self.provider, self.model, self.cost_usd, self.attempts = "fake", "fake", 0.0, []
+        return [T(n) for n, _ in lines]
+
+    monkeypatch.setattr(pl, "narrate", fake_narrate)
+    monkeypatch.setattr(pl, "store_take", lambda t, *, prefix, store=None: t)
+    monkeypatch.setattr(pl, "voice_specs", lambda kv: ("p", "f"))
+    monkeypatch.setattr(pl, "take_window", lambda kv: (9.0, 12.5))
+
+    doc = {"id": "retake", "title": "t", "through_line": "tower-signal",
+           "facts": [{"text": "A sourced fact", "sources": ["https://example.org/a"]}]}
+    pipe = pl.Pipeline(story_file=parse_story(doc, where="test"), state=state)
+    result = asyncio.run(pipe.stage_narration(kit_voice={}, speak=None))
+
+    assert asked == [5], f"re-took {asked}, wanted only the refused block"
+    assert result.ok
+    kept = {b.n: b.voice_uri for b in pipe.state.blocks}
+    assert kept[1] == "https://x/1.mp3"
+    assert kept[5] == "https://x/new5.mp3"

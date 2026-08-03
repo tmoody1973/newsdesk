@@ -365,3 +365,29 @@ def test_loading_a_keyed_kit_reads_that_kits_prefix(tmp_path):
     # different keys, which is what makes "nothing migrates" true.
     with pytest.raises(brandkit.BrandKitError):
         brandkit.load(store=_FakeStore(_published("diorama")))
+
+
+def test_the_diorama_take_window_covers_every_take_it_was_measured_from():
+    """The window and the measurements are in the same file and must agree.
+
+    A take outside the window is not a warning: `Take.ok` is False for anything
+    but `ready`, so `stage_narration` reports the block as not voiced and stops
+    the run — after the takes are paid for. The first diorama run stopped that
+    way, with three of six compliant lines refused by a window that had been
+    inherited rather than measured. This fails if anyone narrows the window
+    without re-measuring, or records a take the window would reject.
+    """
+    import json
+
+    from newsdesk.narration import take_window
+
+    voice = json.loads((DIORAMA / "voice.json").read_text(encoding="utf-8"))
+    low, high = take_window(voice)
+    measured = voice["delivery"]["why_the_window_moved"]["measured_2026_08_02"]
+
+    assert len(measured) == 6, "six blocks, six takes"
+    for take in measured:
+        assert low <= take["seconds"] <= high, (
+            f"block {take['block']} measured {take['seconds']}s, outside the "
+            f"published {low}-{high}s window — that run would fail"
+        )

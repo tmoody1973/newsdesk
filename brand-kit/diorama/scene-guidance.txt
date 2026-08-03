@@ -27,6 +27,14 @@ and it is the fastest way to make this style look cheap. The through-line object
 IS the orange element (through-lines.yaml) — so if the scene already has an
 orange prop and the through-line arrives orange as well, the block is wrong.
 
+Measured on the first live run (diorama-smoke, 2026-08-02): five of six blocks
+came back on-style; block 2's note-stack rendered WALNUT BROWN with no orange
+anywhere in frame. One miss in six, from a prompt whose SCENE names burnt orange
+four times and closes on "the only colour anywhere in the frame". Read it as
+stochastic rather than as a prompt defect — but read every frame, because a
+scene that loses the accent has lost the through-line, and it does not announce
+itself in any log. Re-roll that block; do not re-write the prompt around it.
+
 
 THE FAKE-ONER — the shape every block is written in
 
@@ -102,6 +110,20 @@ fact ID (as before) OR case-insensitively equals one of the attested labels.
 through one shared method (`Pipeline._block_prompts`) precisely so the gate
 checks the same bytes the render stage pays for — see policy.yaml POL-4's v4
 changelog entry for the full account of what the sourcing test used to say.
+
+WHAT THE FIRST LIVE RENDER SHOWED (diorama-smoke block 3, 2026-08-02). The
+label WATERTOWN rendered correctly spelled — and DUPLICATED onto two separate
+props in the same frame. "doubled text" is in this kit's negative.txt and did
+not prevent it, which is the negation mechanism working exactly as the house
+guidance says it does: a negative acts only after the positive prompt has
+already rendered the thing, and cancels it against whatever occupies that
+region. Nothing here occupies "the second prop", so there is nothing to cancel
+against. The lever is positive and it is the fence's own wording: say WHERE the
+one label is, on WHICH element, and that everything else in frame is unprinted.
+One label, one surface, named — the same rule the surface clauses in
+through-lines.yaml apply to typography-carrying objects, applied to the label
+itself. Until that is written into the spliced sentence, expect roughly one
+duplication per six blocks and check every frame for it.
 
 
 THE MODERATION MAP — hard-won, and the reason this file exists

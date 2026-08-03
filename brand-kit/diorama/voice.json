@@ -22,15 +22,36 @@
   "delivery": {
     "target_take_seconds": [
       9.0,
-      10.5
+      12.5
     ],
-    "why_this_window": {
+    "why_the_window_moved": {
       "date": "2026-08-02",
-      "is": [9.0, 10.5],
+      "was": [9.0, 10.5],
+      "is": [9.0, 12.5],
+      "what_happened": "The first diorama run was voiced and measured. Six takes on stories/diorama-smoke.yaml, this voice_id on eleven_v3, every line inside POL-5's 23-27 word window: 9.888, 11.242, 9.438, 11.704, 10.320, 10.725s. Three of six fell outside 9.0-10.5, all by running long, and an out-of-window take is not a warning — `narration.run_take` marks it `review`, `Take.ok` is False, and the narration stage FAILED the run: '$0.277 spent, blocks 2, 4, 6 were not voiced'. The takes were not wrong and neither were the lines. The window was.",
+      "measured_2026_08_02": [
+        {"block": 1, "words": 23, "seconds": 9.888, "wps": 2.33, "result": "was in window"},
+        {"block": 2, "words": 27, "seconds": 11.242, "wps": 2.40, "result": "REFUSED as long"},
+        {"block": 3, "words": 25, "seconds": 9.438, "wps": 2.65, "result": "was in window"},
+        {"block": 4, "words": 25, "seconds": 11.704, "wps": 2.14, "result": "REFUSED as long"},
+        {"block": 5, "words": 27, "seconds": 10.320, "wps": 2.62, "result": "was in window"},
+        {"block": 6, "words": 23, "seconds": 10.725, "wps": 2.14, "result": "REFUSED as long"}
+      ],
+      "why_9_0_stays": "Unchanged, and not by inertia. The observed minimum is 9.438s, so 9.0 still has 0.44s of clearance below a normal read, and a take under it is the ONE failure the correction ladder can actually reach — [pause] tags lengthen a short take and nothing lengthens time in the other direction.",
+      "why_12_5": "Derived from these six takes twice over, and both derivations land in the same place. (1) The observed band is 9.438-11.704s; 12.5 clears the longest normal take by 0.8s, which is about mean + 2.3 standard deviations on this sample — outside the natural spread of a compliant read rather than inside it, which is what an uncorrectable failure mode requires. (2) The measured rate ran 2.14-2.65 w/s. A POL-5-maximum 27-word line at the slowest observed rate is 27/2.14 = 12.6s. So the check can still fail on a line POL-5 admits, by a small margin, which is the property the house file argues for: a window that cannot fail is worse than one that fails too often.",
+      "why_not_the_houses_13_0": "Because copying it would be inheriting a correction this kit did not earn. The house moved to 13.0 against takes reaching 12.56s; ours reach 11.704s. Setting 13.0 here would buy 1.3s of slack no measurement asked for and would quietly stop catching the long read it is supposed to catch.",
+      "the_honest_caveat": "Six takes, one story, one narrator. It is a runtime budget, not a law. A second diorama story should read these numbers as the starting point they now are, and re-measure if its takes drift.",
+      "what_this_cost": "$0.277 and a failed narration stage, which is the cheapest place this could have been discovered — text and audio, before any video was bought."
+    },
+    "why_this_window_was_9_0_to_10_5": {
+      "SUPERSEDED": "By why_the_window_moved above, on the same day, by the first six measured takes. Kept because this repo keeps the wrong version next to the right one — and because this one got its own prediction right, which is the useful part: it said the number was an intention rather than a measurement, said what would happen if it were trusted, and said to re-measure rather than widen. That is exactly what happened and exactly what was done. A note that names its own weakness is why the failure cost $0.277 and a stage rather than a re-rendered video.",
+      "date": "2026-08-02",
+      "was": [9.0, 10.5],
       "the_house_window_is": [9.0, 13.0],
       "what_this_number_is": "The reference brief's target for this style — a clipped ten-second beat, six of them, a piece around sixty seconds. It is an intention. It has not been measured on a diorama story.",
       "the_correction_it_must_not_repeat": "The house kit started at exactly these numbers and moved to 9.0-13.0 on 2026-07-28, after six CS-1 blocks were voiced and measured at 9.25, 9.28, 9.64, 10.88, 12.40 and 12.56s. Three of six fell outside a 9.0-10.5 window, all by running long, and an overrun has NO correction on this stack: the genblaze ElevenLabs adapter builds voice_settings from stability, similarity_boost and style only and never forwards speed. The house file's own closing caveat is the instruction here — 'a second story on a different voice should re-measure rather than inherit these numbers'.",
       "so_what_happens_on_the_first_run": "Expect blocks flagged `review` for running long, and read that as this window being untested rather than as the takes being wrong. A flag does not fail the run; POL-5 is a runtime budget, not a sync constraint (§6.6). Re-measure from the first six diorama takes and move this number with the measurement written beside it, the way the house window records its own move. Do not widen it on a hunch, and do not narrow the script to defend it — regenerating the script changes the lines, which invalidates every take already cut from them.",
+      "one_thing_this_got_wrong": "'A flag does not fail the run.' It does. An out-of-window take is marked `review`, `Take.ok` returns False on anything but `ready`, and `stage_narration` reports the block as not voiced and stops the run. POL-5 being a runtime budget rather than a sync constraint is true of the DESIGN and not of this code path. Read as advice it was reassuring and wrong; the run stopped with three blocks paid for and unusable.",
       "why_it_is_not_simply_set_to_the_house_number": "Because the house number was measured on a warm documentary read of house-length sentences, and this kit asks for a colder, more clipped one. Inheriting 13.0 would carry over a correction that was earned by a different delivery. The window a style should start from is its brief; the window it keeps is the one its takes measure."
     },
     "words_per_block": [

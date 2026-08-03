@@ -286,3 +286,82 @@ def test_every_diorama_block_prompt_passes_the_gate():
         for n in range(1, 7):
             verdict = check(build_block_prompt(tl, n, 6, kit="diorama"))
             assert verdict.passed, f"{entry['id']} block {n}: {verdict.explain()}"
+
+
+# --- publishing a kit --------------------------------------------------------
+
+
+class _FakeStore:
+    """A B2 bucket that lives in a dict. The kit path is $0 and offline here."""
+
+    def __init__(self, objects: dict[str, bytes] | None = None):
+        self.objects = dict(objects or {})
+
+    def get(self, key: str) -> bytes:
+        return self.objects[key]
+
+    def exists(self, key: str) -> bool:
+        return key in self.objects
+
+    def get_durable_url(self, key: str) -> str:
+        return f"https://example.invalid/{key}"
+
+
+def _published(kit_id: str) -> dict[str, bytes]:
+    """What a synced bucket holds for one kit, keyed the way B2 keys it."""
+    from newsdesk.brandkit import FLOOR, kit_prefix
+
+    objects = {f"kit/{FLOOR}": b"photorealism"}
+    for name in REQUIRED_TEXT:
+        objects[f"{kit_prefix(kit_id)}{name}"] = (
+            b"version: 1\nthrough_lines: []\n" if name.endswith(".yaml")
+            else b"{}" if name.endswith(".json") else b"x"
+        )
+    return objects
+
+
+def test_sync_down_materializes_a_kit_the_gate_can_actually_read(tmp_path):
+    """The floor is at the kit ROOT and is not one of the six required files, so
+    it was never fetched. A deployed run points NEWSDESK_BRAND_KIT_DIR at this
+    directory and `platform_floor()` reads floor.txt out of it — without it the
+    gate dies on FileNotFoundError, having refused nothing."""
+    from newsdesk import brandkit
+
+    dest = brandkit.sync_down(tmp_path / "kit", store=_FakeStore(_published("house")))
+    assert (dest / "floor.txt").is_file()
+    for name in REQUIRED_TEXT:
+        assert (dest / name).is_file()
+
+
+def test_sync_down_lays_a_keyed_kit_out_the_way_kit_dir_for_looks_for_it(tmp_path):
+    """`kit_dir_for('diorama')` is `<root>/diorama`, and the floor stays at the
+    root because a kit that could write its own floor is compared against
+    itself."""
+    from newsdesk import brandkit
+    from newsdesk.blockprompt import kit_dir_for
+
+    dest = brandkit.sync_down(
+        tmp_path / "kit", store=_FakeStore(_published("diorama")), kit_id="diorama"
+    )
+    assert (dest / "floor.txt").is_file(), "the floor is never inside a kit"
+    for name in REQUIRED_TEXT:
+        assert (dest / "diorama" / name).is_file()
+
+    import os
+    os.environ["NEWSDESK_BRAND_KIT_DIR"] = str(dest)
+    try:
+        assert kit_dir_for("diorama") == dest / "diorama"
+    finally:
+        del os.environ["NEWSDESK_BRAND_KIT_DIR"]
+
+
+def test_loading_a_keyed_kit_reads_that_kits_prefix(tmp_path):
+    from newsdesk import brandkit
+
+    kit = brandkit.load(store=_FakeStore(_published("diorama")), kit_id="diorama")
+    assert kit.through_lines == {"version": 1, "through_lines": []}
+
+    # And the same bucket cannot satisfy a house load: the two prefixes are
+    # different keys, which is what makes "nothing migrates" true.
+    with pytest.raises(brandkit.BrandKitError):
+        brandkit.load(store=_FakeStore(_published("diorama")))

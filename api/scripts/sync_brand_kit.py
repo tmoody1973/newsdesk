@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Publish the local brand kit to B2. Idempotent (MOO-425).
+"""Publish one local brand kit to B2. Idempotent (MOO-425).
 
-    uv run python scripts/sync_brand_kit.py            # publish changed files
-    uv run python scripts/sync_brand_kit.py --check    # report drift, upload nothing
+    uv run python scripts/sync_brand_kit.py                    # the house kit
+    uv run python scripts/sync_brand_kit.py --kit diorama      # a keyed kit
+    uv run python scripts/sync_brand_kit.py --check            # report drift, upload nothing
+
+One kit per run, and the default is the house kit, byte for byte what it was
+before kits were keyed. `--kit diorama` publishes `kit/diorama/` and touches no
+house object — B2 keys are flat, so the two prefixes are unrelated keys and
+nothing migrates.
 
 Idempotence is decided on a SHA-256 we store as object metadata, not on the
 ETag. B2 returns the MD5 for single-PUT objects and something opaque for
@@ -20,7 +26,8 @@ import hashlib
 import sys
 from pathlib import Path
 
-from newsdesk.brandkit import KIT_PREFIX, REQUIRED_TEXT, STYLE_KEY
+from newsdesk.blockprompt import HOUSE_KIT, KNOWN_KITS
+from newsdesk.brandkit import FLOOR, KIT_PREFIX, REQUIRED_TEXT, STYLE_KEY, kit_prefix
 from newsdesk.config import BUCKETS, ConfigError, backend
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,8 +55,20 @@ def published_digest(store, key: str) -> str | None:
     return meta.metadata.get("sha256") if meta else None
 
 
+def _kit_id(argv: list[str]) -> str:
+    if "--kit" not in argv:
+        return HOUSE_KIT
+    kit = argv[argv.index("--kit") + 1]
+    if kit not in KNOWN_KITS:
+        raise SystemExit(f"unknown kit '{kit}'. Choose from: {', '.join(KNOWN_KITS)}")
+    return kit
+
+
 def main() -> int:
     check_only = "--check" in sys.argv
+    kit_id = _kit_id(sys.argv)
+    prefix = kit_prefix(kit_id)
+    local = LOCAL_KIT if kit_id == HOUSE_KIT else LOCAL_KIT / kit_id
 
     try:
         store = backend(BUCKETS["brand_kit"])
@@ -60,17 +79,25 @@ def main() -> int:
     # The style key is optional — it is documentation, and it may not be picked
     # yet. Everything else is required, and a missing one is a failure here
     # rather than a surprise inside brandkit.load() during a run.
-    names = list(REQUIRED_TEXT) + [STYLE_KEY]
+    #
+    # The floor rides along with EVERY kit and always at the root prefix. It is
+    # not part of any kit — no kit may narrow it — but `negative_line()` cannot
+    # compose without it, so a kit published without it is a kit that cannot be
+    # used. Its source is always the root directory, never the kit's own.
+    names: list[tuple[str, Path, str]] = [(FLOOR, LOCAL_KIT / FLOOR, KIT_PREFIX)]
+    names += [(name, local / name, prefix) for name in list(REQUIRED_TEXT) + [STYLE_KEY]]
 
     uploaded = unchanged = missing = drifted = 0
 
-    for name in names:
-        path = LOCAL_KIT / name
-        key = f"{KIT_PREFIX}{name}"
+    for name, path, at in names:
+        key = f"{at}{name}"
 
         if not path.exists():
-            if name in REQUIRED_TEXT:
-                print(f"  MISSING   {name}  — brandkit.load() will refuse without it")
+            # Everything except the style key is required — including the floor,
+            # whose absence is not a load failure but a gate failure, one layer
+            # further in and after the run has started.
+            if name != STYLE_KEY:
+                print(f"  MISSING   {name}  — a run on this kit will refuse without it")
                 missing += 1
             else:
                 print(f"  skipped   {name}  — optional")
@@ -99,7 +126,7 @@ def main() -> int:
         uploaded += 1
 
     print(
-        f"\nb2://{BUCKETS['brand_kit']}/{KIT_PREFIX}  "
+        f"\nb2://{BUCKETS['brand_kit']}/{prefix}  kit '{kit_id}': "
         f"{uploaded} uploaded, {unchanged} unchanged"
         + (f", {drifted} drifted" if drifted else "")
         + (f", {missing} required file(s) missing" if missing else "")

@@ -57,6 +57,15 @@ REQUIRED_TEXT = (
     "subtitle.ass",
 )
 
+# The platform floor. NOT one of the six — it is not part of any kit, it is the
+# thing no kit may narrow, and it lives at the bare root prefix for every kit
+# there will ever be (`blockprompt.platform_floor` reads it from the kit ROOT for
+# exactly that reason). Published and materialized alongside whichever kit is
+# being synced, because `negative_line()` cannot compose without it: a
+# materialized kit directory missing this file kills the deployed gate with
+# FileNotFoundError, having refused nothing.
+FLOOR = "floor.txt"
+
 # Documentation, not a pipeline input. MOO-424 established that passing a
 # style key as an image reference made consistency *worse* — two scenes off one
 # key produced a blue ground and a tan ground, while naming the palette in text
@@ -138,15 +147,24 @@ def load(*, store: Any | None = None, kit_id: str = HOUSE_KIT) -> BrandKit:
     )
 
 
-def sync_down(dest: Path, *, store: Any | None = None) -> Path:
-    """Materialize the published kit into `dest` and return it.
+def sync_down(dest: Path, *, store: Any | None = None, kit_id: str = HOUSE_KIT) -> Path:
+    """Materialize one published kit into `dest` and return it.
 
     Point NEWSDESK_BRAND_KIT_DIR at the result and `blockprompt` — and through
     it POL-2's byte comparison — reads the published kit rather than the
     working copy, without either module importing a network package.
+
+    The layout mirrors the repo, because `blockprompt.kit_dir_for` is what reads
+    it: the floor at the root, the house kit's files at the root beside it, a
+    keyed kit's files in `dest/<kit_id>/`.
     """
     store = store if store is not None else backend(BUCKETS["brand_kit"])
+    prefix = kit_prefix(kit_id)
+    into = dest if prefix == KIT_PREFIX else dest / kit_id
+    into.mkdir(parents=True, exist_ok=True)
     dest.mkdir(parents=True, exist_ok=True)
+
+    (dest / FLOOR).write_bytes(_fetch(store, FLOOR))
     for name in REQUIRED_TEXT:
-        (dest / name).write_bytes(_fetch(store, name))
+        (into / name).write_bytes(_fetch(store, name, prefix=prefix))
     return dest

@@ -169,11 +169,28 @@ def estimate_take_seconds(narration: str) -> float:
     return len(narration.split()) / WORDS_PER_SECOND
 
 
-def check(prompt: BlockPrompt, *, narration: str = "", fact_ids: tuple[str, ...] = ()) -> GateResult:
+def check(
+    prompt: BlockPrompt,
+    *,
+    narration: str = "",
+    fact_ids: tuple[str, ...] = (),
+    labels: tuple[str, ...] = (),
+) -> GateResult:
     """Evaluate one block against every deterministic rule.
 
     Returns findings for all rules, passed or failed, so the audit records what
     was checked rather than only what broke.
+
+    `labels` sources POL-4 the same way `fact_ids` does, for the diorama
+    style's one legal kind of on-prop text: a letterpress word already
+    validated by claims.py against an entered fact, before it ever reached
+    this prompt. The gate does not re-derive that — there is no fact list
+    here to check it against, by design (this module must never import
+    claims.py; see the module docstring on why nothing here reaches a
+    provider). It accepts a label ONLY because the caller attests it was
+    claims-validated. A caller that passes an unvalidated string as a label is
+    the one thing this function cannot defend against; that is claims.py's job,
+    upstream, once, rather than this file's job on every call.
     """
     n = _names()
     findings: list[Finding] = []
@@ -205,7 +222,10 @@ def check(prompt: BlockPrompt, *, narration: str = "", fact_ids: tuple[str, ...]
 
     # POL-4 — no unsourced text on screen, and a budget on the sourced kind
     all_quoted = _QUOTED.findall(prompt.scene)
-    unsourced = [q for q in all_quoted if q.upper() not in fact_ids]
+    labels_upper = {label.upper() for label in labels}
+    unsourced = [
+        q for q in all_quoted if q.upper() not in fact_ids and q.upper() not in labels_upper
+    ]
     requested = _TEXT_REQUEST.search(prompt.scene)
 
     # Checked in severity order: an unsourced word is a policy violation, while

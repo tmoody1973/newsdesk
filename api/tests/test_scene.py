@@ -262,3 +262,64 @@ def test_a_kit_brings_its_own_ground_and_accent():
 
     house = build_scene(ThroughLine.from_kit(entry), 1)
     assert GROUND in house and ANCHOR in house
+
+
+# --- Task 11b: the letterpress label splice ---------------------------------
+#
+# `ScriptBlock.label` was emitted, validated by claims.py, and survived the
+# state round-trip — and then nothing put it in a prompt. These pin the two
+# directions of that gap at once: the label must actually reach SCENE, and
+# the gate must refuse the exact same quoted word the moment nobody attests
+# it. Deleting either the splice or the refusal breaks one of the two.
+
+
+def test_a_claims_validated_label_reaches_the_scene_and_the_gate_sources_it():
+    from newsdesk.blockprompt import platform_floor
+
+    tl = all_through_lines()[0]
+    prompt = build_block_prompt(tl, 1, kit="diorama", label="EXPIRED")
+
+    assert '"EXPIRED"' in prompt.scene
+    assert prompt.negative.startswith(platform_floor())
+    assert prompt.negative.endswith(
+        'No text anywhere except "EXPIRED". No gibberish letters, no repeated text.'
+    )
+    assert check(prompt, labels=("EXPIRED",)).passed
+
+
+def test_the_same_prompt_with_no_attested_label_is_refused():
+    """The sibling of the test above. Deleting the new sourced-path breaks
+    that one; deleting this refusal breaks this one — together they prove the
+    gate did not just start accepting quoted SCENE text unconditionally."""
+    tl = all_through_lines()[0]
+    prompt = build_block_prompt(tl, 1, kit="diorama", label="EXPIRED")
+
+    result = check(prompt, labels=())
+    assert not result.passed
+    assert "EXPIRED" in result.explain()
+
+
+def test_a_five_word_label_is_refused_by_the_word_budget_even_when_attested():
+    tl = all_through_lines()[0]
+    label = "one two three four five"
+    prompt = build_block_prompt(tl, 1, kit="diorama", label=label)
+
+    result = check(prompt, labels=(label,))
+    assert not result.passed
+    assert "words on screen" in result.explain()
+
+
+def test_label_none_renders_byte_identical_to_before_this_task():
+    """House kit and label-less diorama blocks change nothing — the splice
+    only fires when a kit ever hands `build` a label."""
+    tl = all_through_lines()[0]
+
+    house = build_block_prompt(tl, 1)
+    assert house.render() == build_block_prompt(tl, 1, label=None).render()
+    assert '"' not in house.scene
+    assert "No text anywhere except" not in house.negative
+
+    diorama = build_block_prompt(tl, 1, kit="diorama")
+    assert diorama.render() == build_block_prompt(tl, 1, kit="diorama", label=None).render()
+    assert '"' not in diorama.scene
+    assert "No text anywhere except" not in diorama.negative

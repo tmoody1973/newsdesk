@@ -153,6 +153,7 @@ class BlockPrompt:
         style_reference: str | None = None,
         negative: str | None = None,
         kit: str = HOUSE_KIT,
+        label: str | None = None,
     ) -> BlockPrompt:
         """Construct with the brand kit supplying the two fixed fields.
 
@@ -160,7 +161,41 @@ class BlockPrompt:
         reference or the exclusion line. They may only say WHICH kit — and the
         story file is what says that, so `kit` is threaded from `StoryFile.kit`
         rather than chosen here.
+
+        `label` is the diorama style's signature: a letterpress word already
+        validated by claims.py against an entered fact (Task 10) and carried
+        on the block through the state round-trip (Task 11 Part A). None for
+        every house block and every diorama block that carries no label — the
+        splice below is skip-by-default so passing nothing leaves SCENE and
+        NEGATIVE byte-identical to before this parameter existed. Only when a
+        kit hands this a validated word does the prompt gain the sentence that
+        actually asks a provider to print it, and the fence that forbids
+        anything else on screen. This module never validates the label itself
+        — that trust boundary is claims.py, one layer up, on purpose: this
+        file has no fact list to check it against.
         """
+        scene_text = scene.strip()
+        negative_text = negative or negative_line(kit)
+        if label:
+            # Wording and placement (one sentence, right after the described
+            # scene, plain double quotes) from diorama-doc.md's own worked
+            # example: "...a burnt-orange stamp punches the letterpress word
+            # "EXPIRED" across it...". "stamped on" rather than "written on" or
+            # "reading" is deliberate — the gate's POL-4 `_TEXT_REQUEST` phrases
+            # ("the word(s)", "written on", "sign that reads") are exactly the
+            # generic lettering requests this splice must not accidentally
+            # become one of; this exact wording does not match any of them.
+            scene_text = (
+                f'{scene_text} A distressed letterpress word "{label}" is '
+                f"stamped on a torn burnt-orange paper element."
+            )
+            # Appended AFTER the kit's own additions — add-only above the
+            # floor holds, and `negative_is_intact` (startswith check) still
+            # passes because nothing before the kit's additions moved.
+            negative_text = (
+                f'{negative_text}. No text anywhere except "{label}". '
+                f"No gibberish letters, no repeated text."
+            )
         return cls(
             block=block,
             # No attachment is named, because there is no longer one to name.
@@ -169,10 +204,10 @@ class BlockPrompt:
             # points a model at nothing and invites it to invent the referent.
             style_reference=style_reference
             or f"Render in this house style EXACTLY — {style_tokens(kit)}",
-            scene=scene.strip(),
+            scene=scene_text,
             motion=motion.strip(),
             audio=audio.strip(),
-            negative=negative or negative_line(kit),
+            negative=negative_text,
         )
 
     def render(self) -> str:

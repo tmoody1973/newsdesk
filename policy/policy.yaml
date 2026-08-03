@@ -99,7 +99,8 @@ rules:
     layers: [deterministic, vision]
     check: >
       SCENE must not request readable text. Any on-prop text must map to an
-      entered fact ID.
+      entered fact ID, or be a claims-validated block label the caller
+      attests to via `check(..., labels=...)` (v4, below).
     threshold: >
       Text is a violation when it is readable at normal viewing size — a
       viewer watching on a phone can make out a word or a number. Sub-legible
@@ -145,6 +146,24 @@ rules:
       The element budget bounds the damage where text is permitted. It does
       nothing about text that arrives uninvited, which stays POL-6's job.
     changelog: >
+      v4 (2026-08-02) extended the sourcing test itself. v3, directly below,
+      split the NEGATIVE-line half so a kit COULD permit on-prop text — but
+      `gate.check`'s sourcing test still read "a quoted string is sourced if
+      it matches an entered fact ID", which gave the diorama kit's own
+      signature no legal path: a letterpress label is validated by claims.py
+      against a fact, not typed by the fact itself, so it never appeared in
+      `fact_ids` and every labelled block was refused as unsourced text. The
+      test now reads "sourced if it matches a fact ID OR case-insensitively
+      equals one of the labels the caller attests were claims-validated" —
+      `check(prompt, labels=(block.label,))`. The element budget, the word
+      budget, and the "unsourced text outranks a budget complaint" ordering
+      are all unchanged and bind labels exactly as they bind fact-sourced
+      text; only what counts as "sourced" grew a second legal path. A caller
+      that passes an unvalidated string as a label defeats this the same way a
+      caller that lies about `fact_ids` already could — the gate trusts the
+      attestation once, at the boundary, rather than re-deriving it, because
+      re-deriving it would mean importing claims.py into gate.py's import
+      graph, which tests/test_structure.py exists specifically to forbid.
       v3 (2026-08-02) — this rule's text is now enforced by two layers that
       moved independently. The vision/element-budget checks above are
       unchanged. What moved is the NEGATIVE-line half: "readable text, letters,

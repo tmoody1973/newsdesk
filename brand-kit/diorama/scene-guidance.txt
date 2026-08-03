@@ -90,14 +90,18 @@ The rules, all of them enforced somewhere other than here:
   * Always fenced in the negative for that block: no text anywhere except the
     label itself, no gibberish letters, no captions, no watermark.
 
-NOT YET WIRED, and this is the honest state of it: `ScriptBlock.label` is
-emitted by the script stage and validated by claims.py, and it survives a state
-round trip — but nothing splices it into the SCENE field yet, so no provider has
-been asked to print one. Doing that also needs the gate's POL-4 to be told which
-label was traced (`check(prompt, fact_ids=...)` is already the parameter for it,
-and pipeline.py currently calls `check(prompt)` with no fact ids). Until that is
-closed, diorama scenes render with no printed word at all, which is a plain
-diorama rather than a wrong one.
+WIRED (Task 11b): `ScriptBlock.label` is emitted by the script stage,
+validated by claims.py, survives the state round trip, and now reaches the
+prompt. `BlockPrompt.build(..., label=...)` splices the sentence above into
+SCENE and appends the fence to NEGATIVE, only when a label is present — a
+label-less block, and every house block, renders byte-identical to before this
+was wired. `gate.check(prompt, ..., labels=(block.label,))` is what sources it:
+POL-4 treats a quoted SCENE string as legitimate when it matches an entered
+fact ID (as before) OR case-insensitively equals one of the attested labels.
+`stage_gate` and `stage_blocks` in pipeline.py both build every block's prompt
+through one shared method (`Pipeline._block_prompts`) precisely so the gate
+checks the same bytes the render stage pays for — see policy.yaml POL-4's v4
+changelog entry for the full account of what the sourcing test used to say.
 
 
 THE MODERATION MAP — hard-won, and the reason this file exists

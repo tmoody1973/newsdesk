@@ -561,3 +561,68 @@ def test_every_block_prompt_is_built_in_the_storys_kit(cs2, monkeypatch):
     monkeypatch.setattr(p, "build_block_prompt", _capture)
     _fresh(replace(cs2, kit="diorama")).stage_gate()
     assert seen and set(seen) == {"diorama"}
+
+
+def test_the_gate_sources_a_scripted_label_and_blocks_pays_for_the_same_prompt(
+    cs2, monkeypatch
+):
+    """Task 11b. `stage_gate` must give POL-4 the block's own claims-validated
+    label — not check a generic prompt that never carries it — and `stage_blocks`
+    must render the identical bytes, not a second prompt that happens to agree."""
+    import newsdesk.pipeline as p
+
+    monkeypatch.setattr(p, "load_kit", _kit)
+    monkeypatch.setattr(p, "sink", lambda prefix: None)
+
+    pipe = _fresh(replace(cs2, kit="diorama"))
+    pipe.state = replace(
+        pipe.state,
+        blocks=tuple(
+            Block(n=i, narration=f"Line {i}", label="EXPIRED" if i == 1 else None)
+            for i in range(1, 7)
+        ),
+    )
+
+    gate_result = pipe.stage_gate()
+    assert gate_result.ok, gate_result.detail
+
+    captured: dict[int, object] = {}
+
+    async def fake_run_block(prompt, **kw):
+        captured[prompt.block] = prompt
+        return _FakeResult(n=prompt.block)
+
+    monkeypatch.setattr(p, "run_block", fake_run_block)
+    asyncio.run(pipe.stage_blocks(image_provider=object(), video_provider=object()))
+
+    assert '"EXPIRED"' in captured[1].scene
+    assert '"' not in captured[2].scene
+
+
+def test_an_unattested_label_left_on_the_state_makes_the_gate_refuse(cs2, monkeypatch):
+    """The other direction: a label the gate is not told about is unsourced
+    text, and Wall 2 must still stop it before any spend."""
+    import newsdesk.pipeline as p
+
+    monkeypatch.setattr(p, "load_kit", _kit)
+
+    pipe = _fresh(replace(cs2, kit="diorama"))
+    pipe.state = replace(
+        pipe.state,
+        blocks=tuple(Block(n=i, narration=f"Line {i}") for i in range(1, 7)),
+    )
+    # Force a label into block 1's prompt without it being on the state — the
+    # bug this task closes: a label spliced into SCENE but never sourced to
+    # the gate.
+    real_bbp = p.build_block_prompt
+
+    def _bbp_with_forced_label(through_line, n, blocks=6, **kw):
+        if n == 1:
+            kw["label"] = "EXPIRED"
+        return real_bbp(through_line, n, blocks, **kw)
+
+    monkeypatch.setattr(p, "build_block_prompt", _bbp_with_forced_label)
+
+    result = pipe.stage_gate()
+    assert not result.ok
+    assert "EXPIRED" in result.detail

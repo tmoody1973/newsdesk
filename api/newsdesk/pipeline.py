@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from newsdesk.assembly import resolve_ffmpeg
+from newsdesk.blockprompt import BlockPrompt
 from newsdesk.blocks import run_block, run_still, sink
 from newsdesk.brandkit import load as load_kit
 from newsdesk.caption import generate_captions
@@ -171,13 +172,20 @@ class Pipeline:
         The demo's rejection beat IS this stage, and CS-4's whole acceptance
         criterion is that it can run with no credentials configured at all.
         """
-        through_line = self.through_line()
+        by_n = {b.n: b for b in self.state.blocks}
         blocked: list[str] = []
-        for n in range(1, BLOCKS + 1):
-            prompt = build_block_prompt(through_line, n, BLOCKS, kit=self.story_file.kit)
-            verdict = check(prompt)
+        first_findings = 0
+        for prompt in self._block_prompts():
+            block = by_n.get(prompt.block)
+            verdict = check(
+                prompt,
+                fact_ids=block.fact_ids if block else (),
+                labels=(block.label,) if block and block.label else (),
+            )
+            if prompt.block == 1:
+                first_findings = len(verdict.findings)
             if not verdict.passed:
-                blocked.append(f"block {n}: {verdict.explain()}")
+                blocked.append(f"block {prompt.block}: {verdict.explain()}")
 
         if blocked:
             self.state = self.state.log("gate", "refused before any spend")
@@ -185,12 +193,9 @@ class Pipeline:
                 "gate", False, detail="\n".join(blocked),
             ))
 
-        rules = len(check(
-            build_block_prompt(through_line, 1, BLOCKS, kit=self.story_file.kit)
-        ).findings)
-        self.state = self.state.log("gate", f"{BLOCKS} blocks x {rules} rules passed")
+        self.state = self.state.log("gate", f"{BLOCKS} blocks x {first_findings} rules passed")
         return self._record(StageResult(
-            "gate", True, detail=f"{BLOCKS} blocks x {rules} rules, $0 spent",
+            "gate", True, detail=f"{BLOCKS} blocks x {first_findings} rules, $0 spent",
         ))
 
     def stage_endcard(self) -> StageResult:
@@ -325,11 +330,7 @@ class Pipeline:
         The gate is NOT re-run here — `stage_gate` owns it and the runner
         refuses to reach this stage without it. One wall, one owner.
         """
-        through_line = self.through_line()
-        prompts = [
-            build_block_prompt(through_line, n, BLOCKS, kit=self.story_file.kit)
-            for n in range(1, BLOCKS + 1)
-        ]
+        prompts = self._block_prompts()
         prefix = self.story_file.clip_prefix.rstrip("/")
 
         async def one(prompt: Any) -> tuple[int, bool, float, str, str | None, str | None]:
@@ -454,6 +455,24 @@ class Pipeline:
         ))
 
     # --- helpers ------------------------------------------------------------
+
+    def _block_prompts(self) -> list[BlockPrompt]:
+        """Every block's prompt, built once, in the story's kit, with each
+        block's own claims-validated label if it has one.
+
+        `stage_gate` and `stage_blocks` both call this rather than each
+        building its own list. Two call sites building the same six prompts
+        independently is how a gate that passed one prompt ends up paying for
+        a different one — this is the one place that can no longer happen.
+        """
+        through_line = self.through_line()
+        labels = {b.n: b.label for b in self.state.blocks}
+        return [
+            build_block_prompt(
+                through_line, n, BLOCKS, kit=self.story_file.kit, label=labels.get(n),
+            )
+            for n in range(1, BLOCKS + 1)
+        ]
 
     def through_line(self) -> ThroughLine:
         """The art-direction menu item this story picked, from the PUBLISHED kit.

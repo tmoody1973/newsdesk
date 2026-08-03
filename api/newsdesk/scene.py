@@ -339,7 +339,12 @@ def _stage(escalation: str, block_n: int, blocks: int) -> str:
 
 
 def build_block_prompt(
-    through_line: ThroughLine, block_n: int, blocks: int = 6, *, kit: str = HOUSE_KIT
+    through_line: ThroughLine,
+    block_n: int,
+    blocks: int = 6,
+    *,
+    kit: str = HOUSE_KIT,
+    label: str | None = None,
 ) -> BlockPrompt:
     """The five-field document that reaches the gate, then the provider.
 
@@ -347,6 +352,10 @@ def build_block_prompt(
     house kit so nothing that never heard of kits changes, and the pipeline
     passes the story file's own kit so the gate checks the prompt that is
     actually paid for.
+
+    `label` is this block's claims-validated letterpress word, if it has one
+    — `BlockPrompt.build` does the actual splicing; passed straight through so
+    the gate and the render path build from the one place (`pipeline.py`).
     """
     return BlockPrompt.build(
         block_n,
@@ -354,4 +363,5 @@ def build_block_prompt(
         motion=build_motion(block_n, blocks),
         audio=build_audio(block_n, blocks),
         kit=kit,
+        label=label,
     )

@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
  */
 const ITEMS = [
   {
-    href: "/",
+    href: "/desk",
     label: "Desk",
     icon: (
       <>
@@ -72,7 +72,7 @@ export function Rail() {
       {/* The brand mark, replacing the Anton "N" that stood in for it. The rail
           renders it at 28px, which is inside the band where the two-bar mark
           holds and the three-bar one starts to close up. */}
-      <Link href="/" aria-label="Newsdesk — the desk" style={{ marginBottom: 18, lineHeight: 0 }}>
+      <Link href="/" aria-label="Newsdesk — front page" style={{ marginBottom: 18, lineHeight: 0 }}>
         <img src="/brand/newsdesk-mark-small-light.svg" alt="" width={28} height={28} />
       </Link>
       {ITEMS.map((item) => {

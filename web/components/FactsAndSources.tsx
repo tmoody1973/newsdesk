@@ -21,6 +21,7 @@ import {
   emptyFact,
   factId,
   factProblem,
+  filledSources,
   looksLikeUrl,
   sourceLabel,
   sourcedCount,
@@ -73,9 +74,19 @@ export function FactsAndSources({
         </div>
 
         <PullFromUrl
+          facts={draft.facts}
           accessCode={accessCode}
           onAccessCode={onAccessCode}
-          onConfirm={(fact) => onChange({ ...draft, facts: [...draft.facts, fact] })}
+          onConfirm={(fact) =>
+            onChange({
+              ...draft,
+              // A first pull otherwise lands next to the blank row every draft
+              // opens with, and the screen answers a successful pull with a red
+              // UNSOURCED tag and a dead "Check sources". A row nobody has typed
+              // in is a slot, not a fact — the confirmed one takes the slot.
+              facts: isBlank(draft.facts) ? [fact] : [...draft.facts, fact],
+            })
+          }
         />
 
         {draft.facts.map((fact, i) => (
@@ -130,6 +141,16 @@ export function FactsAndSources({
   );
 }
 
+/** An untouched draft: the single blank row `emptyDraft()` opens with, nothing
+ *  typed and no source slot filled. */
+function isBlank(facts: DraftFact[]): boolean {
+  return (
+    facts.length === 1 &&
+    !facts[0].text.trim() &&
+    filledSources(facts[0]).length === 0
+  );
+}
+
 /** Paste a link, read what the model proposes, confirm the ones you stand
  *  behind.
  *
@@ -138,10 +159,12 @@ export function FactsAndSources({
  *  journalist having read the line it was pulled from — a paraphrase with a
  *  confident tick next to it is exactly what this tool exists not to produce. */
 function PullFromUrl({
+  facts,
   accessCode,
   onAccessCode,
   onConfirm,
 }: {
+  facts: DraftFact[];
   accessCode: string;
   onAccessCode: (next: string) => void;
   onConfirm: (fact: DraftFact) => void;
@@ -150,19 +173,27 @@ function PullFromUrl({
   const [pulling, setPulling] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [result, setResult] = useState<{
+    /** The URL these proposals were pulled from, frozen at pull time. The
+     *  input keeps taking keystrokes afterwards, and a proposal must never be
+     *  sourced to a link its quote was not checked against — that would put a
+     *  URL in the public receipt that nothing was verified from. */
+    url: string;
     proposals: FactProposal[];
     dropped: number;
   } | null>(null);
-  const [added, setAdded] = useState<number[]>([]);
 
   async function pull() {
     setPulling(true);
     setProblem(null);
     setResult(null);
-    setAdded([]);
+    const pulledFrom = url.trim();
     try {
-      const pulled = await ingestUrl(url.trim(), accessCode);
-      setResult({ proposals: pulled.proposals ?? [], dropped: pulled.dropped ?? 0 });
+      const pulled = await ingestUrl(pulledFrom, accessCode);
+      setResult({
+        url: pulledFrom,
+        proposals: pulled.proposals ?? [],
+        dropped: pulled.dropped ?? 0,
+      });
     } catch (err) {
       // The server's refusal already names the fallback — "paste the text of
       // the story instead". Rewording it would drop the only instruction in it.
@@ -226,7 +257,13 @@ function PullFromUrl({
           </span>
 
           {result.proposals.map((proposal, i) => {
-            const isAdded = added.includes(i);
+            // Read off the draft rather than remembered here, so removing the
+            // confirmed row hands the proposal back instead of stranding it at
+            // ADDED. The trade: editing a confirmed fact's text re-enables its
+            // button and lets it be added twice — both rows are on screen, so
+            // that failure is one a journalist can see and delete.
+            const source = proposal.url || result.url;
+            const isAdded = facts.some((f) => f.text === proposal.text);
             return (
               <div
                 key={i}
@@ -248,7 +285,7 @@ function PullFromUrl({
                 </p>
                 <div className="card-meta" style={{ justifyContent: "space-between" }}>
                   <span className="mono" style={{ fontSize: 11, color: "#2b5da8" }}>
-                    {sourceLabel({ kind: "url", value: proposal.url || url.trim() })}
+                    {sourceLabel({ kind: "url", value: source })}
                   </span>
                   {isAdded ? (
                     <span
@@ -262,16 +299,13 @@ function PullFromUrl({
                       type="button"
                       className="btn btn-secondary"
                       style={{ fontSize: 12 }}
-                      onClick={() => {
+                      onClick={() =>
                         onConfirm({
                           ...emptyFact(),
                           text: proposal.text,
-                          sources: [
-                            { kind: "url", value: proposal.url || url.trim() },
-                          ],
-                        });
-                        setAdded([...added, i]);
-                      }}
+                          sources: [{ kind: "url", value: source }],
+                        })
+                      }
                     >
                       Add fact
                     </button>

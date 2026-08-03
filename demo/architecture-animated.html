@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Newsdesk — architecture (animated, for the demo film)</title>
+<style>
+  /* The site's own tokens, carried over so the film matches the app. */
+  :root {
+    --paper: #f9f6ee; --ink: #353334; --red: #f2322f;
+    --surface: #eae8e3; --muted: #7c7a74;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  html, body { margin: 0; height: 100%; background: var(--paper); overflow: hidden; }
+  .stage { display: grid; place-items: center; height: 100%; }
+  svg { height: 92vh; width: auto; max-width: 95vw; }
+
+  /* Draw-in choreography. One class per beat; delays stagger the story:
+     people → surfaces → walls → genblaze/providers → ledger → B2 → the file. */
+  .box, .lbl { opacity: 0; animation: land .55s cubic-bezier(.2,.7,.2,1) forwards; }
+  .arrow { stroke-dasharray: 300; stroke-dashoffset: 300; opacity: 0;
+           animation: draw .6s ease-out forwards; }
+  @keyframes land { from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: none; } }
+  @keyframes draw { to { stroke-dashoffset: 0; opacity: 1; } }
+
+  .t1  { animation-delay: .4s; }   /* journalist */
+  .t2  { animation-delay: 1.2s; }  /* web app + arrow */
+  .t3  { animation-delay: 2.0s; }  /* worker + arrow */
+  .t4  { animation-delay: 3.2s; }  /* THE WALLS (red) */
+  .t5  { animation-delay: 5.4s; }  /* genblaze + arrow */
+  .t6  { animation-delay: 6.4s; }  /* providers */
+  .t7  { animation-delay: 8.0s; }  /* decision ledger */
+  .t8  { animation-delay: 9.6s; }  /* B2 + arrows */
+  .t9  { animation-delay: 11.6s; } /* the MP4 */
+  .t10 { animation-delay: 13.2s; } /* the tamper line, red, last word */
+
+  .pulse { animation: land .55s cubic-bezier(.2,.7,.2,1) 13.2s forwards,
+                      pulse 2.4s ease-in-out 14.2s 3; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+</style>
+</head>
+<body>
+<div class="stage">
+<svg viewBox="0 0 720 560" role="img" aria-label="Newsdesk architecture, animated">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#353334"/>
+    </marker>
+  </defs>
+  <g font-family="IBM Plex Mono, ui-monospace, monospace">
+
+  <!-- journalist -->
+  <g class="box t1"><rect x="12" y="14" width="150" height="44" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="87" y="33" text-anchor="middle" font-size="11" fill="#353334">JOURNALIST</text>
+    <text x="87" y="47" text-anchor="middle" font-size="9.5" fill="#7c7a74">facts · sources · approval</text></g>
+
+  <!-- web app -->
+  <line class="arrow t2" x1="162" y1="36" x2="234" y2="36" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <g class="box t2"><rect x="238" y="14" width="170" height="44" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="323" y="33" text-anchor="middle" font-size="11" fill="#353334">WEB APP</text>
+    <text x="323" y="47" text-anchor="middle" font-size="9.5" fill="#7c7a74">Next.js · Vercel</text></g>
+
+  <!-- worker -->
+  <line class="arrow t3" x1="408" y1="36" x2="484" y2="36" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text class="lbl t3" x="446" y="28" text-anchor="middle" font-size="9.5" fill="#7c7a74">POST /runs</text>
+  <g class="box t3"><rect x="488" y="14" width="180" height="44" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="578" y="33" text-anchor="middle" font-size="11" fill="#353334">RENDER WORKER</text>
+    <text x="578" y="47" text-anchor="middle" font-size="9.5" fill="#7c7a74">Python · Fly · own ffmpeg</text></g>
+
+  <!-- the walls -->
+  <line class="arrow t4" x1="578" y1="58" x2="578" y2="82" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <g class="box t4"><rect x="488" y="86" width="180" height="118" fill="none" stroke="#f2322f" stroke-width="2"/>
+    <text x="497" y="103" font-size="11" fill="#f2322f">THE THREE WALLS</text>
+    <text x="497" y="122" font-size="9.5" fill="#7c7a74">1 · no fact without a source</text>
+    <text x="497" y="138" font-size="9.5" fill="#7c7a74">2 · policy gate — no network,</text>
+    <text x="509" y="151" font-size="9.5" fill="#7c7a74">no credentials, $0 refusals</text>
+    <text x="497" y="168" font-size="9.5" fill="#7c7a74">3 · no publish without a</text>
+    <text x="509" y="181" font-size="9.5" fill="#7c7a74">named approver</text></g>
+
+  <!-- genblaze -->
+  <line class="arrow t5" x1="484" y1="146" x2="412" y2="146" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text class="lbl t5" x="444" y="138" text-anchor="middle" font-size="9.5" fill="#7c7a74">every paid step</text>
+  <g class="box t5"><rect x="238" y="120" width="170" height="52" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="323" y="141" text-anchor="middle" font-size="11" fill="#353334">GENBLAZE</text>
+    <text x="323" y="156" text-anchor="middle" font-size="9.5" fill="#7c7a74">pipeline · manifest · verify</text></g>
+
+  <!-- providers -->
+  <line class="arrow t6" x1="234" y1="146" x2="166" y2="116" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line class="arrow t6" x1="234" y1="146" x2="166" y2="166" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line class="arrow t6" x1="234" y1="152" x2="166" y2="212" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <g class="box t6"><rect x="12" y="96" width="150" height="40" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="87" y="113" text-anchor="middle" font-size="11" fill="#353334">GMI CLOUD</text>
+    <text x="87" y="127" text-anchor="middle" font-size="9.5" fill="#7c7a74">stills · video · text</text></g>
+  <g class="box t6"><rect x="12" y="146" width="150" height="40" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="87" y="163" text-anchor="middle" font-size="11" fill="#353334">ELEVENLABS</text>
+    <text x="87" y="177" text-anchor="middle" font-size="9.5" fill="#7c7a74">narration voice</text></g>
+  <g class="box t6"><rect x="12" y="196" width="150" height="40" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="87" y="213" text-anchor="middle" font-size="11" fill="#353334">LMNT</text>
+    <text x="87" y="227" text-anchor="middle" font-size="9.5" fill="#7c7a74">fallback voice</text></g>
+
+  <!-- ledger -->
+  <line class="arrow t7" x1="530" y1="204" x2="380" y2="214" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text class="lbl t7" x="478" y="232" text-anchor="middle" font-size="9.5" fill="#7c7a74">pass · reject · revise</text>
+  <g class="box t7"><rect x="238" y="216" width="170" height="52" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="323" y="237" text-anchor="middle" font-size="11" fill="#f2322f">DECISION LEDGER</text>
+    <text x="323" y="252" text-anchor="middle" font-size="9.5" fill="#7c7a74">every refusal, and why</text></g>
+
+  <!-- B2 -->
+  <line class="arrow t8" x1="323" y1="268" x2="323" y2="308" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line class="arrow t8" x1="578" y1="204" x2="578" y2="308" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line class="arrow t8" x1="87" y1="236" x2="140" y2="308" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <g class="box t8"><rect x="90" y="312" width="540" height="96" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="360" y="334" text-anchor="middle" font-size="11" fill="#353334">BACKBLAZE B2 — FIVE BUCKETS, ONE JOB EACH</text>
+    <text x="360" y="356" text-anchor="middle" font-size="9.5" fill="#7c7a74">assets (public) · brand-kit (public) · runs · manifests · audit (private, enforced in code)</text>
+    <text x="360" y="378" text-anchor="middle" font-size="9.5" fill="#7c7a74">no other database exists — every page load reads B2,</text>
+    <text x="360" y="392" text-anchor="middle" font-size="9.5" fill="#7c7a74">every stage completion writes B2</text></g>
+
+  <!-- the file -->
+  <line class="arrow t9" x1="360" y1="408" x2="360" y2="448" stroke="#353334" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text class="lbl t9" x="372" y="432" font-size="9.5" fill="#7c7a74">assembly, only after a named approval</text>
+  <g class="box t9"><rect x="200" y="452" width="320" height="60" fill="#eae8e3" stroke="#353334" stroke-width="2"/>
+    <text x="360" y="474" text-anchor="middle" font-size="11" fill="#353334">PUBLISHED MP4</text>
+    <text x="360" y="490" text-anchor="middle" font-size="9.5" fill="#7c7a74">manifest embedded in the file · ledger digest folded in</text></g>
+  <text class="lbl t10 pulse" x="360" y="503" text-anchor="middle" font-size="9.5" fill="#f2322f">edit one refusal afterwards → genblaze verify fails</text>
+
+  </g>
+</svg>
+</div>
+</body>
+</html>

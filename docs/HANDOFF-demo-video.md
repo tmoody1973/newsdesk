@@ -11,6 +11,10 @@ itself, scrolling slow).
 
 - **The VO script is FINAL and humanized:** `demo/vo-final.md`. Six segments,
   ~2:45 total, numbers written out for speech. Do not rewrite it; record it.
+- **The animated architecture diagram is BUILT and verified:**
+  `demo/architecture-animated.html` — self-drawing SVG in the site's ink,
+  ~15s build + pulse. **The end bumper is BUILT and verified:**
+  `demo/end-bumper.html` — stacked logo + tagline on cream.
 - **Scenes 1–2 recorder is ready:** `demo/record-scenes-1-2.mjs` (Playwright,
   records 1920×1080 webm). Scene 1 = ProPublica article scrolling + front page.
   Scene 2 = the whole wizard: title → paste link → pull facts → add 5 →
@@ -77,15 +81,32 @@ seconds after a deploy took 14 minutes on a cold machine.
      README "Status" + JUDGING-CRITERIA §1) — an agent must not sign a
      human's name; the VO narrates this as a feature. Film the click and the
      AWAITING→assembly moment. Assembly ≈2 min — film the working chip, ramp it.
-   - **S5 published + receipts:** the published board (stamp, video), scroll to
-     **Social captions**, click one **Copy** (films "Copied ✓"), then the
-     receipt page (`/runs/<id>/receipt`). Then 10s each on the two
-     HUMAN-approved runs from last night —
+   - **S5 published, log, captions, receipt — Tarik's explicit beats, all
+     required:** (a) the published board with its stamp; (b) **scroll the RUN
+     LOG deliberately** (~8s — the audit trail on screen while the VO talks
+     refusals); (c) scroll to **Social captions** and click one **Copy**
+     (films "Copied ✓"); (d) **the receipt page**
+     (`/runs/<id>/receipt`) — a slow 12s scroll, its own beat; (e) 8s each
+     on the two HUMAN-approved runs from last night —
      `/runs/why-one-in-four-babies-in-this-karachi` and
-     `/runs/why-did-openai-s-and-anthropic-s-ai` (the VO: "here are two
-     videos a human signed last night").
-   - **S6 close:** `/judges` — slow scroll from the headline through the
-     architecture diagram; end on the front page hero line.
+     `/runs/why-did-openai-s-and-anthropic-s-ai`.
+   - **S5b — THE FINAL VIDEO PLAYS INSIDE THE DEMO (required):** open the
+     published MP4's public B2 URL directly in the recorder browser
+     (`https://s3.us-east-005.backblazeb2.com/newsdesk-assets/<run-id>/<run-id>.mp4`)
+     and let it play 10–12 seconds. **Playwright screen recording captures NO
+     AUDIO** — so in the edit, download that same MP4, trim the same span,
+     and lay ITS OWN audio under this segment. The demo VO goes silent here:
+     the made thing speaks for itself. This is the money shot; do not cut it.
+   - **S6 the animated architecture:** open
+     `file://.../demo/architecture-animated.html` in the recorder at
+     1920×1080 and film ~19s from load — the diagram draws itself in
+     story order and the red tamper line pulses at the end. Verified working;
+     the timing map is the .t1–.t10 delays in the file. SEG 6 of the VO reads
+     over this.
+   - **S7 end bumper (required):** film
+     `file://.../demo/end-bumper.html` for ~5s — the stacked Newsdesk mark
+     lands, then the tagline. The VO's final words ("This is Newsdesk.")
+     land ON the bumper. Cut to black.
 4. **Assemble** (use `/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg` — PATH ffmpeg
    has no drawtext and may lack filters):
    - Normalize every clip: `-vf "scale=1920:1080:flags=lanczos,fps=30" -r 30`.

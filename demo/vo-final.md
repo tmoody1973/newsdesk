@@ -49,4 +49,4 @@ social captions are held to the wall. Every claim traced, ready to paste.
 ## SEG 6 — close (over the judges page and the architecture) [~20s]
 Four hundred and eighty-nine tests, offline, free. Five providers through
 Genblaze. Five buckets on B2. Three walls between a fact and a frame. The
-governance is the product. The video is the output. This is Newsdesk.
+governance is the product. The video is the output. This is Newsdesk.	

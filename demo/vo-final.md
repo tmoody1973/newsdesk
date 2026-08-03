@@ -1,4 +1,4 @@
-# Newsdesk demo VO — FINAL (humanized, Machine Bias cut, ~2:45 at documentary pace)
+# Newsdesk demo VO — FINAL (humanized, Machine Bias cut, ~3:00 at documentary pace)
 # Voice: ElevenLabs voice_id 6lbtrJXRylVZ6EqIQQPT (the Newsdesk house narrator), model eleven_v3
 # One audio file per segment. Numbers are written out the way they should be spoken.
 
@@ -13,13 +13,22 @@ cannot prove.
 
 ## SEG 2 — ingest (over paste-link, pull facts, proposals appearing) [~30s]
 Watch it work, live. Paste the link. Newsdesk reads the page and proposes
-facts, each carrying the exact quote it came from. Eight candidates came
-back. Five are on screen. Three were dropped because their quotes could
-not be verified against the page, character for character. Nothing is
-added until the journalist adds it. That is the first wall. No fact
-without a source.
+facts, each carrying the exact quote it came from. Eight came back. Five
+are on screen. Three were dropped — their quotes could not be verified
+against the page, character for character. Nothing is added until the
+journalist adds it. That is the first wall. No fact without a source.
 
-## SEG 3 — the script and the walls (over script review, or a refusal) [~35s]
+## SEG 2b — art direction and the brand kits (over the kit toggle + through-line pick) [~24s]
+Then the journalist picks the look. A brand kit is a visual style the
+newsroom owns, all the way down to the prompt: style tokens sent to the
+image model word for word, an exclusion line that opens with a safety
+floor no kit may touch, and a menu of through-line objects — one physical
+thing that carries all six scenes. Two kits ship today. The house
+mixed-media collage. And a paper-diorama documentary world — sepia
+newsprint, censor-bar figures, letterpress labels that are themselves
+checked against the facts.
+
+## SEG 3 — the script and the walls (over script review, or a refusal) [~32s]
 Now it writes the sixty-second script. Every line has to fit the
 narrator's measured pace. Every claim has to trace, word for word, to a
 confirmed fact. Seventy-seven percent. Twice as likely. Seven thousand
@@ -40,11 +49,11 @@ every stage writes its state back. The storage is the application.
 Nothing publishes without a named human. An agent must not sign a human
 being's name, so when a machine runs this demo, the record says exactly
 that: unreviewed, pending the editor. Here are two videos a human signed
-last night. The receipt rides inside the file. Every fact, every model,
-every refusal, every dollar, the approver's name. A digest of the refusal
-ledger is folded into the manifest Genblaze embeds, so changing one
-refusal afterwards makes the file fail its own verification. Even the
-social captions are held to the wall. Every claim traced, ready to paste.
+last night. The receipt rides inside the file — every fact, every model,
+every refusal, every dollar, the approver's name — and a digest of the
+refusal ledger is folded into the manifest Genblaze embeds. Change one
+refusal afterwards, and the file fails its own verification. Even the
+social captions are held to the wall. Traced, and ready to paste.
 
 ## SEG 6 — close (over the judges page and the architecture) [~20s]
 Four hundred and eighty-nine tests, offline, free. Five providers through

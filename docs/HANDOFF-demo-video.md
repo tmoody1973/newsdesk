@@ -9,8 +9,12 @@ itself, scrolling slow).
 
 ## ▶ START HERE — what is already done
 
-- **The VO script is FINAL and humanized:** `demo/vo-final.md`. Six segments,
-  ~2:45 total, numbers written out for speech. Do not rewrite it; record it.
+- **The VO script is FINAL and humanized:** `demo/vo-final.md`. SEVEN segments
+  (SEG 2b covers art direction + brand kits + their prompt styles, read over
+  the kit-toggle footage), ~3:00 total, numbers written out for speech. Do
+  not rewrite it; record it. In scene 2, give the art-direction footage a
+  full ~24s of screen time so SEG 2b fits over it — linger on the diorama
+  click before returning to house.
 - **The animated architecture diagram is BUILT and verified:**
   `demo/architecture-animated.html` — self-drawing SVG in the site's ink,
   ~15s build + pulse. **The end bumper is BUILT and verified:**

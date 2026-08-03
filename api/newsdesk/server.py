@@ -108,6 +108,13 @@ def _validate_ingest_url(raw: Any) -> str:
     # Private import — same as genblaze's own providers/_ffmpeg_utils.py,
     # which reuses this exact function for its own HTTP-input SSRF check
     # rather than forking one. Not a public genblaze contract.
+    #
+    # This resolves the host a second time — `_http_get_stream` in
+    # `ingest.py` re-resolves and re-pins on every hop internally, which is
+    # what actually closes the DNS-rebinding TOCTOU window. This earlier
+    # call buys nothing against that; what it buys is a $0 refusal before
+    # any fetch happens at all, for the common case (an obviously private
+    # host) that doesn't need a hop-by-hop guarantee to catch.
     from genblaze_core._utils import check_ssrf
 
     try:

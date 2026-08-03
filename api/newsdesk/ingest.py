@@ -13,6 +13,13 @@ fetched article — checked with `claims.normalize`, the exact discipline
 `claims.py` already applies to narration. A quote the model invented is
 dropped, not shown, not flagged: dropped.
 
+**What the check does not prove.** It proves the quote is on the page. It
+cannot prove `text` follows from the quote — a span lifted out of its own
+negation passes just as cleanly as one used honestly. That gap is what the
+journalist's confirmation is for, not a second automated pass, which is why
+the wizard reading this needs to show the quote in enough surrounding
+context for a journalist to actually judge it, not just the bare span.
+
 **Why this is not a `judged()` role, even though PLAN.md §B4 numbers it
 chat() role #4.** `judged()` (`decisions.py`) records a verdict against a
 `RunState` — every call site has a run in flight to attach the ledger entry

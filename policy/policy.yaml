@@ -255,4 +255,6 @@ rules:
       claims.normalize, the same discipline claims.py applies to narration —
       the proposal is dropped before it is ever shown, not flagged, not
       returned with a warning. `ingest.py`'s Proposal.url is always the
-      pasted URL, copied verbatim; a model never writes a citation.
+      pasted URL, copied verbatim; a model never writes a citation. This
+      check proves the quote is on the page — the fact's wording is the
+      model's and is confirmed by the journalist, not by this check.

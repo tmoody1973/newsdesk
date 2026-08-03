@@ -180,7 +180,9 @@ RULES
 - No emoji. No all-caps. No exclamation runs.
 - Do NOT write source URLs. Sources are attached by the system.
 - Every claim you make goes in "claims" with the fact id it comes from and the
-  supporting text copied verbatim from that fact.{repair}
+  supporting text copied verbatim from that fact.
+- Use the fact's own verbs for claim-bearing assertions. A synonym breaks the
+  trace: if the fact says "found", the caption says "found", not "discovered".{repair}
 
 Return JSON only:
 {{"captions": [{{"platform": "linkedin", "variant": 1, "hook": "...",

@@ -87,6 +87,13 @@ export function EditorReview({ run }: { run: RunState }) {
           </span>
         </div>
 
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-neutral-700)", margin: "0 0 16px", maxWidth: 640 }}>
+          This is the sign-off. Watch each block — picture and narration together —
+          and approve what you&apos;d put your name on, because that is literally what
+          happens: your name goes into the published receipt as the approver, and
+          nothing publishes without it. This is the only screen that can publish.
+        </p>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {blocks.map((block) => {
             const isApproved = approved.has(block.n);

@@ -71,6 +71,13 @@ export function ArtDirection({
 
   return (
     <div style={{ padding: "32px 0 0", display: "flex", flexDirection: "column", gap: 28 }}>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-neutral-700)", margin: 0, maxWidth: 640 }}>
+        Two choices set the whole look. The <strong>brand kit</strong> is a visual
+        style your newsroom owns — palette, materials, typography, narrator. The{" "}
+        <strong>through-line object</strong> is one physical thing that appears in
+        every scene and carries the story&apos;s escalation, so six clips read as one
+        film. Facts stay exactly as you entered them either way.
+      </p>
       {onKitChange && (
         <section>
           <h6 style={{ marginBottom: 12 }}>Brand kit · every kit brings its own objects</h6>

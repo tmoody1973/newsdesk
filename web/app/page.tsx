@@ -57,6 +57,13 @@ export default async function Desk() {
         <span className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)" }}>
           {runs.length} {runs.length === 1 ? "story" : "stories"} · {awaiting} awaiting approval
         </span>
+        <Link
+          href="/about"
+          className="mono"
+          style={{ fontSize: 11, color: "var(--color-accent)", textDecoration: "none" }}
+        >
+          new here? how Newsdesk works →
+        </Link>
         <span style={{ flex: 1 }} />
         <Link href="/new" className="btn btn-primary" style={{ fontSize: 16, padding: "12px 22px" }}>
           Start a story

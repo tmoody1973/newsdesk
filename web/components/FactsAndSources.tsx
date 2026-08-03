@@ -61,6 +61,13 @@ export function FactsAndSources({
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <h2 style={{ fontSize: 24, margin: 0 }}>Every claim starts here.</h2>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-neutral-700)", margin: "-8px 0 0", maxWidth: 640 }}>
+          Give the story a title, then add the facts the video may use — nothing else
+          will ever reach the screen. Fastest way: paste a link to a story you
+          reported and pull facts from it, each with the exact quote it came from;
+          you confirm every one. Or type them by hand. Every fact needs a source —
+          a link or a citation — before you can go on.
+        </p>
 
         <div className="field">
           <label htmlFor="story-title">What is this story about?</label>

@@ -55,6 +55,13 @@ export function ScriptReview({
         gap: 14,
       }}
     >
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--color-neutral-700)", margin: 0, maxWidth: 640 }}>
+        This is the script, one card per 10-second block. Every line already
+        survived the checks: it fits the narrator&apos;s pace, and every claim in it
+        traces to one of your facts word-for-word — the fact tags show which.
+        Read it as an editor. If it says what your reporting says, send it to
+        generation; that&apos;s when pictures and voice get made (about a dollar).
+      </p>
       {blocks.map((block, i) => (
         <BlockCard key={block.n} block={block} isKicker={i === blocks.length - 1} />
       ))}

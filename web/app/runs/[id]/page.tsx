@@ -33,7 +33,12 @@ export default async function RunBoard({ params }: { params: Promise<{ id: strin
   // happened was an error. Anything else is still moving, so the board keeps
   // refreshing — see LivePoll for why "stopped polling" must mean "stopped
   // running" rather than "timer expired".
-  const errored = run.events.some((e) => e.kind === "error");
+  // The NEWEST event, not any-error-ever: a run that refused, was retried and
+  // recovered keeps its refusals in the log (corrections stay in the record),
+  // and judging the whole history froze the board — no "working" chip, no
+  // polling — on exactly the runs that recovered.
+  const newest = run.events[run.events.length - 1];
+  const errored = newest?.kind === "error";
   const done = run.status === "published" || errored;
   const ready = blocks.filter((b) => b.clip_uri).length;
   const spend = run.events.reduce((sum, e) => sum + (e.cost_usd ?? 0), 0);

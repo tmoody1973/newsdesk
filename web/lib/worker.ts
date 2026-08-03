@@ -91,11 +91,21 @@ export async function waitFor(
   const every = opts.everyMs ?? 2500;
   const until = Date.now() + (opts.forMs ?? 10 * 60_000);
 
+  // A run that failed before can be re-posted, and its state keeps the old
+  // failure in the log — corrections stay in the record. So "an error exists"
+  // is not "this run has failed": only an error NEWER than the events we saw
+  // on the first poll ends the wait. Judging any-error-ever made a retry
+  // return the previous run's corpse instantly while the new run was still
+  // working.
+  let baseline: string | null = null;
+
   while (Date.now() < until) {
     const state = await pollRun(runId);
     if (state) {
       opts.onTick?.(state);
-      if (state.events.some((e) => e.kind === "error")) return state;
+      const newest = state.events[state.events.length - 1];
+      if (baseline === null) baseline = newest?.ts ?? "";
+      if (newest?.kind === "error" && newest.ts > baseline) return state;
       if (done(state)) return state;
     }
     await new Promise((r) => setTimeout(r, every));
@@ -105,6 +115,9 @@ export async function waitFor(
 
 export function lastError(state: RunState | null): string | null {
   if (!state) return null;
-  const failed = [...state.events].reverse().find((e) => e.kind === "error");
-  return failed?.message ?? null;
+  // Only a run that ENDED in error has failed. Older errors in the log are
+  // refusals the run recovered from — the record, not the verdict. Reporting
+  // them as the outcome showed a failure banner over a successful script.
+  const newest = state.events[state.events.length - 1];
+  return newest?.kind === "error" ? newest.message : null;
 }

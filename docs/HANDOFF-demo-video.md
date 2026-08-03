@@ -147,6 +147,55 @@ seconds after a deploy took 14 minutes on a cold machine.
    also upload to the public assets bucket for a shareable URL:
    `cd api && uv run python - <<'EOF'` … `backend(BUCKETS["assets"]).put("demo/newsdesk-demo.mp4", open(path,"rb").read())` … match `config.py`'s API.
 
+## ✅ DELIVERED 2026-08-03 07:55 CDT
+
+`videos/newsdesk-demo/newsdesk-demo-final.mp4` — 2:59.67, 1920×1080/30,
+−16.0 LUFS, faststart. Public copy:
+`https://s3.us-east-005.backblazeb2.com/newsdesk-assets/demo/newsdesk-demo.mp4`.
+Preview (14.9 MiB) sent to Tarik in chat. Verified: blank-frame scan clean,
+full-audio transcript checked segment by segment, every VO claim's referent
+on screen (incl. demo-run captions — Tarik's GMI top-up let the caption
+stage land 6 traced captions on try 3; receipt + captions beats refilmed on
+the demo run). Renderer gotcha for posterity: the local HyperFrames renderer
+drops a `<video>` clip's frames after any 60s output-chunk boundary the clip
+crosses — split such clips at the boundary with `data-media-start`.
+
+## Session notes ~07:35 (superseded)
+
+- **The run is PUBLISHED**: retake 4 (fact texts per the refusal's own advice)
+  passed script round 1, gate 6×4, blocks+narration rendered ~2.5min,
+  approved as `Claude (agent) — UNREVIEWED, pending Tarik Moody`, assembly
+  2m18s, published 71.23s at −16.1 LUFS. **Total run spend $1.2213.**
+- **GMI balance is EXHAUSTED (402)** — the demo run's caption stage died on
+  it: first a real POL refusal (untraced "7,000" — great story), then 402 on
+  the retry. Demo run has NO captions; the captions beat films on the
+  human-approved AI-hacking run (6 captions, approver Tarik). **Top up GMI
+  before any future run.**
+- All 7 scene segments cut to length in `videos/newsdesk-demo/assets/footage/`
+  (27/22.2/24.53/29.03/21.6/30.43/9.47s), VO final 164.9s, sub-comps ported
+  to GSAP after CSS-delay seeks proved wrong at non-zero scene starts.
+  Timeline totals 179.66s. `check` clean; midpoint snapshots eyeballed.
+- Rendering `videos/newsdesk-demo/newsdesk-demo.mp4` now; then loudnorm
+  master, full watch-through, SendUserFile.
+
+## Older session notes ~07:00 (superseded)
+
+- S1 footage CUT and verified: `videos/newsdesk-demo/assets/footage/s1.mp4` (27s).
+- VO generated + transcribed-verified in scratchpad `vo/` (seg5 re-taken twice
+  for a TTS stutter; final durations 26.4/21.76/24.24/28.48/21.28/29.84/14.96
+  = 167s — SEG 1/2b/3/5 were CUT to fit 3:00, cut record at top of vo-final.md).
+- HyperFrames project scaffolded at `videos/newsdesk-demo/` (BRIEF.md, index
+  timeline, architecture+bumper sub-comps BUILT and snapshot-verified).
+- Take 2's POLICY refusal beat cut to scratchpad `refusal-beat.mp4` (7s).
+- Brand-kit b-roll for SEG 2b recorded + cut: scratchpad `s2b-kit-cut.mp4` (15.5s).
+- WEB BUG (not deployed, fix post-deadline): on a FRESH run the wizard never
+  displays a script refusal — `waitFor` in `web/lib/worker.ts` baselines the
+  error ts when the first poll 404s. Resumed runs display fine.
+- Machine Bias convergence is a GRIND: ~12 rounds × 8 attempts refused on
+  POL-5 (writer over-writes the closing blocks, 40+ words). Facts trimmed per
+  the refusal's own advice (F1/F2 then F3/F5, see record-scene-2-retake2.mjs).
+  Retake 3 runs 12 rounds. All refusals $0, verified in run events.
+
 ## Hazards learned the hard way (do not relearn)
 
 - **The Playwright MCP tools attach to Tarik's real Chrome.** NEVER use

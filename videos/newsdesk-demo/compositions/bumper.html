@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Ported from demo/end-bumper.html; vh sizes fixed to the 1080 canvas;
+         motion on a GSAP timeline so seeks are exact at any scene start. -->
+  </head>
+  <body>
+    <template>
+      <style>
+        @font-face {
+          font-family: "IBM Plex Mono";
+          src: url("assets/plex-mono-400.woff2") format("woff2");
+          font-weight: 400;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          background: #f9f6ee;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+        }
+        .mark { opacity: 0; }
+        .mark img { height: 497px; display: block; margin: 0 auto; }
+        .line {
+          opacity: 0;
+          font-family: "IBM Plex Mono", ui-monospace, monospace;
+          font-size: 15px;
+          color: #7c7a74;
+          text-align: center;
+          margin: 34px 0 0;
+          letter-spacing: 0.04em;
+        }
+      </style>
+
+      <div id="root" data-composition-id="bumper" data-width="1920" data-height="1080" data-duration="4.5">
+        <div>
+          <div class="mark" id="bumper-mark"><img src="assets/newsdesk-stacked-light.svg" alt="Newsdesk" /></div>
+          <p class="line" id="bumper-line">it refuses to say what it cannot prove</p>
+        </div>
+      </div>
+
+      <script>
+        window.__timelines = window.__timelines || {};
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo(
+            "#bumper-mark",
+            { opacity: 0, y: 14, scale: 0.985 },
+            { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: "power3.out" },
+            0.6,
+          );
+          tl.fromTo(
+            "#bumper-line",
+            { opacity: 0, y: 14 },
+            { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" },
+            1.9,
+          );
+          window.__timelines["bumper"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

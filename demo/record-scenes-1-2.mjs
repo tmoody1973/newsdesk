@@ -24,7 +24,7 @@ await p.goto(PP, { waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => 
 await pause(p, 4000);
 for (let i = 0; i < 6; i++) { await p.mouse.wheel(0, 520); await pause(p, 2600); }
 mark("S1 frontpage");
-await p.goto(APP + "/", { waitUntil: "networkidle" });
+await p.goto(APP + "/", { waitUntil: "domcontentloaded" });
 await pause(p, 4500);
 await p.mouse.wheel(0, 500); await pause(p, 2500);
 await p.mouse.wheel(0, -500); await pause(p, 1500);
@@ -34,7 +34,7 @@ fs.renameSync((await p.video().path()), `${OUT}/s1-problem.webm`);
 // ---------- Scene 2: the whole wizard, one take --------------------------
 p = await ctx.newPage();
 mark("S2 wizard-open");
-await p.goto(APP + "/new", { waitUntil: "networkidle" });
+await p.goto(APP + "/new", { waitUntil: "domcontentloaded" });
 await pause(p, 2500);
 await p.getByRole("textbox", { name: /What is this story about/ }).click();
 await p.getByRole("textbox", { name: /What is this story about/ }).pressSequentially(TITLE, { delay: 28 });
@@ -59,7 +59,7 @@ for (let i = 0; i < 5; i++) {
 await p.mouse.wheel(0, 800); await pause(p, 2500);
 mark("S2 check-sources");
 await p.getByRole("button", { name: "Check sources" }).click();
-await p.getByText("Through-line object").waitFor({ timeout: 15000 });
+await p.getByRole("heading", { name: /Through-line object/ }).waitFor({ timeout: 15000 });
 await pause(p, 2500);
 mark("S2 art-direction");
 // show the kit toggle deliberately: hover diorama, then stay on house
@@ -75,8 +75,8 @@ await p.getByRole("button", { name: "Write script" }).click();
 // wait for either script review blocks or a refusal paragraph; retry up to 3x
 for (let round = 1; round <= 4; round++) {
   const outcome = await Promise.race([
-    p.getByText("This is the script").waitFor({ timeout: 420000 }).then(() => "script"),
-    p.getByText("stage script failed").waitFor({ timeout: 420000 }).then(() => "refusal"),
+    p.getByText("This is the script").first().waitFor({ timeout: 660000 }).then(() => "script"),
+    p.getByText("stage script failed").first().waitFor({ timeout: 660000 }).then(() => "refusal"),
   ]).catch(() => "timeout");
   mark(`S2 round${round} ${outcome}`);
   if (outcome === "script") break;

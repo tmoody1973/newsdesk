@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1280px; overflow: hidden; }
+  body {
+    background: #f9f6ee;
+    position: relative;
+    font-family: "IBM Plex Mono", monospace;
+    color: #353334;
+  }
+  /* halftone paper texture */
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(#35333418 1.6px, transparent 1.6px);
+    background-size: 22px 22px;
+  }
+  /* torn paper accents */
+  .tear { position: absolute; }
+  .tear.navy { background: #23305a; }
+  .tear.coral { background: #f2836f; }
+  .t1 { width: 340px; height: 150px; left: -60px; top: -55px; transform: rotate(-7deg);
+        clip-path: polygon(0 0, 100% 0, 96% 62%, 78% 74%, 60% 60%, 38% 88%, 14% 72%, 0 90%); }
+  .t2 { width: 260px; height: 120px; left: 150px; top: -60px; transform: rotate(4deg);
+        clip-path: polygon(0 0, 100% 0, 88% 70%, 66% 55%, 42% 84%, 18% 66%, 0 80%); }
+  .t3 { width: 420px; height: 170px; left: -80px; bottom: -70px; transform: rotate(5deg);
+        clip-path: polygon(0 100%, 100% 100%, 94% 30%, 72% 46%, 52% 22%, 30% 44%, 10% 26%, 0 40%); }
+  .t4 { width: 300px; height: 140px; left: 210px; bottom: -75px; transform: rotate(-4deg);
+        clip-path: polygon(0 100%, 100% 100%, 90% 40%, 64% 58%, 40% 30%, 16% 52%, 0 36%); }
+
+  .left {
+    position: absolute; left: 110px; top: 130px; width: 1010px;
+  }
+  .kicker {
+    font-size: 30px; font-weight: 600; letter-spacing: .14em;
+    color: #7c7a74; text-transform: uppercase; margin-bottom: 34px;
+  }
+  .kicker b { color: #f2322f; }
+  h1 {
+    font-family: "Anton", sans-serif;
+    font-size: 138px; line-height: .98; text-transform: uppercase;
+    letter-spacing: .005em; font-weight: 400;
+  }
+  h1 .red { color: #f2322f; }
+  .stamp {
+    position: absolute; right: 560px; bottom: 118px; z-index: 5;
+    border: 6px solid #f2322f; color: #f2322f;
+    font-family: "Anton", sans-serif; font-size: 54px; letter-spacing: .06em;
+    padding: 14px 34px; text-transform: uppercase;
+    transform: rotate(-6deg);
+    box-shadow: 0 0 0 2px #f9f6ee, 0 6px 22px #35333422;
+    background: #f9f6ee;
+  }
+  .brand {
+    position: absolute; left: 110px; bottom: 96px; display: flex; align-items: center; gap: 34px;
+  }
+  .brand img { height: 84px; display: block; }
+  .brand .sep { width: 2px; height: 64px; background: #35333433; }
+  .brand .sub { font-size: 26px; line-height: 1.5; color: #7c7a74; }
+
+  .photo-wrap {
+    position: absolute; right: 96px; top: 84px;
+    transform: rotate(2.6deg);
+  }
+  .photo {
+    width: 660px; height: 1020px; background: #fff;
+    padding: 22px 22px 30px;
+    box-shadow: 0 26px 60px #3533343d, 0 4px 14px #3533342b;
+  }
+  .photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; display: block; }
+  .tape {
+    position: absolute; width: 220px; height: 62px;
+    background: #e8ddbe99; backdrop-filter: blur(1px);
+    box-shadow: 0 2px 8px #35333422;
+  }
+  .tape.tl { left: -70px; top: -20px; transform: rotate(-38deg); }
+  .tape.br { right: -64px; bottom: -14px; transform: rotate(-42deg); }
+</style>
+</head>
+<body>
+  <div class="dots"></div>
+  <div class="tear navy t1"></div>
+  <div class="tear coral t2"></div>
+  <div class="tear coral t3"></div>
+  <div class="tear navy t4"></div>
+
+  <div class="left">
+    <div class="kicker">AI video for newsrooms &middot; every claim traced &middot; <b>refusal is the product</b></div>
+    <h1>It makes<br>the video.<br><span class="red">It refuses</span> to say<br>what it cannot<br>prove.</h1>
+  </div>
+  <div class="stamp">$0 spent on a refusal</div>
+
+  <div class="brand">
+    <img src="newsdesk-horizontal-light.svg" alt="Newsdesk">
+  </div>
+
+  <div class="photo-wrap">
+    <div class="photo"><img src="film2.png" alt=""></div>
+    <div class="tape tl"></div>
+    <div class="tape br"></div>
+  </div>
+</body>
+</html>

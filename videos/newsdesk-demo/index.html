@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f9f6ee;
+      }
+      video { width: 1920px; height: 1080px; object-fit: cover; display: block; }
+    </style>
+  </head>
+  <body>
+    <!--
+      The Newsdesk submission demo — one 1920x1080 timeline, 179.66s (2:59.7).
+        S1 problem hook        0.00  27.00  s1.mp4    seg1 @ 0.30
+        S2 ingest             27.00  22.20  s2.mp4    seg2 @ 27.20
+        S2b art dir + kits    49.20  24.53  s2b.mp4   seg2b @ 49.45
+        S3 script + refusal   73.73  29.03  s3.mp4    seg3 @ 74.03
+        S4 run board         102.76  21.60  s4.mp4    seg4 @ 102.96
+        S5 approve + receipt 124.36  30.43  s5.mp4    seg5 @ 124.66
+        S5b the film itself  154.79   9.47  s5b.mp4   film's own audio @ 154.95
+        S6 architecture      164.26  11.10  sub-comp  seg6 @ 164.70
+        S7 end bumper        175.36   4.30  sub-comp  seg6 tail lands here
+    -->
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="179.66"
+      data-width="1920"
+      data-height="1080"
+      data-fps="30"
+    >
+      <video id="f-s1" src="assets/footage/s1.mp4" data-start="0" data-duration="27" data-track-index="1" muted playsinline></video>
+      <video id="f-s2" src="assets/footage/s2.mp4" data-start="27" data-duration="22.2" data-track-index="1" muted playsinline></video>
+      <!-- ponytail: the local renderer chunks output in 60s blocks and drops a
+           <video>'s frames after a chunk boundary it crosses; each clip that
+           would cross 60s/120s is split AT the boundary via data-media-start. -->
+      <video id="f-s2b-a" src="assets/footage/s2b.mp4" data-start="49.2" data-duration="10.8" data-track-index="1" muted playsinline></video>
+      <video id="f-s2b-b" src="assets/footage/s2b.mp4" data-media-start="10.8" data-start="60" data-duration="13.73" data-track-index="1" muted playsinline></video>
+      <video id="f-s3" src="assets/footage/s3.mp4" data-start="73.73" data-duration="29.03" data-track-index="1" muted playsinline></video>
+      <video id="f-s4-a" src="assets/footage/s4.mp4" data-start="102.76" data-duration="17.24" data-track-index="1" muted playsinline></video>
+      <video id="f-s4-b" src="assets/footage/s4.mp4" data-media-start="17.24" data-start="120" data-duration="4.36" data-track-index="1" muted playsinline></video>
+      <video id="f-s5" src="assets/footage/s5.mp4" data-start="124.36" data-duration="30.43" data-track-index="1" muted playsinline></video>
+      <video id="f-s5b" src="assets/footage/s5b.mp4" data-start="154.79" data-duration="9.47" data-track-index="1" muted playsinline></video>
+
+      <div
+        id="scene-architecture"
+        data-composition-id="architecture"
+        data-composition-src="compositions/architecture.html"
+        data-start="164.26"
+        data-duration="11.1"
+        data-track-index="2"
+        data-width="1920"
+        data-height="1080"
+      ></div>
+      <div
+        id="scene-bumper"
+        data-composition-id="bumper"
+        data-composition-src="compositions/bumper.html"
+        data-start="175.36"
+        data-duration="4.3"
+        data-track-index="2"
+        data-width="1920"
+        data-height="1080"
+      ></div>
+
+      <audio id="vo-1" src="assets/vo/seg1.mp3" data-start="0.3" data-duration="26.4" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-2" src="assets/vo/seg2.mp3" data-start="27.2" data-duration="21.76" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-2b" src="assets/vo/seg2b.mp3" data-start="49.45" data-duration="24.24" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-3" src="assets/vo/seg3.mp3" data-start="74.03" data-duration="26.4" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-4" src="assets/vo/seg4.mp3" data-start="102.96" data-duration="21.28" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-5" src="assets/vo/seg5.mp3" data-start="124.66" data-duration="29.84" data-track-index="10" data-volume="1"></audio>
+      <audio id="vo-6" src="assets/vo/seg6.mp3" data-start="164.7" data-duration="14.96" data-track-index="10" data-volume="1"></audio>
+
+      <!-- The published film's own audio under S5b; the VO is silent here. -->
+      <audio id="film-audio" src="assets/footage/s5b-audio.m4a" data-start="154.95" data-duration="9.3" data-track-index="11" data-volume="1"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

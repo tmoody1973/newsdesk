@@ -626,3 +626,19 @@ def test_an_unattested_label_left_on_the_state_makes_the_gate_refuse(cs2, monkey
     result = pipe.stage_gate()
     assert not result.ok
     assert "EXPIRED" in result.detail
+
+
+def test_a_run_records_its_kit_where_editor_review_can_find_it():
+    """Editor Review rebuilds the story from the run to approve it. A run that
+    forgets its kit assembles a diorama with house subtitles — silently."""
+    from newsdesk.pipeline import Pipeline
+    from newsdesk.storyfile import parse_story
+
+    doc = {
+        "id": "kit-carrier", "title": "A title", "through_line": "note-stack",
+        "kit": "diorama",
+        "facts": [{"text": "A sourced fact", "sources": ["https://example.org/a"]}],
+    }
+    pipe = Pipeline.start(parse_story(doc, where="test"))
+    assert pipe.state.art_direction["kit"] == "diorama"
+    assert pipe.state.art_direction["through_line"] == "note-stack"

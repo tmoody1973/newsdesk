@@ -1,0 +1,106 @@
+- generic [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - navigation "Sections" [ref=f6e3]:
+      - link "Newsdesk — the desk" [ref=f6e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=f6e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=f6e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=f6e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=f6e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=f6e23]:
+      - generic [ref=f6e24]:
+        - generic [ref=f6e25]: 1 Facts & Sources
+        - generic [ref=f6e26]: 2 Art Direction
+        - generic [ref=f6e27]: 3 Script Review
+      - paragraph [ref=f6e222]: "stage script failed: no block survived checking — block 2: POL-5 — 28 words (need 23-27). Estimated ~10.8s. | block 3: POL-5 — 32 words (need 23-27). Estimated ~12.3s. | block 4: POL-5 — 35 words (need 23-27). Estimated ~13.5s. | block 6: POL-5 — 20 words (need 23-27). Estimated ~7.7s. | block 3: this line asserts \"world health organization says\" without tracing to a fact. Map the whole assertion — not just the number in it — to the fact that supports it, or cut it. Everything on screen is a claim. (after 6 attempts — surfacing rather than retrying further)"
+      - generic [ref=f6e28]:
+        - generic [ref=f6e397]:
+          - generic [ref=f6e398]:
+            - heading "Through-line object · pick one" [level=6] [ref=f6e399]
+            - generic [ref=f6e400]:
+              - button [ref=f6e401] [cursor=pointer]:
+                - paragraph [ref=f6e405]: Fuse
+              - button [ref=f6e406] [cursor=pointer]:
+                - paragraph [ref=f6e409]: Balloon
+              - button [ref=f6e410] [cursor=pointer]:
+                - paragraph [ref=f6e413]: Tower signal
+              - button [ref=f6e414] [cursor=pointer]:
+                - paragraph [ref=f6e418]: Dollar, cut
+              - button [ref=f6e419] [cursor=pointer]:
+                - paragraph [ref=f6e423]: Record
+              - button [pressed] [ref=f6e424] [cursor=pointer]:
+                - paragraph [ref=f6e427]: Scale
+          - generic [ref=f6e428]:
+            - heading "Motif per block · defaults from the through-line" [level=6] [ref=f6e429]
+            - generic [ref=f6e430]:
+              - generic [ref=f6e431]:
+                - generic [ref=f6e432]: B1
+                - combobox "Motif for block 1" [ref=f6e433] [cursor=pointer]:
+                  - option "Prop with text" [selected]
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f6e434]:
+                - generic [ref=f6e435]: B2
+                - combobox "Motif for block 2" [ref=f6e436] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map" [selected]
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f6e437]:
+                - generic [ref=f6e438]: B3
+                - combobox "Motif for block 3" [ref=f6e439] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart" [selected]
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f6e440]:
+                - generic [ref=f6e441]: B4
+                - combobox "Motif for block 4" [ref=f6e442] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger" [selected]
+                  - option "Cutout crowd"
+                  - option "Archival frame"
+              - generic [ref=f6e443]:
+                - generic [ref=f6e444]: B5
+                - combobox "Motif for block 5" [ref=f6e445] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd" [selected]
+                  - option "Archival frame"
+              - generic [ref=f6e446]:
+                - generic [ref=f6e447]: B6
+                - combobox "Motif for block 6" [ref=f6e448] [cursor=pointer]:
+                  - option "Prop with text"
+                  - option "Map"
+                  - option "Chart"
+                  - option "Ledger"
+                  - option "Cutout crowd"
+                  - option "Archival frame" [selected]
+          - generic [ref=f6e453] [cursor=pointer]:
+            - paragraph [ref=f6e454]: Add a photo from your reporting.
+            - paragraph [ref=f6e455]: It appears as a cutout and is labeled authentic in the receipt.
+        - generic [ref=f6e457]:
+          - generic [ref=f6e458]:
+            - button "Back" [ref=f6e459] [cursor=pointer]
+            - paragraph [ref=f6e460]: Requests outside this menu are checked against policy. Real people's likenesses and photoreal news scenes will be blocked.
+          - generic [ref=f6e461]:
+            - textbox "Access code" [active] [ref=f6e462]:
+              - /placeholder: access code
+              - text: newsdesk-ba77b4f2
+            - button "Write script" [ref=f6e463] [cursor=pointer]
+  - alert [ref=f6e63]

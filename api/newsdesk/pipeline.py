@@ -128,7 +128,13 @@ class Pipeline:
                     }
                     for f in story.facts
                 ),
-                art_direction={"through_line": story_file.through_line},
+                # The kit rides in art_direction because Editor Review rebuilds
+                # the story from the run to approve it — a run that forgets its
+                # kit would assemble a diorama with house subtitles and voice.
+                art_direction={
+                    "through_line": story_file.through_line,
+                    "kit": story_file.kit,
+                },
             )
         return cls(story_file=story_file, state=state)
 

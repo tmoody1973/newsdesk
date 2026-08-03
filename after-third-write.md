@@ -1,0 +1,70 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - navigation "Sections" [ref=f6e3]:
+      - link "Newsdesk — the desk" [ref=f6e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=f6e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=f6e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=f6e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=f6e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=f6e23]:
+      - generic [ref=f6e24]:
+        - generic [ref=f6e25]: 1 Facts & Sources
+        - generic [ref=f6e26]: 2 Art Direction
+        - generic [ref=f6e27]: 3 Script Review
+      - paragraph [ref=f6e465]: "stage script failed: no block survived checking — block 2: POL-5 — 21 words (need 23-27). Estimated ~8.1s. | block 5: POL-5 — 1 sentence (need 2-3) — sentence-end pauses are what fill the ten-second window, so one long sentence runs short. Estimated ~8.8s. | block 6: POL-5 — 22 words (need 23-27). Estimated ~8.5s. | block 2: this block traces to no fact at all. Its role is \"stakes\", which is reporting — only the kicker may be pure framing. Map at least one assertion to a fact, or replace the block. (after 6 attempts — surfacing rather than retrying further)"
+      - generic [ref=f6e28]:
+        - generic [ref=f6e397]:
+          - generic [ref=f6e398]:
+            - heading "Through-line object · pick one" [level=6] [ref=f6e399]
+            - generic [ref=f6e400]:
+              - button "Fuse" [ref=f6e401] [cursor=pointer]:
+                - paragraph [ref=f6e405]: Fuse
+              - button "Balloon" [ref=f6e406] [cursor=pointer]:
+                - paragraph [ref=f6e409]: Balloon
+              - button "Tower signal" [ref=f6e410] [cursor=pointer]:
+                - paragraph [ref=f6e413]: Tower signal
+              - button "Dollar, cut" [ref=f6e414] [cursor=pointer]:
+                - paragraph [ref=f6e418]: Dollar, cut
+              - button "Record" [ref=f6e419] [cursor=pointer]:
+                - paragraph [ref=f6e423]: Record
+              - button "Scale" [pressed] [ref=f6e424] [cursor=pointer]:
+                - paragraph [ref=f6e427]: Scale
+          - generic [ref=f6e428]:
+            - heading "Motif per block · defaults from the through-line" [level=6] [ref=f6e429]
+            - generic [ref=f6e430]:
+              - generic [ref=f6e431]:
+                - generic [ref=f6e432]: B1
+                - combobox "Motif for block 1" [ref=f6e433] [cursor=pointer]
+              - generic [ref=f6e434]:
+                - generic [ref=f6e435]: B2
+                - combobox "Motif for block 2" [ref=f6e436] [cursor=pointer]
+              - generic [ref=f6e437]:
+                - generic [ref=f6e438]: B3
+                - combobox "Motif for block 3" [ref=f6e439] [cursor=pointer]
+              - generic [ref=f6e440]:
+                - generic [ref=f6e441]: B4
+                - combobox "Motif for block 4" [ref=f6e442] [cursor=pointer]
+              - generic [ref=f6e443]:
+                - generic [ref=f6e444]: B5
+                - combobox "Motif for block 5" [ref=f6e445] [cursor=pointer]
+              - generic [ref=f6e446]:
+                - generic [ref=f6e447]: B6
+                - combobox "Motif for block 6" [ref=f6e448] [cursor=pointer]
+          - generic [ref=f6e453] [cursor=pointer]:
+            - paragraph [ref=f6e454]: Add a photo from your reporting.
+            - paragraph [ref=f6e455]: It appears as a cutout and is labeled authentic in the receipt.
+        - generic [ref=f6e457]:
+          - generic [ref=f6e458]:
+            - button "Back" [ref=f6e459] [cursor=pointer]
+            - paragraph [ref=f6e460]: Requests outside this menu are checked against policy. Real people's likenesses and photoreal news scenes will be blocked.
+          - generic [ref=f6e461]:
+            - textbox "Access code" [ref=f6e462]:
+              - /placeholder: access code
+              - text: newsdesk-ba77b4f2
+            - button "Write script" [ref=f6e463] [cursor=pointer]
+  - alert [ref=f6e63]

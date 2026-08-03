@@ -139,6 +139,10 @@ export default function NewStory() {
             <ArtDirection
               value={draft.throughLine}
               onChange={(id) => setDraft({ ...draft, throughLine: id })}
+              kit={draft.kit}
+              onKitChange={(kit, firstThroughLine) =>
+                setDraft({ ...draft, kit, throughLine: firstThroughLine })
+              }
             />
             <div
               style={{

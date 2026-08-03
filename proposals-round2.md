@@ -1,0 +1,110 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - navigation "Sections" [ref=f6e3]:
+      - link "Newsdesk — the desk" [ref=f6e4] [cursor=pointer]:
+        - /url: /
+      - link "Desk" [ref=f6e5] [cursor=pointer]:
+        - /url: /
+      - link "Brand Kit" [ref=f6e9] [cursor=pointer]:
+        - /url: /brand-kit
+      - link "Policy" [ref=f6e14] [cursor=pointer]:
+        - /url: /policy
+      - link "Red team" [ref=f6e18] [cursor=pointer]:
+        - /url: /redteam
+    - main [ref=f6e23]:
+      - generic [ref=f6e24]:
+        - generic [ref=f6e25]: 1 Facts & Sources
+        - generic [ref=f6e26]: 2 Art Direction
+        - generic [ref=f6e27]: 3 Script Review
+      - paragraph [ref=f6e222]: "stage script failed: no block survived checking — block 2: POL-5 — 28 words (need 23-27). Estimated ~10.8s. | block 3: POL-5 — 32 words (need 23-27). Estimated ~12.3s. | block 4: POL-5 — 35 words (need 23-27). Estimated ~13.5s. | block 6: POL-5 — 20 words (need 23-27). Estimated ~7.7s. | block 3: this line asserts \"world health organization says\" without tracing to a fact. Map the whole assertion — not just the number in it — to the fact that supports it, or cut it. Everything on screen is a claim. (after 6 attempts — surfacing rather than retrying further)"
+      - generic [ref=f6e223]:
+        - generic [ref=f6e224]:
+          - heading "Every claim starts here." [level=2] [ref=f6e225]
+          - generic [ref=f6e226]:
+            - generic [ref=f6e227]: What is this story about?
+            - textbox "What is this story about?" [ref=f6e228]:
+              - /placeholder: Who pays when public radio goes dark?
+              - text: Why one in four babies in this Karachi settlement arrive too soon
+          - generic [ref=f6e229]:
+            - generic [ref=f6e230]:
+              - generic [ref=f6e231]: Paste a link to a story you reported.
+              - generic [ref=f6e232]:
+                - textbox "Paste a link to a story you reported." [ref=f6e233]:
+                  - /placeholder: https://npr.org/2025/08/01/cpb-rescission
+                - textbox "Access code" [ref=f6e234]:
+                  - /placeholder: access code
+                - button "Pull facts" [ref=f6e278] [cursor=pointer]
+            - generic [ref=f6e279]:
+              - generic [ref=f6e280]: Proposed facts — nothing is added until you add it
+              - generic [ref=f6e281]:
+                - paragraph [ref=f6e282]: About 1 in 4 babies in the Pakistani fishing settlement of Rehri Goth are born prematurely, nearly double the national rate of 14%.
+                - paragraph [ref=f6e283]: “About 1 in 4 babies in this fishing settlement of Rehri Goth are born prematurely, nearly double the national rate of 14% — and that's one of the world's highest.”
+                - generic [ref=f6e284]
+              - generic [ref=f6e287]:
+                - paragraph [ref=f6e288]: Scientists at Agha Khan University have identified a bacterium called Prevotella copri that was far less present in women who delivered prematurely compared to women who delivered at term.
+                - paragraph [ref=f6e289]: “what we found was — there's this one bacterium, Prevotella [copri], which was far less in women who had delivered pre-term compared to women who delivered term”
+                - generic [ref=f6e290]
+              - generic [ref=f6e293]:
+                - paragraph [ref=f6e294]: The World Health Organization says about half of all premature babies born in poor countries at around 32 weeks are likely to die.
+                - paragraph [ref=f6e295]: “The World Health Organization says some half of all premature babies born in poor countries at around 32 weeks are likely to die.”
+                - generic [ref=f6e296]
+              - generic [ref=f6e299]:
+                - paragraph [ref=f6e300]: Factors contributing to early birth in Rehri Goth include malnutrition, extreme heat, and poor sanitation.
+                - paragraph [ref=f6e301]: "“It's evident why women and girls in this community are having babies prematurely: They're clearly malnourished . Other factors contribute to early birth, such as the extreme heat and poor sanitation .”"
+                - generic [ref=f6e302]
+              - generic [ref=f6e305]:
+                - paragraph [ref=f6e306]: A 17-year-old mother named Mariam was advised not to breastfeed her premature baby when he had diarrhea, despite the unsanitary water in Rehri Goth.
+                - paragraph [ref=f6e307]: “Mariam says when newborn baby Ladoo was suffering from diarrhea, "I was told not to breastfeed." She says she was told to give him formula instead, even though the water in Rehri Goth is unsanitary and dangerous for babies”
+                - generic [ref=f6e308]
+              - generic [ref=f6e311]:
+                - paragraph [ref=f6e312]: The World Health Organization states that Cerelac is not formulated to meet the nutritional needs of an infant and is not sterile.
+                - paragraph [ref=f6e313]: “Cerelac "is not formulated to meet the nutritional needs of an infant. It is not sterile and may itself be the source of food-borne illness - even if it is prepared with clean drinking water."”
+                - generic [ref=f6e314]
+              - generic [ref=f6e317]:
+                - paragraph [ref=f6e318]: Dr. Fyezah Jehan notes that improving education, water, and sanitation could solve half the premature birth problems in the community.
+                - paragraph [ref=f6e319]: “if you ask me, improve education and water and sanitation and half the problems will just disappear.”
+                - generic [ref=f6e320]
+              - generic [ref=f6e323]:
+                - paragraph [ref=f6e324]: Premature babies born in the West have an excellent chance of survival, particularly those born after 32 weeks gestation, unlike in low-income countries.
+                - paragraph [ref=f6e325]: “While premature babies born in the West have an excellent chance of survival — particularly those born after 32 weeks gestation, or at around 8 months — it's not the same in low-income countries.”
+                - generic [ref=f6e326]
+          - generic [ref=f6e237]:
+            - generic [ref=f6e238]:
+              - generic [ref=f6e239]: F1
+              - textbox "One verified statement, as you would say it out loud." [ref=f6e240]: About 1 in 4 babies in the Pakistani fishing settlement of Rehri Goth are born prematurely, nearly double the national rate of 14%.
+              - button "Remove F1" [ref=f6e241] [cursor=pointer]: Remove
+            - generic [ref=f6e242]:
+              - generic [ref=f6e243]:
+                - generic [ref=f6e244]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=f6e245]: https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+                - button "Remove source" [ref=f6e246] [cursor=pointer]: ×
+              - generic [ref=f6e247]:
+                - button "+ link" [ref=f6e248] [cursor=pointer]
+                - button "+ citation" [ref=f6e249] [cursor=pointer]
+          - generic [ref=f6e250]:
+            - generic [ref=f6e251]:
+              - generic [ref=f6e252]: F2
+              - textbox "One verified statement, as you would say it out loud." [ref=f6e253]: The World Health Organization says about half of all premature babies born in poor countries at around 32 weeks are likely to die.
+              - button "Remove F2" [ref=f6e254] [cursor=pointer]: Remove
+            - generic [ref=f6e255]:
+              - generic [ref=f6e256]:
+                - generic [ref=f6e257]: "src:"
+                - textbox "https://npr.org/2025/08/01/cpb-rescission" [ref=f6e258]: https://www.npr.org/2026/08/02/g-s1-135946/premature-birth-slum-pakistan
+                - button "Remove source" [ref=f6e259] [cursor=pointer]: ×
+              - generic [ref=f6e260]:
+                - button "+ link" [ref=f6e261] [cursor=pointer]
+                - button "+ citation" [ref=f6e262] [cursor=pointer]
+          - generic [ref=f6e263]:
+            - button "Add fact" [ref=f6e264] [cursor=pointer]
+            - button "Check sources" [ref=f6e265] [cursor=pointer]
+        - generic [ref=f6e266]:
+          - generic [ref=f6e267]: Sources ledger
+          - generic [ref=f6e268]:
+            - generic [ref=f6e269]:
+              - generic [ref=f6e270]: F1
+              - generic [ref=f6e271]: npr.org
+            - generic [ref=f6e272]:
+              - generic [ref=f6e273]: F2
+              - generic [ref=f6e274]: npr.org
+          - generic [ref=f6e276]: 2 of 2 sourced
+  - alert [ref=f6e63]

@@ -82,6 +82,7 @@ eq(
   sourcedCount({
     title: "t",
     throughLine: "record",
+    kit: "house",
     facts: [
       fact("a", [{ kind: "citation", value: "" }]),
       fact("b", [{ kind: "citation", value: "RIAA, 2025" }]),

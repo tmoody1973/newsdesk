@@ -16,6 +16,7 @@ export type DraftFact = { id: string; text: string; sources: DraftSource[] };
 export type Draft = {
   title: string;
   throughLine: string;
+  kit: string;
   facts: DraftFact[];
 };
 
@@ -31,7 +32,7 @@ export function emptyFact(): DraftFact {
 }
 
 export function emptyDraft(): Draft {
-  return { title: "", throughLine: "tower-signal", facts: [emptyFact()] };
+  return { title: "", throughLine: "tower-signal", kit: "house", facts: [emptyFact()] };
 }
 
 /** http(s) only.
@@ -132,6 +133,7 @@ export function toPayload(draft: Draft, slug: string) {
     id: slug,
     title: draft.title.trim(),
     through_line: draft.throughLine,
+    kit: draft.kit,
     facts: draft.facts.map((f) => ({
       text: f.text.trim(),
       sources: f.sources.map((s) =>

@@ -265,6 +265,8 @@ function storyFromRun(run: RunState) {
     id: run.run_id,
     title: run.story,
     through_line: String(run.art_direction?.through_line ?? "tower-signal"),
+    // Absent on runs from before kits existed — those were all house.
+    kit: String(run.art_direction?.kit ?? "house"),
     facts: run.facts.map((f) => ({
       text: f.text,
       sources: f.sources.map((s) =>

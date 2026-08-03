@@ -17,6 +17,22 @@ const THROUGH_LINES = [
   { id: "scale", label: "Scale", d: "M12 4v16M5 8h14M7 8l-2 6h4zM17 8l-2 6h4z" },
 ];
 
+// The diorama kit's own menu — ids must match brand-kit/diorama/through-lines.yaml,
+// because Wall 1 refuses a through-line that is not in the story's kit's menu.
+const DIORAMA_LINES = [
+  { id: "keg-fuse", label: "Keg & fuse", d: "M6 21c5-2 7-6 8-10", extra: <rect x="13" y="3" width="8" height="8" /> },
+  { id: "hourglass", label: "Hourglass", d: "M6 3h12L8 12 6 21h12l-10-9z" },
+  { id: "stamped-document", label: "Stamped document", d: "M8 13h6", extra: <><rect x="4" y="3" width="16" height="18" /><circle cx="15" cy="16" r="3" /></> },
+  { id: "note-stack", label: "Note stack", d: "M5 19h14M6 16h12M7 13h10M8 10h8" },
+  { id: "censor-portraits", label: "Censor portraits", d: "M7 10h10", extra: <><circle cx="12" cy="9" r="5" /><path d="M6 21c1-4 4-6 6-6s5 2 6 6" /></> },
+  { id: "paper-city", label: "Paper city", d: "M3 21V11h4v10M9 21V6h4v15M15 21V14h4v7M3 21h18" },
+];
+
+const KITS = [
+  { id: "house", label: "House — mixed media", lines: THROUGH_LINES },
+  { id: "diorama", label: "Paper diorama", lines: DIORAMA_LINES },
+];
+
 const MOTIFS = ["Prop with text", "Map", "Chart", "Ledger", "Cutout crowd", "Archival frame"];
 
 // Defaults per through-line. The journalist adjusts; they do not compose.
@@ -36,12 +52,17 @@ const FALLBACK = ["Prop with text", "Map", "Chart", "Ledger", "Cutout crowd", "A
 export function ArtDirection({
   value,
   onChange,
+  kit = "house",
+  onKitChange,
 }: {
   value: string;
   onChange: (id: string) => void;
+  kit?: string;
+  onKitChange?: (kit: string, firstThroughLine: string) => void;
 }) {
   const chosen = value;
   const [motifs, setMotifs] = useState<string[]>(DEFAULTS[value] ?? FALLBACK);
+  const lines = (KITS.find((k) => k.id === kit) ?? KITS[0]).lines;
 
   function pick(id: string) {
     onChange(id);
@@ -50,10 +71,38 @@ export function ArtDirection({
 
   return (
     <div style={{ padding: "32px 0 0", display: "flex", flexDirection: "column", gap: 28 }}>
+      {onKitChange && (
+        <section>
+          <h6 style={{ marginBottom: 12 }}>Brand kit · every kit brings its own objects</h6>
+          <div style={{ display: "flex", gap: 14 }}>
+            {KITS.map((k) => {
+              const on = k.id === kit;
+              return (
+                <button
+                  key={k.id}
+                  type="button"
+                  aria-pressed={on}
+                  // Switching kits must switch the object too — Wall 1 refuses
+                  // a through-line that is not in the story's kit's menu.
+                  onClick={() => onKitChange(k.id, k.lines[0].id)}
+                  style={{
+                    border: on ? "3px solid #F2C744" : "1px solid var(--color-divider)",
+                    padding: "10px 18px", cursor: "pointer",
+                    background: "var(--color-surface)", font: "inherit",
+                    fontWeight: on ? 600 : 400,
+                  }}
+                >
+                  {k.label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <section>
         <h6 style={{ marginBottom: 12 }}>Through-line object · pick one</h6>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14 }}>
-          {THROUGH_LINES.map((tl) => {
+          {lines.map((tl) => {
             const on = tl.id === chosen;
             return (
               <button
@@ -84,6 +133,13 @@ export function ArtDirection({
         </div>
       </section>
 
+      {kit !== "house" && (
+        <p className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)", margin: 0 }}>
+          The diorama composes its own six beats around the object — sepia newsprint
+          world, one burnt-orange accent, censor-bar cutouts, letterpress labels.
+        </p>
+      )}
+      {kit === "house" && (
       <section>
         <h6 style={{ marginBottom: 12 }}>Motif per block · defaults from the through-line</h6>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14 }}>
@@ -112,6 +168,7 @@ export function ArtDirection({
           ))}
         </div>
       </section>
+      )}
 
       <section style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: 32, alignItems: "stretch" }}>
         <label style={{

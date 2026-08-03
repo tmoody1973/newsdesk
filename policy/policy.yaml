@@ -164,6 +164,23 @@ rules:
       attestation once, at the boundary, rather than re-deriving it, because
       re-deriving it would mean importing claims.py into gate.py's import
       graph, which tests/test_structure.py exists specifically to forbid.
+      Review caught a second gap in the same v4 change, closed same day: the
+      sourcing test above is only reachable at all if the label survives as a
+      matched span of gate.py's `_QUOTED` pattern, which captures a quoted
+      run of 2-40 characters. `LABEL_MAX_WORDS` bounds word count, not
+      character count, so a legal four-word label can still land outside that
+      window (or, separately, carry a quote mark of its own and corrupt the
+      match) — and a label `_QUOTED` cannot see is not refused, it is simply
+      absent from what POL-4 inspects, which reads as passing having checked
+      nothing. This is squarely `element_budget_why`'s failure mode — a model
+      asked to letterpress an over-long or malformed string comes back
+      garbled or duplicated — so it is recorded here rather than as a new
+      rule. Two changes close it: claims.py now enforces `LABEL_MAX_CHARS =
+      40` and rejects a label containing a quote character, at the one place
+      a label is minted (`label_unsourceable`); and `gate.check`, as a second
+      line of defence for a future caller that skips claims.py, refuses when
+      an attested label in `labels` does not actually appear among
+      `_QUOTED`'s captures, rather than silently finding nothing to check.
       v3 (2026-08-02) — this rule's text is now enforced by two layers that
       moved independently. The vision/element-budget checks above are
       unchanged. What moved is the NEGATIVE-line half: "readable text, letters,

@@ -190,7 +190,13 @@ def check(
     provider). It accepts a label ONLY because the caller attests it was
     claims-validated. A caller that passes an unvalidated string as a label is
     the one thing this function cannot defend against; that is claims.py's job,
-    upstream, once, rather than this file's job on every call.
+    upstream, once, rather than this file's job on every call. What this
+    function DOES defend, as a second line of defence: an attested label that
+    never actually shows up as quoted SCENE text — outside `_QUOTED`'s 2-40
+    character window, or carrying a quote mark of its own — refuses POL-4
+    rather than passing having verified nothing. That closes the gap for any
+    future caller that skips claims.py's own bound (`LABEL_MAX_CHARS`) and
+    hands this a label the regex cannot see.
     """
     n = _names()
     findings: list[Finding] = []
@@ -222,11 +228,21 @@ def check(
 
     # POL-4 — no unsourced text on screen, and a budget on the sourced kind
     all_quoted = _QUOTED.findall(prompt.scene)
+    quoted_upper = {q.upper() for q in all_quoted}
     labels_upper = {label.upper() for label in labels}
     unsourced = [
         q for q in all_quoted if q.upper() not in fact_ids and q.upper() not in labels_upper
     ]
     requested = _TEXT_REQUEST.search(prompt.scene)
+    # Defence-in-depth against a caller that skipped claims.py's own length and
+    # quote-character bound (see LABEL_MAX_CHARS there): `_QUOTED` only
+    # captures a quoted span of 2-40 characters, so an attested label outside
+    # that window — or containing a quote mark of its own — never shows up in
+    # `all_quoted` at all. Left unchecked that reads as "nothing to inspect"
+    # and POL-4 passes having verified nothing about text it was told exists.
+    # Refuse-never-warn: a label the gate cannot see is refused, not waved
+    # through on the caller's word.
+    unseen_labels = [label for label in labels if label.upper() not in quoted_upper]
 
     # Checked in severity order: an unsourced word is a policy violation, while
     # too many sourced ones is a craft bound. Reporting the bound first would
@@ -237,6 +253,12 @@ def check(
             f"({'\"' + unsourced[0] + '\"' if unsourced else requested.group(0)}). "
             f"Map it to an entered fact, or express it as an abstract highlight bar "
             f"or marker circle."
+        )
+    elif unseen_labels:
+        problem = (
+            f"label {unseen_labels[0]!r} was attested but is not visible to POL-4 as "
+            f"quoted SCENE text — it may be too short, too long, or itself contain a "
+            f"quote character. A label the gate cannot see is a label it cannot bind."
         )
     elif len(all_quoted) > MAX_TEXT_ELEMENTS:
         problem = (

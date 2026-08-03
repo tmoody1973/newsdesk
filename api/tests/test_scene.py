@@ -309,6 +309,19 @@ def test_a_five_word_label_is_refused_by_the_word_budget_even_when_attested():
     assert "words on screen" in result.explain()
 
 
+def test_an_attested_label_the_gate_cannot_see_still_refuses():
+    """Defense-in-depth for a caller that bypasses claims.py's length/quote
+    bound: attesting a label does not mean the gate takes your word for it. If
+    `labels` names a word that never actually shows up as a quoted SCENE span,
+    the gate has been told text exists that it cannot verify — refuse-never-
+    warn means that refuses, not passes having inspected nothing."""
+    tl = all_through_lines()[0]
+    prompt = build_block_prompt(tl, 1, kit="diorama")  # no label spliced in
+
+    result = check(prompt, labels=("EXPIRED",))
+    assert not result.passed
+
+
 def test_label_none_renders_byte_identical_to_before_this_task():
     """House kit and label-less diorama blocks change nothing — the splice
     only fires when a kit ever hands `build` a label."""

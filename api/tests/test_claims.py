@@ -11,7 +11,14 @@ import dataclasses
 import pytest
 from fixtures import cs1_blocks, cs1_story
 
-from newsdesk.claims import LABEL_MAX_WORDS, Claim, ScriptBlock, validate_block, validate_script
+from newsdesk.claims import (
+    LABEL_MAX_CHARS,
+    LABEL_MAX_WORDS,
+    Claim,
+    ScriptBlock,
+    validate_block,
+    validate_script,
+)
 from newsdesk.facts import Source, Story
 
 
@@ -265,3 +272,33 @@ def test_a_label_drawn_from_a_mapped_fact_passes():
         claims=(Claim(spoken=word, fact_id=fact.id, evidence=fact.text),),
     )
     assert not [p for p in validate_block(story, block) if "label" in p.kind]
+
+
+def test_a_label_longer_than_the_gates_quote_window_is_rejected():
+    """gate.py's `_QUOTED` only captures a quoted span of 2-40 characters. A
+    label outside that window is legal under LABEL_MAX_WORDS (which counts
+    words, not characters) but invisible to POL-4 once spliced into SCENE —
+    the gate inspects zero text elements and passes having checked nothing.
+    Four words can easily run past 40 characters, so the word budget alone
+    does not bound this."""
+    story = cs1_story()
+    label = "x" * (LABEL_MAX_CHARS + 5)  # one word, so LABEL_MAX_WORDS is silent
+    block = ScriptBlock(
+        n=1, narration="Framing only.", label=label,
+        claims=(Claim(spoken=label, fact_id=story.facts[0].id, evidence=label),),
+    )
+    assert any(p.kind == "label_unsourceable" for p in validate_block(story, block))
+
+
+def test_a_label_containing_a_quote_character_is_rejected():
+    """A label with a quote mark of its own breaks the splice's own quoting —
+    `blockprompt.py` wraps it in `"..."`, and an embedded `"` closes the quote
+    early, which corrupts both what `_QUOTED` extracts and what a provider is
+    actually asked to letterpress."""
+    story = cs1_story()
+    label = 'A"B'
+    block = ScriptBlock(
+        n=1, narration="Framing only.", label=label,
+        claims=(Claim(spoken=label, fact_id=story.facts[0].id, evidence=label),),
+    )
+    assert any(p.kind == "label_unsourceable" for p in validate_block(story, block))

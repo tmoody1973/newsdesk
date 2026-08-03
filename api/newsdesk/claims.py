@@ -249,6 +249,19 @@ KICKER_ROLE = "kicker"
 # much smaller size because a label has no sentence structure to keep it honest.
 LABEL_MAX_WORDS = 4
 
+# The gate finds a spliced label by matching it as a quoted SCENE span
+# (gate.py's `_QUOTED`, capture window 2-40 characters). A label outside that
+# window is legal under LABEL_MAX_WORDS — which counts words, not characters,
+# and four words can easily run past 40 — but invisible to `_QUOTED` once
+# blockprompt.py splices it in: POL-4 then inspects zero text elements and
+# passes having checked nothing, rather than refusing an unbound one. Same
+# story for a label containing a quote character of its own — it closes
+# blockprompt.py's own `"..."` wrapper early, corrupting the match. Bounding
+# both here, at the one place a label is minted, is what keeps every later
+# "sourced because it's spliced in quotes" check honest.
+LABEL_MAX_CHARS = 40
+_LABEL_QUOTE_CHARS = "\"'“”"
+
 _SENTENCE_RE = re.compile(r"[^.!?]+[.!?]*")
 
 
@@ -323,7 +336,7 @@ class Problem:
     block: int
     kind: str  # unknown_fact | evidence_missing | spoken_missing |
                # unmapped_number | unmapped_assertion | untraced_block |
-               # label_too_long | label_untraced
+               # label_too_long | label_untraced | label_unsourceable
     message: str
 
     def __str__(self) -> str:
@@ -433,6 +446,17 @@ def validate_block(story: Story, block: ScriptBlock) -> tuple[Problem, ...]:
                 block.n, "label_too_long",
                 f"label {block.label!r} is {len(words)} words; POL-4's element "
                 f"budget is {LABEL_MAX_WORDS}.",
+            ))
+        if (
+            not 2 <= len(block.label) <= LABEL_MAX_CHARS
+            or any(ch in _LABEL_QUOTE_CHARS for ch in block.label)
+        ):
+            problems.append(Problem(
+                block.n, "label_unsourceable",
+                f"label {block.label!r} cannot be sourced: the gate finds a label "
+                f"by matching it as quoted SCENE text ({LABEL_MAX_CHARS} characters "
+                f"or fewer, at least 2, no quote marks of its own). A label outside "
+                f"that window is invisible to POL-4 rather than refused by it.",
             ))
         if not any(normalize(block.label) in normalize(c.evidence) for c in block.claims):
             problems.append(Problem(

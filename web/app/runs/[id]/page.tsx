@@ -12,6 +12,22 @@ const ROLES = ["cold open", "stakes", "evidence", "evidence", "turn", "kicker"];
 /** The take against the published window. Blue when it landed, graphite when it
  *  is a runtime cost rather than a fault — since design spec §6.6 made block
  *  length follow the take, an out-of-window take no longer desyncs anything. */
+/** "working" says nothing during a two-minute assembly. The newest event's
+ *  kind says exactly which stage is spending the time — honest stage-level
+ *  progress, not an invented percentage. */
+function doing(kind: string | undefined): string {
+  switch (kind) {
+    case "approve": return "assembling the final cut";
+    case "narrate": return "recording narration";
+    case "blocks": return "rendering pictures";
+    case "script":
+    case "decision.script": return "writing the script";
+    case "gate": return "checking policy";
+    case "art": return "following the new direction";
+    default: return "working";
+  }
+}
+
 function takeBadge(seconds: number | null) {
   if (seconds == null) return <span className="mono text-xs text-graphite">no take</span>;
   const inWindow = seconds >= 9.0 && seconds <= 13.0;
@@ -55,7 +71,23 @@ export default async function RunBoard({ params }: { params: Promise<{ id: strin
           <LivePoll done={done} label={`${ready} of ${blocks.length} ready`} />
           {!done && (
             <span className="mono text-xs text-stamp-red">
-              {errored ? "stopped" : "working"}
+              {errored ? "stopped" : doing(newest?.kind)}
+              {!errored && (
+                <span aria-hidden>
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: "inline-block",
+                        animation: `dotpulse 1.4s ${i * 0.22}s ease-in-out infinite`,
+                      }}
+                    >
+                      .
+                    </span>
+                  ))}
+                  <style>{`@keyframes dotpulse { 0%,100% { opacity: .15 } 40% { opacity: 1 } }`}</style>
+                </span>
+              )}
             </span>
           )}
           {/* The way to the gate. Editor Review is the only screen that

@@ -39,8 +39,19 @@ export function LivePoll({ done, label }: { done: boolean; label?: string }) {
 
   return (
     <span className="mono text-xs text-graphite" aria-live="polite">
-      ● live{label ? ` · ${label}` : ""}
+      <span
+        aria-hidden
+        style={{
+          display: "inline-block",
+          color: "var(--color-accent)",
+          animation: "livepulse 1.2s ease-in-out infinite",
+        }}
+      >
+        ●
+      </span>{" "}
+      live{label ? ` · ${label}` : ""}
       {ticks > 0 ? ` · refreshed ${ticks}×` : ""}
+      <style>{`@keyframes livepulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }`}</style>
     </span>
   );
 }

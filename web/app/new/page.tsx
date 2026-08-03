@@ -127,6 +127,10 @@ export default function NewStory() {
             onChange={setDraft}
             ready={factsReady(draft)}
             onNext={() => setStep(2)}
+            // Same code the run is posted with, entered once — `POST /ingest`
+            // is authorized the same way `POST /runs` is.
+            accessCode={accessCode}
+            onAccessCode={setAccessCode}
           />
         )}
 

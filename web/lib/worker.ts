@@ -53,6 +53,24 @@ export async function startRun(opts: {
   );
 }
 
+/** A fact the model proposes from a pasted article, with the sentence it came
+ *  from. The quote is the whole point: the journalist confirms a proposal by
+ *  reading the source line, not by trusting the paraphrase. */
+export type FactProposal = { text: string; quote: string; url: string };
+
+/** `POST /ingest` — paste a link, get proposed facts back.
+ *
+ *  Synchronous, unlike `/runs`: it is one cheap call, so there is nothing to
+ *  poll. A 422 here is the server refusing a page it could not read, and its
+ *  message names the fallback ("paste the text of the story instead") — which
+ *  is why callers show `WorkerError.message` rather than their own wording. */
+export async function ingestUrl(
+  url: string,
+  accessCode: string,
+): Promise<{ proposals: FactProposal[]; dropped: number }> {
+  return post("/ingest", { url }, accessCode);
+}
+
 export async function pollRun(runId: string): Promise<RunState | null> {
   const res = await fetch(`${BASE}/runs/${runId}`, { cache: "no-store" });
   if (!res.ok) return null;

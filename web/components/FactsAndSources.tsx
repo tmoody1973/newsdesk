@@ -12,6 +12,8 @@
  * The layout is the mockup's: 1fr / 340px, facts left, sources ledger right.
  */
 
+import { useState } from "react";
+
 import {
   Draft,
   DraftFact,
@@ -19,20 +21,26 @@ import {
   emptyFact,
   factId,
   factProblem,
+  looksLikeUrl,
   sourceLabel,
   sourcedCount,
 } from "@/lib/draft";
+import { FactProposal, WorkerError, ingestUrl } from "@/lib/worker";
 
 export function FactsAndSources({
   draft,
   onChange,
   onNext,
   ready,
+  accessCode,
+  onAccessCode,
 }: {
   draft: Draft;
   onChange: (next: Draft) => void;
   onNext: () => void;
   ready: boolean;
+  accessCode: string;
+  onAccessCode: (next: string) => void;
 }) {
   function patch(i: number, changes: Partial<DraftFact>) {
     onChange({
@@ -63,6 +71,12 @@ export function FactsAndSources({
             onChange={(e) => onChange({ ...draft, title: e.target.value })}
           />
         </div>
+
+        <PullFromUrl
+          accessCode={accessCode}
+          onAccessCode={onAccessCode}
+          onConfirm={(fact) => onChange({ ...draft, facts: [...draft.facts, fact] })}
+        />
 
         {draft.facts.map((fact, i) => (
           <FactCard
@@ -112,6 +126,177 @@ export function FactsAndSources({
       </div>
 
       <SourcesLedger draft={draft} />
+    </div>
+  );
+}
+
+/** Paste a link, read what the model proposes, confirm the ones you stand
+ *  behind.
+ *
+ *  Nothing here writes a fact by itself. A proposal shows the sentence it came
+ *  from, verbatim, because the only thing that makes a pulled fact usable is a
+ *  journalist having read the line it was pulled from — a paraphrase with a
+ *  confident tick next to it is exactly what this tool exists not to produce. */
+function PullFromUrl({
+  accessCode,
+  onAccessCode,
+  onConfirm,
+}: {
+  accessCode: string;
+  onAccessCode: (next: string) => void;
+  onConfirm: (fact: DraftFact) => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [pulling, setPulling] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    proposals: FactProposal[];
+    dropped: number;
+  } | null>(null);
+  const [added, setAdded] = useState<number[]>([]);
+
+  async function pull() {
+    setPulling(true);
+    setProblem(null);
+    setResult(null);
+    setAdded([]);
+    try {
+      const pulled = await ingestUrl(url.trim(), accessCode);
+      setResult({ proposals: pulled.proposals ?? [], dropped: pulled.dropped ?? 0 });
+    } catch (err) {
+      // The server's refusal already names the fallback — "paste the text of
+      // the story instead". Rewording it would drop the only instruction in it.
+      setProblem(err instanceof WorkerError ? err.message : String(err));
+    } finally {
+      setPulling(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="field">
+        <label htmlFor="ingest-url">Paste a link to a story you reported.</label>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            id="ingest-url"
+            className="input mono"
+            style={{ fontSize: 12, color: "#2b5da8" }}
+            placeholder="https://npr.org/2025/08/01/cpb-rescission"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <input
+            className="input mono"
+            style={{ width: 140, fontSize: 12 }}
+            placeholder="access code"
+            value={accessCode}
+            onChange={(e) => onAccessCode(e.target.value)}
+            aria-label="Access code"
+          />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ flex: "none" }}
+            disabled={!looksLikeUrl(url) || pulling}
+            onClick={pull}
+          >
+            {pulling ? "Pulling…" : "Pull facts"}
+          </button>
+        </div>
+      </div>
+
+      {problem && (
+        <p
+          className="mono"
+          style={{
+            fontSize: 11,
+            color: "var(--color-accent-700)",
+            margin: 0,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {problem}
+        </p>
+      )}
+
+      {result && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <span className="card-kicker">
+            Proposed facts — nothing is added until you add it
+          </span>
+
+          {result.proposals.map((proposal, i) => {
+            const isAdded = added.includes(i);
+            return (
+              <div
+                key={i}
+                className="card"
+                style={{ border: "1px solid var(--color-divider)", gap: 8 }}
+              >
+                <p style={{ fontSize: 14, margin: 0 }}>{proposal.text}</p>
+                <p
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    margin: 0,
+                    color: "var(--color-neutral-600)",
+                    borderLeft: "2px solid var(--color-divider)",
+                    paddingLeft: 10,
+                  }}
+                >
+                  &ldquo;{proposal.quote}&rdquo;
+                </p>
+                <div className="card-meta" style={{ justifyContent: "space-between" }}>
+                  <span className="mono" style={{ fontSize: 11, color: "#2b5da8" }}>
+                    {sourceLabel({ kind: "url", value: proposal.url || url.trim() })}
+                  </span>
+                  {isAdded ? (
+                    <span
+                      className="tag tag-neutral mono"
+                      style={{ fontSize: 10, letterSpacing: ".06em" }}
+                    >
+                      ADDED
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: 12 }}
+                      onClick={() => {
+                        onConfirm({
+                          ...emptyFact(),
+                          text: proposal.text,
+                          sources: [
+                            { kind: "url", value: proposal.url || url.trim() },
+                          ],
+                        });
+                        setAdded([...added, i]);
+                      }}
+                    >
+                      Add fact
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {result.proposals.length === 0 && (
+            <span className="card-meta mono">
+              Nothing on that page could be quoted verbatim. Type the facts yourself.
+            </span>
+          )}
+
+          {result.dropped > 0 && (
+            <span className="card-meta mono">
+              {result.dropped} proposals were dropped because their quotes could not be
+              verified against the page.
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="hr" style={{ margin: 0 }} />
     </div>
   );
 }

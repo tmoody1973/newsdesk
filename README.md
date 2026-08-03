@@ -303,6 +303,8 @@ before changing anything, because several of those assumptions were expensive.
 
 | | |
 |---|---|
+| [`docs/WHAT-IS-NEWSDESK.md`](docs/WHAT-IS-NEWSDESK.md) | **Not technical?** Start here instead. The product in plain English, at three lengths — a sentence, a paragraph, and the whole thing |
+| [`docs/JUDGING-CRITERIA.md`](docs/JUDGING-CRITERIA.md) | How the project meets the four hackathon criteria, with the file path or command behind every claim — including what is thin |
 | [`docs/HANDOFF.md`](docs/HANDOFF.md) | **Start here.** Where the work stands, what is deployed, the assumptions that died, and the bugs that are known and unfixed |
 | [`newsdesk-prd.md`](newsdesk-prd.md) | Brief, requirements P0-1…P0-9, non-goals |
 | [`newsdesk-case-studies.md`](newsdesk-case-studies.md) | The five fixtures — these *are* the test suite |

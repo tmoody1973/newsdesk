@@ -66,7 +66,7 @@ Newsdesk is built for the checking, not around it.
 
 ## How the checking actually works
 
-There are two barriers, and they are deliberately different from each other.
+There are three barriers, and they are deliberately different from each other.
 
 **Wall 1 — nothing enters without a source.** Before anything is written or
 generated, every fact must carry a source. A story with a bare assertion in it
@@ -96,6 +96,12 @@ That's correct and worth explaining: four of the six rules can be judged on the
 request, before anything is generated, and those are the ones that save money by
 refusing early. The other two are checked later, against what actually came
 back — which is the whole point of POL-6.
+
+**Wall 3 — nothing publishes without a named human.** The finished video can only
+be assembled through an `approve()` transition in `api/newsdesk/state.py`. There
+is no second route to publication, and the approver's name lands in the record
+embedded in the file. A person is not advised to check; the code has no path that
+skips them.
 
 ## The evidence that it does real work
 

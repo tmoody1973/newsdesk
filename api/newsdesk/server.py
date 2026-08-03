@@ -80,19 +80,27 @@ def _validate_ingest_url(raw: Any) -> str:
     422 (a refusal), never a 500 — a bad or dangerous URL is an expected
     input, not a bug.
 
-    Scheme is checked twice, for two different reasons: our own check turns
-    away `file://`/`ftp://`/etc. with a message that names the problem, and
-    `genblaze_core._utils.check_ssrf` — which we call directly after — turns
-    out to be HTTPS-only itself (`resolve_ssrf`: "Only HTTPS URLs are
-    allowed"). A plain `http://` URL trips on check_ssrf's own scheme
-    rejection rather than ours; either way it's a 422 with the reason.
+    `http://` gets its own branch rather than falling through to
+    `check_ssrf`: `check_ssrf` (`resolve_ssrf`) is HTTPS-only and would
+    refuse it anyway, but with genblaze's internal wording ("Only HTTPS URLs
+    are allowed, got: http://") — accurate, and useless to a journalist who
+    just pasted a small paper's plain http:// link. This is our gate, so the
+    message here can actually name the fix. `check_ssrf` still runs, and is
+    still the authority, for every URL that reaches it — which after this
+    branch is only ever `https://`.
     """
     if not isinstance(raw, str) or not raw.strip():
         raise IngestRejected(422, "a url is required")
     url = raw.strip()
 
     scheme = urlparse(url).scheme
-    if scheme not in ("http", "https"):
+    if scheme == "http":
+        raise IngestRejected(
+            422,
+            "that link is http:// — try the https:// version, "
+            "or paste the text of the story instead.",
+        )
+    if scheme != "https":
         raise IngestRejected(
             422, f"unsupported URL scheme '{scheme}' — paste a link to the story"
         )

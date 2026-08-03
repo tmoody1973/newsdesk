@@ -11,7 +11,13 @@ import json
 
 import pytest
 
-from newsdesk.ingest import IngestError, Proposal, fetch_article, propose_facts
+from newsdesk.ingest import (
+    _MAX_ARTICLE_CHARS,
+    IngestError,
+    Proposal,
+    fetch_article,
+    propose_facts,
+)
 
 ARTICLE_HTML = """
 <html>
@@ -72,6 +78,24 @@ def test_fetch_article_strips_boilerplate_and_collapses_whitespace():
     assert REAL_QUOTE in text
 
 
+def test_fetch_article_does_not_fuse_adjacent_elements_in_minified_html():
+    """Pretty-printed HTML (ARTICLE_HTML above) has newlines between tags
+    that mask this bug — a real article's markup doesn't. No whitespace
+    between `<h1>...</h1><p>...</p>` or `<td>3</td><td>2</td>` must not
+    read as the headline running into the lede, or two numerals reading as
+    one number."""
+    minified = (
+        "<html><body><article>"
+        "<h1>Regulators fine the bank</h1><p>The fine totaled 12 million.</p>"
+        "<table><tr><td>3</td><td>2</td></tr></table>"
+        "</article></body></html>"
+    )
+    text = fetch_article(URL, fetch_fn=lambda url: minified)
+    assert "bankThe" not in text
+    assert "32" not in text
+    assert "3 2" in text
+
+
 # --- propose_facts: the verbatim wall ------------------------------------
 
 
@@ -129,3 +153,38 @@ def test_propose_facts_on_an_empty_or_unreadable_page_raises_ingest_error():
 
     with pytest.raises(IngestError):
         propose_facts(URL, chat_fn=_fake_chat([]), fetch_fn=only_boilerplate)
+
+
+# --- the article is bounded before it's ever used -------------------------
+
+
+def test_propose_facts_truncates_a_very_long_article_to_the_named_cap():
+    """A page well inside the 5 MB download cap can still be far too much
+    text for one chat() call — measured: 1.68M characters (~420k tokens)
+    hard-fails claude-haiku's 200k context. `article_chars` reflects the
+    capped length actually used, not the raw fetch."""
+    huge_tail = "x" * 100_000
+    huge_html = f"<html><body><article><p>{huge_tail}</p></article></body></html>"
+
+    result = propose_facts(URL, chat_fn=_fake_chat([]), fetch_fn=lambda url: huge_html)
+    assert result.article_chars == _MAX_ARTICLE_CHARS
+
+
+def test_propose_facts_checks_quotes_against_the_truncated_text_not_the_full_page():
+    """The prompt and the verbatim check must agree on what "the article"
+    is. A quote that only exists past the truncation cutoff was never shown
+    to the model either — it has to be dropped for the same reason an
+    invented quote is, not pass because the checker read further than the
+    prompt did."""
+    tail_only_quote = "a fact stated only past the truncation cutoff point"
+    padding = "filler word " * 20_000  # well past _MAX_ARTICLE_CHARS
+    long_html = (
+        f"<html><body><article><p>{REAL_QUOTE}</p>"
+        f"<p>{padding}{tail_only_quote}</p></article></body></html>"
+    )
+
+    chat_fn = _fake_chat([{"text": "a late fact", "quote": tail_only_quote}])
+    result = propose_facts(URL, chat_fn=chat_fn, fetch_fn=lambda url: long_html)
+
+    assert result.proposals == ()
+    assert result.dropped == 1

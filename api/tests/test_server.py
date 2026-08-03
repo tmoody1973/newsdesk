@@ -129,12 +129,25 @@ def test_ingest_refuses_a_non_http_scheme():
     assert "scheme" in str(caught.value).lower()
 
 
-def test_ingest_refuses_a_private_ip_literal_without_opening_a_socket():
-    """`check_ssrf` refuses this by string/IP inspection alone — no DNS lookup,
-    no connection. If this test needed the network it would hang or flake in
-    CI; it doesn't, because the refusal never gets that far."""
+def test_ingest_refuses_http_with_an_https_suggestion():
+    """Our own gate, not genblaze's — the message names the fix a journalist
+    can actually take, rather than surfacing check_ssrf's internal wording
+    ("Only HTTPS URLs are allowed, got: http://")."""
     with pytest.raises(server.IngestRejected) as caught:
-        server._validate_ingest_url("http://169.254.169.254/")
+        server._validate_ingest_url("http://example.org/a-story")
+    assert caught.value.status == 422
+    assert "https://" in str(caught.value)
+
+
+def test_ingest_refuses_a_private_ip_literal_without_opening_a_socket():
+    """A private/loopback IP literal over https:// reaches `check_ssrf`'s
+    actual IP blocklist (`resolve_ssrf`'s "Private/loopback URLs are not
+    allowed") rather than tripping its earlier, unrelated HTTPS-only scheme
+    check the way a plain http:// literal would. `getaddrinfo` on a literal
+    IP is numeric parsing, not a DNS lookup — no socket opens, no network
+    needed, still $0 and CI-safe."""
+    with pytest.raises(server.IngestRejected) as caught:
+        server._validate_ingest_url("https://169.254.169.254/")
     assert caught.value.status == 422
 
 

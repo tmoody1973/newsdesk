@@ -59,6 +59,17 @@ _MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 _FETCH_TIMEOUT_S = 20.0
 _CHAT_TIMEOUT_S = 60.0
 
+# ponytail: past 40k characters it's not a news story anymore — it's a
+# liveblog, a comment thread, or a scraped nav dump the extractor let
+# through. The tail adds tokens to the chat() call, not facts. Untruncated,
+# a fetched page well inside the 5 MB download cap can still blow a model's
+# context window in one prompt (measured: 1.68M chars → ~420k tokens, a hard
+# failure on claude-haiku's 200k window, surfaced only as an opaque 502).
+# Truncated ONCE, here, before the text is used for BOTH the prompt and the
+# verbatim check below — checking a quote against the untruncated article
+# would pass quotes the model never actually saw.
+_MAX_ARTICLE_CHARS = 40_000
+
 _WS_RE = re.compile(r"\s+")
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
@@ -109,13 +120,20 @@ class _TextExtractor(HTMLParser):
     def handle_starttag(self, tag: str, attrs: Any) -> None:
         if tag in self._SKIP_TAGS:
             self._skip_depth += 1
+        # A tag boundary is a word boundary. Without this, minified HTML
+        # (real articles; the pretty-printed fixture hid this) collapses
+        # adjacent elements into one token — `<td>3</td><td>2</td>` reads as
+        # "32", and a headline butts straight into its lede. `_WS_RE`
+        # collapses the extra spaces this adds everywhere else, so it's free.
+        self._parts.append(" ")
 
     def handle_startendtag(self, tag: str, attrs: Any) -> None:
-        pass  # self-closed tags (e.g. <br/>) carry no text either way
+        self._parts.append(" ")  # same fusion risk as a start/end pair
 
     def handle_endtag(self, tag: str) -> None:
         if tag in self._SKIP_TAGS and self._skip_depth:
             self._skip_depth -= 1
+        self._parts.append(" ")
 
     def handle_data(self, data: str) -> None:
         if not self._skip_depth:
@@ -220,7 +238,10 @@ def propose_facts(
     never writes a citation, this function does, and it copies rather than
     invents.
     """
-    article = fetch_article(url, fetch_fn=fetch_fn)
+    # Truncated once, up front — the prompt below and the verbatim check
+    # further down both read `article`, so both see the same (possibly
+    # shortened) text. See `_MAX_ARTICLE_CHARS`.
+    article = fetch_article(url, fetch_fn=fetch_fn)[:_MAX_ARTICLE_CHARS]
     if not article.strip():
         raise IngestError(
             "could not read that page — paste the text of the story instead."

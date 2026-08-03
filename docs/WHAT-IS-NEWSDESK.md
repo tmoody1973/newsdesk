@@ -56,10 +56,13 @@ So most newsrooms leave the tools alone. The risk is worth more than the video.
 
 ### What it actually does
 
-You type in your facts — and every single one has to come with a source. Where
-did you get this? A link, a document, a report. Then you pick a visual style, and
-the system writes a script, generates the animation, records the narration, and
-cuts it together.
+You give it your facts — and every single one has to come with a source. Where
+did you get this? A link, a document, a report. You can type them in, or paste a
+link to a story you reported and let the system propose the facts from it, which
+you then confirm one by one. Nothing it proposes counts until a person accepts it.
+
+Then you pick a visual style, and the system writes a script, generates the
+animation, records the narration, and cuts it together.
 
 Four things make it different from a normal AI video tool.
 
@@ -71,9 +74,11 @@ nice-to-have you fill in later; they're the price of entry.
 
 #### 2. It says no before it spends money
 
-There's a rulebook — six rules, written in ordinary English. No real people's
+There's a rulebook — seven rules, written in ordinary English. No real people's
 faces. No invented scenes dressed up to look like real news footage. No words on
-screen, because AI still misspells things. And so on.
+screen, because AI still misspells things. And, since the app can now take a
+pasted link and pull facts out of it: a link you paste is a story you're
+reporting, not one you're quietly borrowing.
 
 Before anything gets generated, the plan is checked against those rules. If
 something breaks one, it stops there.
@@ -140,7 +145,7 @@ didn't make it up?"* — and there's an answer that holds up when they check.
 |---|---|
 | The live app | [newsdesk-rosy.vercel.app](https://newsdesk-rosy.vercel.app) — open, no sign-in |
 | A receipt | [one of the published videos](https://newsdesk-rosy.vercel.app/runs/who-pays-when-the-signal-goes-quiet/receipt) — every claim traced to the fact behind it |
-| The rulebook | [the six rules](https://newsdesk-rosy.vercel.app/policy), rendered from the same file the system enforces |
+| The rulebook | [the seven rules](https://newsdesk-rosy.vercel.app/policy), rendered from the same file the system enforces |
 | What it refused | [the red team page](https://newsdesk-rosy.vercel.app/redteam) — attempts to break it, and what each refusal said |
 
 Deeper reading, in increasing order of detail:

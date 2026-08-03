@@ -35,7 +35,7 @@ Two things you can run locally in under a minute:
 
 ```bash
 cd api
-uv run pytest tests/ -q                                    # 345 tests, no network, no cost
+uv run pytest tests/ -q                                    # 488 tests, no network, no cost
 uv run python -m newsdesk ../stories/cs2.yaml --only gate  # runs the safety gate, spends $0
 ```
 
@@ -75,7 +75,7 @@ will not load. This is enforced by the file parser itself
 can be skipped — a story that fails Wall 1 never becomes a valid story object in
 the first place.
 
-**Wall 2 — the policy gate, which runs before any money is spent.** Six rules,
+**Wall 2 — the policy gate, which runs before any money is spent.** Seven rules,
 written in plain language in `policy/policy.yaml`:
 
 | | The rule |
@@ -86,16 +86,21 @@ written in plain language in `policy/policy.yaml`:
 | POL-4 | No readable text on screen |
 | POL-5 | Narration fits its block |
 | POL-6 | Output is checked, not just the request |
+| POL-7 | A pasted URL is a story you reported, not one you're borrowing |
 
 POL-6 is the one people miss. Most content filters check what you *asked for*.
 This one also checks what *came back*, because a model can be asked for something
 innocuous and return something that breaks a rule anyway.
 
+POL-7 is newer and worth a note of its own: the app can now take a pasted link
+and propose facts from it, and POL-7 draws the line between reporting a story and
+lifting one.
+
 If you run the gate command above you'll see it report `6 blocks x 4 rules`.
-That's correct and worth explaining: four of the six rules can be judged on the
+That's correct and worth explaining: four of the seven rules can be judged on the
 request, before anything is generated, and those are the ones that save money by
-refusing early. The other two are checked later, against what actually came
-back — which is the whole point of POL-6.
+refusing early. The rest are checked at other points — POL-6 against what
+actually came back, POL-7 at the moment a link is ingested.
 
 **Wall 3 — nothing publishes without a named human.** The finished video can only
 be assembled through an `approve()` transition in `api/newsdesk/state.py`. There
@@ -169,7 +174,7 @@ alive. This one tells you the process can do its job.
 
 ## The test suite is fast, offline, and free
 
-**345 tests, 5 seconds, zero network calls, $0.**
+**488 tests, 18 seconds, zero network calls, $0.**
 
 The "zero network" part is not a convention we try to keep — it's enforced.
 `tests/test_structure.py` contains a test called
@@ -376,7 +381,7 @@ We are mentioning it because we would rather disclose it than have it found.
 | Criterion | Where we think we stand |
 |---|---|
 | **Real-World Utility** | Built inside a working newsroom for a problem that stops newsrooms publishing today. Demonstrated catching a genuine journalism error before any money was spent. Thin on outside validation. |
-| **Production Readiness** | Deployed, live, resumable, 345 offline tests, four correct failures under real outage conditions. Constrained by remaining credit. |
+| **Production Readiness** | Deployed, live, resumable, 488 offline tests, four correct failures under real outage conditions. Constrained by remaining credit. |
 | **B2 Storage** | Five purpose-separated buckets with an enforced public/private split, and B2 serving as the application's actual database rather than its file store. |
 | **Use of Genblaze** | Five providers across four modalities, plus an extension that makes Genblaze's tamper-evident manifest cover refusals as well as generations. |
 
@@ -394,6 +399,6 @@ We are mentioning it because we would rather disclose it than have it found.
 
 - `docs/HANDOFF.md` — current state, and thirty assumptions that testing killed
 - `docs/PLAN.md` — the build plan
-- `policy/policy.yaml` — the six rules, in plain language, as the live source
+- `policy/policy.yaml` — the seven rules, in plain language, as the live source
 - `newsdesk-case-studies.md` — the five fixture stories used as the test suite
 - `README.md` — setup and architecture

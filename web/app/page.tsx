@@ -252,6 +252,7 @@ export default function FrontPage() {
             <Link href="/desk" className="mono" style={{ fontSize: 11, color: "var(--color-text)" }}>The desk</Link>
             <Link href="/policy" className="mono" style={{ fontSize: 11, color: "var(--color-text)" }}>Policy</Link>
             <Link href="/brand-kit" className="mono" style={{ fontSize: 11, color: "var(--color-text)" }}>Brand kit</Link>
+            <Link href="/judges" className="mono" style={{ fontSize: 11, color: "var(--color-text)" }}>For the judges</Link>
             <Link href="/new" className="mono" style={{ fontSize: 11, color: "var(--color-accent)" }}>Start a story</Link>
           </nav>
         </div>

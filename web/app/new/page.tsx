@@ -13,6 +13,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { explainRefusal } from "@/lib/refusal";
+
 import { ArtDirection } from "@/components/ArtDirection";
 import { FactsAndSources } from "@/components/FactsAndSources";
 import { ScriptReview } from "@/components/ScriptReview";
@@ -116,6 +118,60 @@ export default function NewStory() {
             padding: 16,
           }}
         >
+          {(() => {
+            const help = explainRefusal(problem, draft.facts);
+            if (!help) return null;
+            return (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 15, margin: 0, fontWeight: 600 }}>{help.headline}</p>
+                {help.tips.map((tip, i) => (
+                  <p key={i} style={{ fontSize: 14, margin: "8px 0 0" }}>
+                    {tip}
+                  </p>
+                ))}
+                {help.trims.map((t) => (
+                  <div
+                    key={t.index}
+                    style={{
+                      marginTop: 10,
+                      padding: "10px 12px",
+                      border: "1px solid var(--color-divider)",
+                      background: "var(--color-surface)",
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontSize: 13, flex: 1 }}>
+                      <span className="mono" style={{ fontSize: 11, color: "var(--color-neutral-600)" }}>
+                        F{t.index + 1} is {t.words} words — suggested trim:{" "}
+                      </span>
+                      {t.suggestion}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: 12, flex: "none" }}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          facts: draft.facts.map((f, j) =>
+                            j === t.index ? { ...f, text: t.suggestion } : f,
+                          ),
+                        })
+                      }
+                    >
+                      Apply trim
+                    </button>
+                  </div>
+                ))}
+                <p className="mono" style={{ fontSize: 10.5, margin: "10px 0 0", color: "var(--color-neutral-600)" }}>
+                  Suggestions only — your facts change when you apply them, never on their own. The full
+                  refusal, as it appears in the run&apos;s record:
+                </p>
+              </div>
+            );
+          })()}
           <p
             className="mono"
             style={{ fontSize: 12, color: "var(--color-accent-700)", margin: 0, whiteSpace: "pre-wrap" }}

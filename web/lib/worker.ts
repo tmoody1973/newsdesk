@@ -107,6 +107,13 @@ export async function waitFor(
       if (baseline === null) baseline = newest?.ts ?? "";
       if (newest?.kind === "error" && newest.ts > baseline) return state;
       if (done(state)) return state;
+    } else if (baseline === null) {
+      // The run does not exist yet, so there is no prior history to protect:
+      // whatever error appears later is news. Without this, a FRESH run's
+      // first refusal becomes its own baseline (the first successful poll
+      // already contains it) and the banner never shows — the wizard spins
+      // for ten minutes and then blames the worker.
+      baseline = "";
     }
     await new Promise((r) => setTimeout(r, every));
   }

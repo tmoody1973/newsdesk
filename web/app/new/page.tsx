@@ -31,32 +31,52 @@ export default function NewStory() {
   const [problem, setProblem] = useState<string | null>(null);
   const [accessCode, setAccessCode] = useState("");
 
+  // The machine grinds, the human reviews. A refusal is free, so the wizard
+  // retries it itself — up to ROUNDS batches of the worker's own attempts —
+  // and only surfaces when a script survives (Script Review) or the budget
+  // is spent. What it never does is touch the facts: redrafting is the only
+  // automatic fix, because the facts are the journalist's, not the model's.
+  const SCRIPT_ROUNDS = 3;
+
   async function writeScript() {
     setProblem(null);
-    setBusy("Writing the script — checking every claim against your facts…");
     const id = slugify(draft.title);
     setSlug(id);
     try {
-      await startRun({
-        story: toPayload(draft, id),
-        stages: ["script"],
-        accessCode,
-      });
-      const state = await waitFor(id, (s) => s.blocks.length > 0 && s.blocks.every((b) => b.narration));
-      const failed = lastError(state);
-      if (failed) {
-        // A refused script is the product working. The model wrote a line that
-        // did not trace, the validator caught it, and nothing was spent on
-        // pictures — so say what happened rather than "something went wrong".
-        setProblem(failed);
+      for (let round = 1; round <= SCRIPT_ROUNDS; round++) {
+        setBusy(
+          round === 1
+            ? "Writing the script — checking every claim against your facts…"
+            : `Refused at $0 — redrafting, round ${round} of ${SCRIPT_ROUNDS}…`,
+        );
+        await startRun({
+          story: toPayload(draft, id),
+          stages: ["script"],
+          accessCode,
+        });
+        const state = await waitFor(id, (s) => s.blocks.length > 0 && s.blocks.every((b) => b.narration));
+        const failed = lastError(state);
+        if (failed) {
+          // A refused script is the product working. The model wrote a line
+          // that did not trace, the validator caught it, and nothing was
+          // spent on pictures. Every refusal stays in the run's record;
+          // only the LAST one becomes the user's problem to read.
+          if (round < SCRIPT_ROUNDS) {
+            const reason = failed.split("|")[0].trim().slice(0, 160);
+            setBusy(`Refused at $0 (${reason}) — redrafting, round ${round + 1} of ${SCRIPT_ROUNDS}…`);
+            continue;
+          }
+          setProblem(failed);
+          return;
+        }
+        if (!state) {
+          setProblem("The worker stopped answering. Nothing was spent on pictures.");
+          return;
+        }
+        setBlocks(state.blocks);
+        setStep(3);
         return;
       }
-      if (!state) {
-        setProblem("The worker stopped answering. Nothing was spent on pictures.");
-        return;
-      }
-      setBlocks(state.blocks);
-      setStep(3);
     } catch (err) {
       setProblem(err instanceof WorkerError ? err.message : String(err));
     } finally {
